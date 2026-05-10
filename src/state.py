@@ -3,6 +3,7 @@
 
 from typing import List, TypedDict, Optional, Literal
 from pydantic import BaseModel, Field
+from uuid import UUID, uuid4
 
 
 #! Why keep everything in three different classes
@@ -42,6 +43,12 @@ class ProductExtraction(BaseModel):
     extraction_confidence: float = Field(
         ..., description="confidence score of the extraction process"
     )
+    system_status: Literal["SUCCESS", "INCOMPLETE", "RETAKE_REQUIRED"] = Field(
+        ..., description="extraction quality status based on confidence and completeness"
+    )
+    trace_id: UUID = Field(
+        default_factory=uuid4, description="auto-generated ID for cross-node observability"
+    )
 
 
 class SafetyAudit(BaseModel):
@@ -60,7 +67,7 @@ class SafetyAudit(BaseModel):
     )
 
 
-# graph state
+# graph state: shared memory bus between nodes, also used for routing decisions
 class AgentState(TypedDict):
     # input data
     image_path: str
