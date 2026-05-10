@@ -1,0 +1,19 @@
+[project]
+name = "skincare-coach"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "David Valls",email = "dvallslanaquera@gmail.com"}
+]
+requires-python = ">=3.10,<4.0"
+dependencies = [
+    "langgraph (>=1.1.10,<2.0.0)",
+    "langchain-google-genai (>=4.2.2,<5.0.0)",
+    "pydantic (>=2.13.4,<3.0.0)",
+    "python-dotenv (>=1.2.2,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
