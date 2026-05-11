@@ -1,0 +1,18 @@
+{
+  "products": [
+    {
+      "jan_code": "4901301388513",
+      "brand": "Cetaphil",
+      "product_name": "Moisturizing Cream",
+      "ingredients_jp": ["水", "グリセリン", "ワセリン", "ナイアシンアミド", "パンテノール"],
+      "is_quasi_drug": false
+    },
+    {
+      "jan_code": "4589530701191",
+      "brand": "ALLNA ORGANIC",
+      "product_name": "Sunscreen",
+      "ingredients_jp": ["水", "メトキシケイヒ酸エチルヘキシル", "BG"],
+      "is_quasi_drug": false
+    }
+  ]
+}
