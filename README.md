@@ -1,4 +1,4 @@
-# 🌿 SkinGraph — AI-Powered Japanese Skincare Label Intelligence
+# 🌿 SkinGraph — AI日本語スキンケアラベル解析パイプライン
 
 <div align="center">
 
@@ -7,12 +7,158 @@
 ![Gemini](https://img.shields.io/badge/Google_Gemini-VLM_Inference-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen?style=for-the-badge)
 
-**A production-grade agentic pipeline that scans Japanese skincare product labels using a tiered Vision Language Model (VLM) strategy, self-correcting OCR loops, and fuzzy registry matching — all orchestrated with LangGraph.**
+**日本語スキンケア商品のラベルを、階層型VLM推論・自己修正ループ・ファジーマッチングで解析するエージェント型AIパイプラインです。**
 
-[English](#english) · [日本語](#japanese)
+[日本語](#japanese) · [English](#english)
 
 </div>
 
+---
+
+<a name="japanese"></a>
+
+## 🧠 このプロジェクトについて
+
+SkinGraphは、単純なOCR APIコールではなく、**3つのエンジニアリング設計思想**をもとに構築されています。
+
+1. **階層型推論によるコスト最適化** — 軽量なFlashモデルが全体の80%のケースを処理し、Proモデルは信頼スコアが不十分なときだけ起動します（コストは約10分の1）。
+2. **自己修正ループによる精度向上** — 1回目の抽出が失敗した場合、その失敗内容を構造化フィードバックとして次のプロンプトに注入し、2回目の精度を測定可能な形で向上させます。
+3. **レジストリ照合によるLLMコール削減** — 修正ループに入る前に、検証済み商品データベースとのファジーマッチングを実行します。99%以上の一致が得られた場合、2回目の推論をスキップし、約$0.007を節約します。
+
+---
+
+## 🏗️ システムアーキテクチャ
+
+### Level 2 — コンポーネント概要
+
+```mermaid
+flowchart TB
+    User(["📱 ユーザー\n（モバイルアプリ）"])
+    Ingest["🖼️ 画像取り込み\nダウンスケール → JPEG 85%\n最大2048px"]
+    VLM["🤖 階層型VLM推論\nGemini Flash → Pro"]
+    Registry["📚 レジストリエンジン\nファジーマッチ · rapidfuzz"]
+    Coach["💬 スキンケアコーチ\n成分分析・アドバイス"]
+    Retake["🔁 再撮影リクエスト\nユーザーへのフィードバック"]
+
+    User -->|"高解像度写真"| Ingest
+    Ingest -->|"最適化済み画像"| VLM
+    VLM -->|"高信頼スコア"| Registry
+    VLM -->|"解読不能"| Retake
+    Registry -->|"検証済み成分リスト"| Coach
+    Registry -->|"一致なし"| Coach
+    Coach -->|"パーソナライズされたアドバイス"| User
+    Retake -->|"再撮影の案内"| User
+```
+
+### Level 3 — LangGraphノードフロー
+
+```mermaid
+flowchart TD
+    Start(["🚀 開始"])
+    Flash["⚡ Flashスキャナー\nGemini Flash\n構造化出力"]
+    Router{"🔀 推論ルーター\n信頼スコアで分岐"}
+    EarlyCheck["🔍 早期レジストリ照合\n99%閾値\n一致→2回目LLMをスキップ"]
+    Correction["📝 修正ノード\n前回フィードバックを\n次プロンプトに注入"]
+    Pro["🧠 Proスキャナー\nGemini Pro\n湾曲テキストに特化"]
+    RegLookup["📚 レジストリ照合\n90%閾値\nAI抽出を検証済みデータで置換"]
+    ProRouter{"🔀 Proルーター"}
+    Retake["🔁 再撮影リクエスト\nユーザー向けメッセージ"]
+    End1(["✅ 終了"])
+    End2(["✅ 終了"])
+    End3(["❌ 終了\n再撮影案内"])
+
+    Start --> Flash
+    Flash --> Router
+
+    Router -->|"conf ≥ 0.85 ✅"| RegLookup
+    Router -->|"0.50 ≤ conf < 0.85 ⚠️"| EarlyCheck
+    Router -->|"conf < 0.50 🚨"| Pro
+
+    EarlyCheck -->|"≥ 99% 一致 🎯\n修正ループをスキップ"| End1
+    EarlyCheck -->|"一致なし"| Correction
+    Correction -->|"強化プロンプト\n試行回数 +1"| Flash
+
+    RegLookup --> End2
+
+    Pro --> ProRouter
+    ProRouter -->|"conf ≥ 0.85"| RegLookup
+    ProRouter -->|"conf < 0.50"| Retake
+    Retake --> End3
+
+    style EarlyCheck fill:#fff3cd,stroke:#ffc107
+    style Correction fill:#d1ecf1,stroke:#0dcaf0
+    style Retake fill:#f8d7da,stroke:#dc3545
+    style Flash fill:#d4edda,stroke:#28a745
+    style Pro fill:#cce5ff,stroke:#0d6efd
+```
+
+---
+
+## ✨ 主な機能
+
+| 機能 | 詳細 |
+|---|---|
+| ⚡ **階層型VLM推論** | Flash優先、信頼スコアに基づいてProへ自動エスカレーション |
+| 🔄 **自己修正ループ** | 最大2回のフィードバック付き再試行 |
+| 🔍 **早期レジストリ照合** | 初回スキャン後に99%ファジーマッチ → 修正LLMコールをスキップ |
+| 📚 **検証済みレジストリマッチング** | rapidfuzz WRatioスコアリングによるキュレーション済みデータベース照合 |
+| 🗾 **日本語ラベル特化** | JCIA基準成分正規化、医薬部外品検出 |
+| 🖼️ **画像最適化** | 推論前に最大2048pxへ自動ダウンスケール（ペイロード60〜80%削減） |
+| 🔭 **完全なオブザーバビリティ** | LangSmithトレーシング（ノード別レイテンシ・信頼スコア・ルーティング） |
+| 🧩 **構造化出力契約** | Pydantic v2による`ProductExtraction`スキーマ強制 |
+
+---
+
+## 🚀 セットアップ
+
+```bash
+git clone <your-repo-url>
+cd skincare-coach
+poetry install
+```
+
+`.env`ファイルを作成:
+
+```env
+GOOGLE_API_KEY=your_key_here
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=your_langsmith_key
+LANGCHAIN_PROJECT=skincare-architect-v1
+LANGCHAIN_HIDE_INPUTS=true
+```
+
+実行:
+
+```bash
+# 単一画像（裏ラベル・デフォルト）
+poetry run python run_pipeline.py data/golden_set/prod_001.jpg
+
+# 表ラベル
+poetry run python run_pipeline.py data/golden_set/prod_001.jpg --image-type front
+
+# Flash vs Pro 比較テスト
+poetry run python test_scanner.py
+```
+
+---
+
+## 🗺️ ロードマップ
+
+- [ ] 🔬 安全性監査ノード（EWG / CosIng 成分リスクスコアリング）
+- [ ] 💬 コーチノード（パーソナライズされたルーティンアドバイス）
+- [ ] 📱 モバイルAPIレイヤー（FastAPI）
+- [ ] 🏷️ バーコード / JANコード事前照合（既知商品のVLMスキップ）
+- [ ] 🌐 多言語ラベル対応（韓国語・中国語）
+
+---
+
+<div align="center">
+
+Built with ❤️ and matcha 🍵
+
+</div>
+
+---
 ---
 
 <a name="english"></a>
@@ -208,159 +354,3 @@ poetry run python test_scanner.py
 - [ ] 📱 Mobile API layer (FastAPI)
 - [ ] 🏷️ Barcode / JAN code pre-lookup (skip VLM entirely for known products)
 - [ ] 🌐 Multi-language label support (KR, CN)
-
----
----
-
-<a name="japanese"></a>
-
-# 🌿 SkinGraph — AI日本語スキンケアラベル解析パイプライン
-
-<div align="center">
-
-**日本語スキンケア商品のラベルを、階層型VLM推論・自己修正ループ・ファジーマッチングで解析するエージェント型AIパイプラインです。**
-
-</div>
-
----
-
-## 🧠 このプロジェクトについて
-
-SkinGraphは、単純なOCR APIコールではなく、**3つのエンジニアリング設計思想**をもとに構築されています。
-
-1. **階層型推論によるコスト最適化** — 軽量なFlashモデルが全体の80%のケースを処理し、Proモデルは信頼スコアが不十分なときだけ起動します（コストは約10分の1）。
-2. **自己修正ループによる精度向上** — 1回目の抽出が失敗した場合、その失敗内容を構造化フィードバックとして次のプロンプトに注入し、2回目の精度を測定可能な形で向上させます。
-3. **レジストリ照合によるLLMコール削減** — 修正ループに入る前に、検証済み商品データベースとのファジーマッチングを実行します。99%以上の一致が得られた場合、2回目の推論をスキップし、約$0.007を節約します。
-
----
-
-## 🏗️ システムアーキテクチャ
-
-### Level 2 — コンポーネント概要
-
-```mermaid
-flowchart TB
-    User(["📱 ユーザー\n（モバイルアプリ）"])
-    Ingest["🖼️ 画像取り込み\nダウンスケール → JPEG 85%\n最大2048px"]
-    VLM["🤖 階層型VLM推論\nGemini Flash → Pro"]
-    Registry["📚 レジストリエンジン\nファジーマッチ · rapidfuzz"]
-    Coach["💬 スキンケアコーチ\n成分分析・アドバイス"]
-    Retake["🔁 再撮影リクエスト\nユーザーへのフィードバック"]
-
-    User -->|"高解像度写真"| Ingest
-    Ingest -->|"最適化済み画像"| VLM
-    VLM -->|"高信頼スコア"| Registry
-    VLM -->|"解読不能"| Retake
-    Registry -->|"検証済み成分リスト"| Coach
-    Registry -->|"一致なし"| Coach
-    Coach -->|"パーソナライズされたアドバイス"| User
-    Retake -->|"再撮影の案内"| User
-```
-
-### Level 3 — LangGraphノードフロー
-
-```mermaid
-flowchart TD
-    Start(["🚀 開始"])
-    Flash["⚡ Flashスキャナー\nGemini Flash\n構造化出力"]
-    Router{"🔀 推論ルーター\n信頼スコアで分岐"}
-    EarlyCheck["🔍 早期レジストリ照合\n99%閾値\n一致→2回目LLMをスキップ"]
-    Correction["📝 修正ノード\n前回フィードバックを\n次プロンプトに注入"]
-    Pro["🧠 Proスキャナー\nGemini Pro\n湾曲テキストに特化"]
-    RegLookup["📚 レジストリ照合\n90%閾値\nAI抽出を検証済みデータで置換"]
-    ProRouter{"🔀 Proルーター"}
-    Retake["🔁 再撮影リクエスト\nユーザー向けメッセージ"]
-    End1(["✅ 終了"])
-    End2(["✅ 終了"])
-    End3(["❌ 終了\n再撮影案内"])
-
-    Start --> Flash
-    Flash --> Router
-
-    Router -->|"conf ≥ 0.85 ✅"| RegLookup
-    Router -->|"0.50 ≤ conf < 0.85 ⚠️"| EarlyCheck
-    Router -->|"conf < 0.50 🚨"| Pro
-
-    EarlyCheck -->|"≥ 99% 一致 🎯\n修正ループをスキップ"| End1
-    EarlyCheck -->|"一致なし"| Correction
-    Correction -->|"強化プロンプト\n試行回数 +1"| Flash
-
-    RegLookup --> End2
-
-    Pro --> ProRouter
-    ProRouter -->|"conf ≥ 0.85"| RegLookup
-    ProRouter -->|"conf < 0.50"| Retake
-    Retake --> End3
-
-    style EarlyCheck fill:#fff3cd,stroke:#ffc107
-    style Correction fill:#d1ecf1,stroke:#0dcaf0
-    style Retake fill:#f8d7da,stroke:#dc3545
-    style Flash fill:#d4edda,stroke:#28a745
-    style Pro fill:#cce5ff,stroke:#0d6efd
-```
-
----
-
-## ✨ 主な機能
-
-| 機能 | 詳細 |
-|---|---|
-| ⚡ **階層型VLM推論** | Flash優先、信頼スコアに基づいてProへ自動エスカレーション |
-| 🔄 **自己修正ループ** | 最大2回のフィードバック付き再試行 |
-| 🔍 **早期レジストリ照合** | 初回スキャン後に99%ファジーマッチ → 修正LLMコールをスキップ |
-| 📚 **検証済みレジストリマッチング** | rapidfuzz WRatioスコアリングによるキュレーション済みデータベース照合 |
-| 🗾 **日本語ラベル特化** | JCIA基準成分正規化、医薬部外品検出 |
-| 🖼️ **画像最適化** | 推論前に最大2048pxへ自動ダウンスケール（ペイロード60〜80%削減） |
-| 🔭 **完全なオブザーバビリティ** | LangSmithトレーシング（ノード別レイテンシ・信頼スコア・ルーティング） |
-| 🧩 **構造化出力契約** | Pydantic v2による`ProductExtraction`スキーマ強制 |
-
----
-
-## 🚀 セットアップ
-
-```bash
-git clone <your-repo-url>
-cd skincare-coach
-poetry install
-```
-
-`.env`ファイルを作成:
-
-```env
-GOOGLE_API_KEY=your_key_here
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=your_langsmith_key
-LANGCHAIN_PROJECT=skincare-architect-v1
-LANGCHAIN_HIDE_INPUTS=true
-```
-
-実行:
-
-```bash
-# 単一画像（裏ラベル・デフォルト）
-poetry run python run_pipeline.py data/golden_set/prod_001.jpg
-
-# 表ラベル
-poetry run python run_pipeline.py data/golden_set/prod_001.jpg --image-type front
-
-# Flash vs Pro 比較テスト
-poetry run python test_scanner.py
-```
-
----
-
-## 🗺️ ロードマップ
-
-- [ ] 🔬 安全性監査ノード（EWG / CosIng 成分リスクスコアリング）
-- [ ] 💬 コーチノード（パーソナライズされたルーティンアドバイス）
-- [ ] 📱 モバイルAPIレイヤー（FastAPI）
-- [ ] 🏷️ バーコード / JANコード事前照合（既知商品のVLMスキップ）
-- [ ] 🌐 多言語ラベル対応（韓国語・中国語）
-
----
-
-<div align="center">
-
-Built with ❤️ and matcha 🍵
-
-</div>
