@@ -10,6 +10,8 @@ from langchain_core.messages import HumanMessage
 from src.state import AgentState, ProductExtraction
 from src.config import FLASH_MODEL, PRO_MODEL
 
+
+
 # TODO: probably better to keep prompts in different files
 # TODO: fine-tune the prompt to Gemini requirements
 SCANNER_SYSTEM_PROMPT = """
