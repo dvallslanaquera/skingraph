@@ -1,0 +1,163 @@
+[
+  {
+    "id": "prod_001",
+    "metadata": {
+      "file_name": "prod_001.jpg",
+      "original_reference": "image_dea1af.png",
+      "image_category": "BACK_LABEL_INGREDIENTS",
+      "difficulty_score": 8,
+      "adversarial_tags": [
+        "cylindrical_distortion",
+        "low_lux_yellow_lighting",
+        "specular_reflection",
+        "dense_kanji_clusters"
+      ],
+      "language_primary": "JP"
+    },
+    "ground_truth": {
+      "brand_name": "Cetaphil / セタフィル",
+      "product_name": "Moisturizing Cream / モイスチャライジング クリーム",
+      "is_medicated_quasi_drug": false,
+      "manufacturer": "Galderma / ガルデルマ株式会社",
+      "star_ingredients": [
+        "ナイアシンアミド (Niacinamide)",
+        "パンテノール (Panthenol)",
+        "グリセリン (Glycerin)"
+      ],
+      "full_ingredient_list": [
+        "水",
+        "グリセリン",
+        "ワセリン",
+        "ジカプリリルエーテル",
+        "ジメチコン",
+        "ステアリン酸グリセリル",
+        "セタノール",
+        "ヒマワリ種子油",
+        "ステアリン酸PEG-30",
+        "酢酸トコフェロール",
+        "ジメチコノール",
+        "(アクリレーツ/アクリル酸アルキル(C10-30))クロスポリマー",
+        "ベンジルアルコール",
+        "フェノキシエタノール",
+        "アーモンド油",
+        "PG",
+        "パンテノール",
+        "ナイアシンアミド",
+        "EDTA-2Na",
+        "カルボマー",
+        "水酸化Na",
+        "トコフェロール",
+        "パントラクトン",
+        "クエン酸",
+        "BHT"
+      ],
+      "safety_logic_triggers": {
+        "allergy_notices": [
+          "Contains Prunus Amygdalus Dulcis (Sweet Almond) Oil"
+        ],
+        "conflict_status": "Clean (No High-Activity Acids)",
+        "usage_advice": "High emollient content; recommended for nighttime sealing or barrier recovery."
+      }
+    }
+  },
+  {
+    "id": "prod_002",
+    "metadata": {
+      "file_name": "prod_002.jpg",
+      "original_reference": "image_3.png",
+      "image_category": "BACK_LABEL_INGREDIENTS",
+      "difficulty_score": 7,
+      "adversarial_tags": [
+        "dense_single_block_text",
+        "curved_package_top",
+        "complex_plant_extract_list",
+        "high_density_kanji_clusters"
+      ],
+      "language_primary": "JP"
+    },
+    "ground_truth": {
+      "brand_name": "ALLNA ORGANIC / オルナ オーガニック",
+      "product_name": "Sunscreen / 日焼け止め 50g",
+      "is_medicated_quasi_drug": false,
+      "manufacturer": "ILMILD Co., Ltd. / イルミルド株式会社",
+      "star_ingredients": [
+        "グリチルリチン酸２Ｋ (Dipotassium Glycyrrhizate)",
+        "テトラヘキシルデカン酸アスコルビル (Tetrahexyldecyl Ascorbate)",
+        "ヒアルロン酸Na (Sodium Hyaluronate)"
+      ],
+      "uv_filters": [
+        "メトキシケイヒ酸エチルヘキシル (Chemical)",
+        "オクトクリレン (Chemical)",
+        "ジエチルアミノヒドロキシベンゾイル安息香酸ヘキシル (Chemical)"
+      ],
+      "full_ingredient_list": [
+        "水",
+        "メトキシケイヒ酸エチルヘキシル",
+        "エタノール",
+        "BG",
+        "オクトクリレン",
+        "ジエチルアミノヒドロキシベンゾイル安息香酸ヘキシル",
+        "シリカ",
+        "ステアリン酸グリセリル",
+        "ヒアルロン酸Na",
+        "加水分解ヒアルロン酸",
+        "ヒアルロン酸クロスポリマーNa",
+        "アセチルヒアルロン酸Na",
+        "加水分解コラーゲン",
+        "水溶性コラーゲン",
+        "サクシノイルアテロコラーゲン",
+        "オレンジ油",
+        "ローズマリー葉油",
+        "ラベンダー油",
+        "セラミドNP",
+        "メチルグルセス-10",
+        "グリチルリチン酸２Ｋ",
+        "トコフェロール",
+        "アスコルビルグルコシド",
+        "テトラヘキシルデカン酸アスコルビル",
+        "パルミチン酸アスコルビルリン酸３Na",
+        "パルミチン酸アスコルビル",
+        "シア脂",
+        "アルガニアスピノサ核油",
+        "オリーブ果実油",
+        "ツボクサエキス",
+        "ペンチレングリコール",
+        "マンダリンオレンジ果皮エキス",
+        "ユキノシタエキス",
+        "オウゴン根エキス",
+        "イタドリ根エキス",
+        "ソメイヨシノ葉エキス",
+        "カミツレ花エキス",
+        "ノイバラ果実エキス",
+        "トウキンセンカ花エキス",
+        "カンゾウ根エキス",
+        "チャ葉エキス",
+        "アルテア根エキス",
+        "イザヨイバラエキス",
+        "ヒメフウロエキス",
+        "ラベンダー花エキス",
+        "ボタンエキス",
+        "セイヨウオトギリソウ花/葉/茎エキス",
+        "フユボダイジュ花エキス",
+        "ヤグルマギク花エキス",
+        "ローマカミツレ花エキス",
+        "ユズ果実エキス",
+        "リン酸アスコルビルMg",
+        "ビスエチルヘキシルオキシフェノールメトキシフェニルトリアジン",
+        "シクロペンタシロキサン",
+        "ジメチコン",
+        "(アクリレーツ/アクリル酸アルキル(C10-30))クロスポリマー",
+        "水酸化K",
+        "カルボマー",
+        "フェノキシエタノール"
+      ],
+      "safety_logic_triggers": {
+        "allergy_notices": [
+          "Contains numerous plant extracts; risk of sensitization/contact dermatitis, specifically Lavender and Orange Oil."
+        ],
+        "conflict_status": "Conflict Warning - Layering Stability",
+        "usage_advice": "Final step of morning routine only. Reapply every 2 hours during direct exposure. Chemical filter dominant formulation; use with caution if skin barrier is compromised."
+      }
+    }
+  }
+]
