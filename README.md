@@ -143,6 +143,8 @@ cd skincare-coach
 poetry install
 ```
 
+> **OCRについて:** `scripts/run_ocr.py` はオープンソースの日本語OCRエンジン（YomiToku）をゴールデンセット画像に対して実行し、プレーンテキストを `data/ocr_out/` に出力します。これは **Phase 0ベンチマーク** として、OCRとVLMの精度差を定量化するためだけに存在します。プロダクショングラフ（`src/graph.py`）には組み込まれておらず、グラフはGemini VLM推論のみを使用します。
+
 `.env`ファイルを作成:
 
 ```env
@@ -321,12 +323,19 @@ skincare-coach/
 │       ├── auditor.py    # Safety audit node (in progress)
 │       └── coach.py      # Advice generation node (in progress)
 ├── data/
-│   ├── golden_set/       # 40 labelled product images for evaluation
-│   ├── registry.json     # Verified product + ingredient database
-│   └── ingredients.json  # JCIA ingredient reference
-├── run_pipeline.py       # CLI entry point
-└── test_scanner.py       # Flash vs Pro head-to-head test harness
+│   ├── golden_set/          # 40 labelled product images for evaluation
+│   ├── ground_truth.json    # Annotated ground truth (brand, ingredients, safety triggers)
+│   ├── registry.json        # Verified product + ingredient database
+│   ├── ingredients.json     # JCIA ingredient reference
+│   └── ocr_out/             # Raw OCR text output (benchmark artefacts, not production)
+├── scripts/
+│   └── run_ocr.py           # ⚠️ Standalone OCR benchmark — NOT wired into the graph
+├── run_pipeline.py          # CLI entry point
+├── evaluate.py              # Extraction accuracy scorer (VLM output vs ground truth)
+└── test_scanner.py          # Flash vs Pro head-to-head test harness
 ```
+
+> **Note on OCR:** `scripts/run_ocr.py` runs a local YomiToku Japanese OCR engine on the golden-set images and writes plain-text output to `data/ocr_out/`. It exists purely as a **Phase 0 benchmark baseline** to quantify the OCR-vs-VLM accuracy gap — it is intentionally excluded from the production graph (`src/graph.py`). The graph uses Gemini VLM inference exclusively.
 
 ---
 
