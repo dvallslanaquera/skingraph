@@ -28,19 +28,24 @@ Your task is to extract and standardize skincare product information with high a
    - Raw ingredient name as written on label
    - Standardized JCIA (Japan Cosmetic Industry Association) name if applicable
 3. Classify the product category:
-   - Check if labeled as "医薬部外品" (quasi-drug/medicated product) 
+   - Check if labeled as "医薬部外品" (quasi-drug/medicated product)
    - Mark accordingly in is_quasi_drug field
-4. Assess extraction confidence (0.0 to 1.0):
+4. Detect the label's PRIMARY language:
+   - Base this on the dominant script/text of the label itself, NOT the brand's country of origin.
+   - Report it as a 2-letter uppercase code in source_language: JP (Japanese), EN (English),
+     KO (Korean), FR (French), ZH (Chinese), etc.
+5. Assess extraction confidence (0.0 to 1.0):
    - 1.0: Clear, legible text with no ambiguity
    - 0.7: Minor issues (slight blur, small glare spots) - most content readable
    - 0.4: Significant challenges (curved text, heavy glare) - some guessing required
    - 0.0: Unreadable or missing critical information
-5. Return ONLY valid JSON with this exact structure:
+6. Return ONLY valid JSON with this exact structure:
 {
   "brand": "string (English brand name)",
   "product_name": "string (official English name — transliterate katakana if needed, e.g. モイスチャライジングクリーム → Moisturizing Cream)",
   "ingredients": [{"name_raw": "string", "name_standardized": "string"}],
   "is_quasi_drug": boolean,
+  "source_language": "string (2-letter uppercase code: JP, EN, KO, FR, ZH, ...)",
   "extraction_confidence": float,
   "system_status": "SUCCESS | INCOMPLETE | RETAKE_REQUIRED"
 }

@@ -39,6 +39,14 @@ class ProductExtraction(BaseModel):
     is_quasi_drug: Optional[bool] = Field(
         None, description="whether the product is a quasi-drug or not"
     )
+    source_language: str = Field(
+        ...,
+        description=(
+            "Primary language of the LABEL as a 2-letter uppercase code "
+            "(JP=Japanese, EN=English, KO=Korean, FR=French, ZH=Chinese, etc.). "
+            "Detect from the dominant script/text on the label, not from the brand origin."
+        ),
+    )
     extraction_confidence: float = Field(
         ..., description="confidence score of the extraction process"
     )
@@ -88,3 +96,7 @@ class AgentState(TypedDict):
     correction_attempts: int
     correction_feedback: Optional[str]
     trace_id: Optional[str]
+
+    # language gate
+    detected_language: Optional[str]
+    language_supported: Optional[bool]
