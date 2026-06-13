@@ -322,7 +322,7 @@ skincare-coach/
 │       ├── auditor.py    # Safety audit node (in progress)
 │       └── coach.py      # Advice generation node (in progress)
 ├── data/
-│   ├── golden_set/          # 40 labelled product images for evaluation
+│   ├── golden_set/          # 40 product label images (2 ground-truthed)
 │   ├── ground_truth.json    # Annotated ground truth (brand, ingredients, safety triggers)
 │   ├── registry.json        # Verified product + ingredient database
 │   ├── ingredients.json     # JCIA ingredient reference

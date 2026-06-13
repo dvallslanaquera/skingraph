@@ -77,7 +77,7 @@
     },
     "ground_truth": {
       "brand_name": "ALLNA ORGANIC / オルナ オーガニック",
-      "product_name": "Sunscreen / 日焼け止め 50g",
+      "product_name": "Sunscreen / 日焼け止め 51g",
       "is_medicated_quasi_drug": false,
       "manufacturer": "ILMILD Co., Ltd. / イルミルド株式会社",
       "star_ingredients": [
@@ -157,6 +157,167 @@
         ],
         "conflict_status": "Conflict Warning - Layering Stability",
         "usage_advice": "Final step of morning routine only. Reapply every 2 hours during direct exposure. Chemical filter dominant formulation; use with caution if skin barrier is compromised."
+      }
+    }
+  },
+  {
+    "id": "prod_003",
+    "metadata": {
+      "file_name": "prod_003.jpg",
+      "original_reference": "PXL_20260613_055129121.RAW-02.ORIGINAL.dng",
+      "image_category": "BACK_LABEL_INGREDIENTS",
+      "difficulty_score": 7,
+      "adversarial_tags": [
+        "cylindrical_distortion",
+        "dense_single_block_text",
+        "high_density_kanji_clusters"
+      ],
+      "language_primary": "JP"
+    },
+    "ground_truth": {
+      "brand_name": "ALLNA ORGANIC / オルナ オーガニック",
+      "product_name": "Moisturizing Lotion / しっとり乳液 150ml",
+      "is_medicated_quasi_drug": false,
+      "manufacturer": "ILMILD Co., Ltd. / イルミルド株式会社",
+      "star_ingredients": [
+        "セラミドNP (Ceramide NP)",
+        "セラミドAP (Ceramide AP)",
+        "セラミドNG (Ceramide NG)",
+        "セラミドEOP (Ceramide EOP)",
+        "セラミドAG (Ceramide AG)",
+        "アスコルビルグルコシド (Ascorbyl Glucoside)"
+      ],
+      "full_ingredient_list": [
+        "水",
+        "BG",
+        "グリセリン",
+        "スクワラン",
+        "トリエチルヘキサノイン",
+        "アスコルビルグルコシド",
+        "アセチルヒアルロン酸Na",
+        "アルガニアスピノサ核油",
+        "アルテア根エキス",
+        "イザヨイバラエキス",
+        "イタドリ根エキス",
+        "エタノール",
+        "エチルヘキシルグリセリン",
+        "オウゴン根エキス",
+        "オリーブ果実油",
+        "オレンジ果皮油",
+        "カミツレ花エキス",
+        "カルボマー",
+        "カンゾウ根エキス",
+        "キサンタンガム",
+        "キハダ樹皮エキス",
+        "キュウリ果実エキス",
+        "クエン酸",
+        "グリコシルトレハロース",
+        "サクシノイルアテロコラーゲン",
+        "シア脂",
+        "ジメチコン",
+        "ステアリン酸グリセリル(SE)",
+        "ステアリン酸ポリグリセリル-10",
+        "セイヨウオトギリソウ花/葉/茎エキス",
+        "セラミドAG",
+        "セラミドAP",
+        "セラミドEOP",
+        "セラミドNG",
+        "セラミドNP",
+        "ソメイヨシノ葉エキス",
+        "ソルビトール",
+        "チャ葉エキス",
+        "ツボクサエキス",
+        "ティーツリー葉油",
+        "テトラヘキシルデカン酸アスコルビル",
+        "トウキンセンカ花エキス",
+        "トレハロース",
+        "ノイバラ果実エキス",
+        "パルミチン酸アスコルビルリン酸3Na",
+        "ヒアルロン酸Na",
+        "ヒアルロン酸クロスポリマーNa",
+        "ヒメフウロエキス",
+        "フィトステロールズ",
+        "フユボダイジュ花エキス",
+        "ヘキサ(ヒドロキシステアリン酸/ステアリン酸/ロジン酸)ジペンタエリスリチル",
+        "ベヘニルアルコール",
+        "ペンチレングリコール",
+        "ボタンエキス",
+        "ポリソルベート60",
+        "マンダリンオレンジ果皮エキス",
+        "ヤグルマギク花エキス",
+        "ユキノシタエキス",
+        "ユズ果実エキス",
+        "ラベンダー花エキス",
+        "ラベンダー油",
+        "リン酸アスコルビルMg",
+        "ローズマリー葉エキス",
+        "ローマカミツレ花エキス",
+        "加水分解コラーゲン",
+        "加水分解ヒアルロン酸",
+        "加水分解水添デンプン",
+        "水酸化Na",
+        "水添レシチン",
+        "水溶性コラーゲン",
+        "フェノキシエタノール"
+      ],
+      "safety_logic_triggers": {
+        "allergy_notices": [
+          "Contains numerous botanical extracts and essential oils (Lavender Oil, Tea Tree Leaf Oil, Orange Peel Oil) which may cause contact allergy in sensitized skin."
+        ],
+        "conflict_status": "Clean (No High-Activity Acids)",
+        "usage_advice": "Rich emulsion format featuring five types of ceramides and multiple Vitamin C derivatives. Best used after watery serums to lock in hydration."
+      }
+    }
+  },
+  {
+    "id": "prod_004",
+    "metadata": {
+      "file_name": "prod_004.jpg",
+      "original_reference": "PXL_20260613_055142497.RAW-02.ORIGINAL.dng",
+      "image_category": "BACK_LABEL_INGREDIENTS",
+      "difficulty_score": 6,
+      "adversarial_tags": [
+        "flat_tube_crimp_distortion",
+        "pharmaceutical_label_structure",
+        "mixed_chemical_script"
+      ],
+      "language_primary": "KR"
+    },
+    "ground_truth": {
+      "brand_name": "Dong-A Pharmaceutical / 동아제약",
+      "product_name": "Melatoning Cream / 멜라토닝크림 30g",
+      "is_medicated_quasi_drug": true,
+      "manufacturer": "Dong-A Pharmaceutical Co., Ltd. / 동아제약",
+      "star_ingredients": [
+        "ヒドロキノン (Hydroquinone)"
+      ],
+      "full_ingredient_list": [
+        "ヒドロキノン",
+        "メチルパラベン",
+        "プロピルパラベン",
+        "濃グリセリン",
+        "デカメチルシクロペンタシロキサン",
+        "メチルグルセス-10",
+        "モノアンドジグリセリド",
+        "ブチルヒドロキシトルエン",
+        "ブチレングリコール",
+        "セタノール",
+        "ステアリン酸",
+        "ステアリルアルコール",
+        "パルミチン酸アスコルビル",
+        "流動パラフィン",
+        "ミリスチン酸イソプロピル",
+        "自己乳化型モノステアリン酸グリセリル",
+        "精製水",
+        "ポリエチレングリコール4000",
+        "ピロ亜硫酸ナトリウム"
+      ],
+      "safety_logic_triggers": {
+        "allergy_notices": [
+          "Contains Methylparaben and Propylparaben which may cause localized allergic reactions. Contains Sodium Metabisulfite (피로아硫酸나트륨) which can rarely cause severe hypersensitivity reactions or bronchospasm."
+        ],
+        "conflict_status": "High Activity Active Warning",
+        "usage_advice": "Contains 2% Hydroquinone. Must be used strictly as a spot treatment for hyperpigmentation. Do not expose treated areas to sunlight; daytime application requires broad-spectrum SPF, or it should be restricted to night use only."
       }
     }
   }
