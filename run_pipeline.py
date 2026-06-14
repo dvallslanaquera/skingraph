@@ -10,7 +10,8 @@ from dotenv import load_dotenv
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
 from src.state import UserProfile
-from src.user_store import get_user, get_user_name, save_user
+from src.user_store import (add_routine_product, get_routine, get_user,
+                            get_user_name, save_user)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -23,6 +24,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--user-profile", default=None, help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)")
     parser.add_argument("--user-id", default=None, help="Load a saved user profile from the database by id")
     parser.add_argument("--save-user", nargs="?", const="", default=None, help="Save the --user-profile to the database (optionally with a name) and print its id")
+    parser.add_argument("--add-to-routine", action="store_true", help="After a successful scan, save this product into the user's routine (requires --user-id)")
     return parser.parse_args()
 
 
@@ -65,15 +67,25 @@ def main():
 
     args = parse_args()
 
+    if args.add_to_routine and not args.user_id:
+        logging.error("--add-to-routine requires --user-id (a routine belongs to a saved user).")
+        sys.exit(1)
+
     user_profile = None
     user_name = None
+    routine_products = None
     if args.user_id:
         user_profile = get_user(args.user_id)
         if user_profile is None:
             logging.error("No user found with id: %s", args.user_id)
             sys.exit(1)
         user_name = get_user_name(args.user_id)
-        logging.info("Loaded user profile from DB: %s", args.user_id)
+        routine_products = get_routine(args.user_id)
+        logging.info(
+            "Loaded user profile from DB: %s (%d routine product(s))",
+            args.user_id,
+            len(routine_products),
+        )
     elif args.user_profile:
         with open(args.user_profile, "r", encoding="utf-8") as f:
             user_profile = UserProfile.model_validate(json.load(f))
@@ -93,6 +105,7 @@ def main():
         "is_ready_for_logic": False,
         "user_profile": user_profile,
         "user_name": user_name,
+        "routine_products": routine_products,
     }
 
     logging.info("--- STARTING FULL PIPELINE INVOCATION ---")
@@ -162,6 +175,27 @@ def main():
             logging.warning(
                 f"NOT IN REGISTRY: {data.brand} - {data.product_name} "
                 f"saved to {REGISTRY_CANDIDATES_PATH} for later addition."
+            )
+
+    # Save this product into the user's routine when explicitly requested.
+    if args.add_to_routine:
+        data = final_state.get("extracted_data")
+        if ready and data is not None:
+            inci = [
+                ing.get("name_standardized")
+                for ing in (final_state.get("standardized_ingredients") or [])
+                if ing.get("name_standardized")
+            ]
+            product_id = add_routine_product(
+                args.user_id, data.brand, data.product_name, inci, data.is_quasi_drug
+            )
+            logging.info(
+                "Added to routine: %s - %s (%d INCI) [product_id=%s]",
+                data.brand, data.product_name, len(inci), product_id,
+            )
+        else:
+            logging.warning(
+                "--add-to-routine skipped: no usable product from this scan."
             )
 
 

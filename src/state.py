@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, TypedDict
+from typing import List, Literal, Optional, Tuple, TypedDict
 
 from pydantic import BaseModel, Field
 
@@ -87,6 +87,64 @@ class UserProfile(BaseModel):
     budget: Optional[Literal["budget", "mid-range", "premium"]] = None
 
 
+class RoutineProduct(BaseModel):
+    """A product the user has saved into their current routine ("shelf").
+
+    ``ingredients`` holds canonical INCI names (the same keys the auditor reasons
+    over), so a saved product can be re-analysed against a new scan without
+    re-running OCR.
+    """
+
+    product_id: str = Field(..., description="stable id of the saved product")
+    brand: str = Field(..., description="brand of the saved product")
+    product_name: str = Field(..., description="name of the saved product")
+    ingredients: List[str] = Field(
+        default_factory=list,
+        description="canonical INCI names of the saved product",
+    )
+    is_quasi_drug: Optional[bool] = Field(
+        None, description="whether the saved product is a quasi-drug"
+    )
+
+
+class CrossConflict(BaseModel):
+    """One deterministic conflict between the new product and a shelf product."""
+
+    with_product: str = Field(
+        ..., description="the existing routine product the new one conflicts with"
+    )
+    severity: str = Field("medium", description="high | medium | low")
+    groups: Tuple[str, str] = Field(
+        ..., description="the two conflicting active groups (new side, existing side)"
+    )
+    reason: str = Field(..., description="why the two groups conflict (from the matrix)")
+
+
+class RoutineFit(BaseModel):
+    """Deterministic evaluation of a new product against the user's routine.
+
+    Computed by ``routine_advisor_node``; the coach turns these grounded findings
+    into 薬機法-safe bilingual prose. Empty lists mean "nothing to report".
+    """
+
+    conflicts: List[CrossConflict] = Field(
+        default_factory=list,
+        description="cross-product active conflicts with existing routine products",
+    )
+    redundancy: List[str] = Field(
+        default_factory=list,
+        description="roles the new product duplicates from the existing routine",
+    )
+    value_add: List[str] = Field(
+        default_factory=list,
+        description="unmet user goals the new product would help target",
+    )
+    existing_products: List[str] = Field(
+        default_factory=list,
+        description="'Brand — Product' labels of the current routine, for context",
+    )
+
+
 # graph state: shared memory bus between nodes, also used for routing decisions
 class AgentState(TypedDict):
     # input data
@@ -130,3 +188,8 @@ class AgentState(TypedDict):
     # personalised coaching
     user_profile: Optional[UserProfile]
     user_name: Optional[str]
+
+    # routine memory: the user's saved "shelf" (loaded at entry) and the
+    # deterministic cross-product evaluation of the new scan against it.
+    routine_products: Optional[List[RoutineProduct]]
+    routine_fit: Optional[RoutineFit]

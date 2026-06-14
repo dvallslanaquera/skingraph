@@ -11,7 +11,7 @@ from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from src.config import USER_DB_PATH
-from src.state import UserProfile
+from src.state import RoutineProduct, UserProfile
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -31,6 +31,22 @@ CREATE TABLE IF NOT EXISTS users (
 );
 """
 
+# Per-user "shelf" of products the user currently uses. ingredients is stored as
+# a JSON list of canonical INCI names so a saved product can be re-audited
+# against a new scan without re-running OCR.
+_ROUTINE_SCHEMA = """
+CREATE TABLE IF NOT EXISTS routine_products (
+    product_id    TEXT PRIMARY KEY,
+    user_id       TEXT NOT NULL,
+    brand         TEXT,
+    product_name  TEXT,
+    ingredients   TEXT,
+    is_quasi_drug INTEGER,
+    added_at      TEXT NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id)
+);
+"""
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -40,6 +56,7 @@ def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(USER_DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute(_SCHEMA)
+    conn.execute(_ROUTINE_SCHEMA)
     return conn
 
 
@@ -155,5 +172,83 @@ def delete_user(user_id: str) -> bool:
     """Delete a profile by id. Returns True if a row was removed."""
     with _connect() as conn:
         cur = conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
+        conn.commit()
+        return cur.rowcount > 0
+
+
+# --- Routine ("shelf") of products a user currently uses --------------------
+
+
+def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
+    return RoutineProduct(
+        product_id=row["product_id"],
+        brand=row["brand"] or "",
+        product_name=row["product_name"] or "",
+        ingredients=json.loads(row["ingredients"]) if row["ingredients"] else [],
+        is_quasi_drug=(
+            bool(row["is_quasi_drug"]) if row["is_quasi_drug"] is not None else None
+        ),
+    )
+
+
+def add_routine_product(
+    user_id: str,
+    brand: str,
+    product_name: str,
+    ingredients: List[str],
+    is_quasi_drug: Optional[bool] = None,
+) -> str:
+    """Save a product into the user's routine. Returns its product_id.
+
+    Dedupes on (user_id, lower(brand), lower(product_name)) — re-adding the same
+    product refreshes its ingredient list instead of creating a duplicate row.
+    """
+    with _connect() as conn:
+        existing = conn.execute(
+            """
+            SELECT product_id FROM routine_products
+            WHERE user_id = ? AND lower(brand) = ? AND lower(product_name) = ?
+            """,
+            (user_id, brand.strip().lower(), product_name.strip().lower()),
+        ).fetchone()
+        product_id = existing["product_id"] if existing else str(uuid4())
+
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO routine_products (
+                product_id, user_id, brand, product_name, ingredients,
+                is_quasi_drug, added_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                product_id,
+                user_id,
+                brand,
+                product_name,
+                json.dumps(ingredients),
+                None if is_quasi_drug is None else int(is_quasi_drug),
+                _now(),
+            ),
+        )
+        conn.commit()
+    return product_id
+
+
+def get_routine(user_id: str) -> List[RoutineProduct]:
+    """Return the user's saved routine products, most recently added first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM routine_products WHERE user_id = ? ORDER BY added_at DESC",
+            (user_id,),
+        ).fetchall()
+    return [_row_to_routine_product(r) for r in rows]
+
+
+def remove_routine_product(product_id: str) -> bool:
+    """Delete a routine product by id. Returns True if a row was removed."""
+    with _connect() as conn:
+        cur = conn.execute(
+            "DELETE FROM routine_products WHERE product_id = ?", (product_id,)
+        )
         conn.commit()
         return cur.rowcount > 0

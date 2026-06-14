@@ -10,6 +10,7 @@ from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
+from src.nodes.routine_advisor import routine_advisor_node
 from src.nodes.scanner import (classify_side_node, flash_scanner_node,
                                pro_scanner_node)
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
@@ -122,6 +123,7 @@ workflow.add_node("tag_language", tag_language_node)
 workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
 workflow.add_node("auditor", auditor_node)
+workflow.add_node("routine_advisor", routine_advisor_node)
 workflow.add_node("coach", coach_node)
 workflow.add_node("verify_identity", verify_identity_node)
 workflow.add_node("web_search", web_search_node)
@@ -200,7 +202,8 @@ workflow.add_conditional_edges(
 )
 
 workflow.add_edge("normalizer", "auditor")
-workflow.add_edge("auditor", "coach")
+workflow.add_edge("auditor", "routine_advisor")
+workflow.add_edge("routine_advisor", "coach")
 workflow.add_edge("coach", END)
 workflow.add_edge("confirm_identity", END)
 workflow.add_edge("search_failed", END)

@@ -1,0 +1,57 @@
+{
+  "_comment": "Function/active categories used ONLY by the routine advisor for redundancy + value-add (NOT for safety conflicts — those use conflict_matrix.json). A product belongs to a category if it carries one of the category's DEFINING markers. Ubiquitous humectants (Glycerin, glycols) are deliberately excluded from 'Hydration' so two ordinary moisturisers don't read as redundant; only distinctive hydrators (hyaluronic family, squalane, trehalose) count. Markers are canonical INCI keys from ingredient_master.json; entries not yet in the master stay dormant until added (same convention as the conflict matrix).",
+  "Vitamin C": [
+    "Ascorbic Acid",
+    "Ascorbyl Glucoside",
+    "Ascorbyl Palmitate",
+    "Magnesium Ascorbyl Phosphate",
+    "Tetrahexyldecyl Ascorbate",
+    "Trisodium Ascorbyl Palmitate Phosphate"
+  ],
+  "Retinoids": ["Retinol"],
+  "Niacinamide": ["Niacinamide"],
+  "Peptides": [
+    "Acetyl Hexapeptide-8",
+    "Palmitoyl Pentapeptide-4",
+    "Palmitoyl Tetrapeptide-7",
+    "Palmitoyl Tripeptide-1",
+    "Copper Tripeptide-1",
+    "Carnosine",
+    "Glutathione"
+  ],
+  "AHA": ["Glycolic Acid", "Lactic Acid"],
+  "BHA": ["Salicylic Acid"],
+  "Hydration": [
+    "Sodium Hyaluronate",
+    "Sodium Acetylated Hyaluronate",
+    "Sodium Hyaluronate Crosspolymer",
+    "Hydrolyzed Hyaluronic Acid",
+    "Squalane",
+    "Trehalose",
+    "Glycosyl Trehalose"
+  ],
+  "Barrier": [
+    "Ceramide NP",
+    "Ceramide AP",
+    "Ceramide EOP",
+    "Ceramide NG",
+    "Ceramide AG",
+    "Phytosterols",
+    "Hydrogenated Lecithin"
+  ],
+  "Sunscreen": [
+    "Ethylhexyl Methoxycinnamate",
+    "Octocrylene",
+    "Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine",
+    "Diethylamino Hydroxybenzoyl Hexyl Benzoate",
+    "Zinc Oxide",
+    "Titanium Dioxide"
+  ],
+  "Cleanser": [
+    "Sodium Lauryl Sulfate",
+    "Sodium Laureth Sulfate",
+    "Cocamidopropyl Betaine",
+    "Sodium Cocoyl Isethionate",
+    "Potassium Cocoate"
+  ]
+}
