@@ -133,3 +133,4 @@ class AgentState(TypedDict):
 
     # personalised coaching
     user_profile: Optional[UserProfile]
+    user_name: Optional[str]

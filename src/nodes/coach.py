@@ -6,7 +6,7 @@
 #   (b) restricts the model to only discussing ingredients that are actually
 #       present in the product — no invented benefits.
 import logging
-from typing import List, Optional, cast
+from typing import List, Optional, Tuple, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -50,8 +50,14 @@ REQUIRED — use only compliant phrasings:
 • 〜をサポートする / supports the look or feel of...
 • 注意が必要です / caution is advised (for risks — never 危険 or 有害)
 
-PREGNANCY: whenever relevant, include:
-妊娠中・授乳中の方は医師にご相談の上ご使用ください
+PREGNANCY — STRICT:
+• Mention pregnancy or breastfeeding ONLY if the user profile explicitly states
+  the user is pregnant or breastfeeding. The system adds that caution separately.
+• NEVER raise pregnancy speculatively ("if you become pregnant…"), and NEVER
+  infer or hint at it from the user's age or gender. Assuming or alluding to a
+  woman's pregnancy status unprompted is disrespectful — do not do it.
+• When the profile DOES indicate pregnancy, the compliant caution is:
+  妊娠中・授乳中の方は医師にご相談の上ご使用ください
 
 ━━ SKIN TYPE → BEHAVIOUR ━━
 Adapt texture, layering, and frequency to the user's skin type:
@@ -81,41 +87,62 @@ than inventing a benefit.
 ━━ SCOPE ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
-• Output in English. Include Japanese terms where standard.
+• TWO COMPLETE VERSIONS — produce the entire advice twice:
+    'japanese': every field written ONLY in Japanese (敬体, 薬機法-compliant).
+    'english':  the SAME advice written ONLY in English.
+  Each version is self-contained: do NOT mix languages within a field. The two
+  versions must convey the same content, just in different languages.
 """.strip()
 
 
-class CoachResponse(BaseModel):
+class AdviceBlock(BaseModel):
+    """One complete set of advice, written entirely in a single language."""
+
+    summary: str = Field(
+        default="",
+        description=(
+            "A personalised opening (2-4 sentences) shown before the routine. "
+            "It MUST: (1) name the scanned product (brand + product name); "
+            "(2) state in one sentence what this product is for / its purpose; "
+            "(3) say whether it is a good fit for THIS user, explicitly citing the "
+            "user's name and their relevant traits (skin type, goals, pregnancy, "
+            "skin conditions) so they can see their profile was considered. "
+            "Address the user by name. Never promise outcomes or use medical claims."
+        ),
+    )
     am_steps: List[str] = Field(
         default_factory=list,
-        description=(
-            "Ordered AM routine steps showing where THIS product fits. Each item is "
-            "one concise, actionable step (e.g. 'Cleanse with a gentle cleanser', "
-            "'Apply this product to damp skin', 'Finish with SPF'). 薬機法-compliant."
-        ),
+        description="Ordered AM routine steps showing where THIS product fits.",
     )
     pm_steps: List[str] = Field(
         default_factory=list,
         description=(
-            "Ordered PM routine steps showing where THIS product fits. Flag any "
-            "PM-only constraints (photosensitising citrus oils, retinoids). "
-            "薬機法-compliant."
+            "Ordered PM routine steps. Flag PM-only constraints "
+            "(photosensitising citrus oils, retinoids)."
         ),
     )
     cautions: List[str] = Field(
         default_factory=list,
         description=(
-            "User-profile-specific cautions: skin conditions, detected ingredient "
-            "conflicts relevant to this user, sensitivity flags. "
-            "One concern per item. 薬機法-compliant."
+            "User-profile-specific cautions (skin conditions, conflicts, "
+            "sensitivity). One concern per item."
         ),
     )
     tips: List[str] = Field(
         default_factory=list,
         description=(
-            "3-5 practical tips tailored to this user's skin type, goals, "
-            "available routine time, and budget. 薬機法-compliant."
+            "3-5 practical tips for this user's skin type, goals, routine "
+            "time, and budget."
         ),
+    )
+
+
+class CoachResponse(BaseModel):
+    japanese: AdviceBlock = Field(
+        description="The complete advice written ONLY in Japanese (敬体, 薬機法-compliant)."
+    )
+    english: AdviceBlock = Field(
+        description="The same complete advice written ONLY in English."
     )
 
 
@@ -154,14 +181,16 @@ def _product_context(state: AgentState) -> str:
     return "\n".join(lines)
 
 
-def _user_context(profile: Optional[UserProfile]) -> str:
+def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
     if profile is None:
         return (
             "User profile: not provided — "
-            "give general-purpose advice suitable for all skin types."
+            "give general-purpose advice suitable for all skin types. "
+            "No name is available, so address the user generically."
         )
 
     lines = ["User profile:"]
+    lines.append(f"  Name: {name}" if name else "  Name: (not provided)")
     if profile.skin_type:
         lines.append(f"  Skin type: {profile.skin_type}")
     if profile.age is not None:
@@ -186,23 +215,62 @@ def _user_context(profile: Optional[UserProfile]) -> str:
     return "\n".join(lines)
 
 
-def _pregnancy_cautions(state: AgentState, profile: Optional[UserProfile]) -> List[str]:
-    """Hardcoded pregnancy flags for any high-risk INCI names present in the product."""
+def _pregnancy_cautions(
+    state: AgentState, profile: Optional[UserProfile]
+) -> Tuple[List[str], List[str]]:
+    """Deterministic pregnancy flags as (japanese, english) caution lists."""
     if profile is None or not profile.is_pregnant:
-        return []
+        return [], []
     present = {
         i["name_standardized"]
         for i in (state.get("standardized_ingredients") or [])
         if i.get("name_standardized")
     }
     flagged = sorted(present & _PREGNANCY_FLAGGED_INCI)
+    consult = "妊娠中・授乳中の方は医師にご相談の上ご使用ください。"
     if flagged:
-        return [
-            f"Pregnancy caution: {', '.join(flagged)} should be avoided during "
-            "pregnancy and breastfeeding. "
-            "妊娠中・授乳中の方は医師にご相談の上ご使用ください。"
+        ja = [
+            f"妊娠中の注意: {', '.join(flagged)} は妊娠中・授乳期のご使用は"
+            f"お控えください。{consult}"
         ]
-    return ["妊娠中・授乳中の方は医師にご相談の上ご使用ください。"]
+        en = [
+            f"Pregnancy caution: {', '.join(flagged)} should be avoided during "
+            "pregnancy and breastfeeding. Please consult a doctor before use."
+        ]
+        return ja, en
+    return [consult], [
+        "If you are pregnant or breastfeeding, please consult a doctor before use."
+    ]
+
+
+# Section headers per language: (am, pm, cautions, tips).
+_HEADERS = {
+    "ja": ("朝のお手入れ", "夜のお手入れ", "注意事項", "アドバイス"),
+    "en": ("AM Routine", "PM Routine", "Cautions", "Tips"),
+}
+
+
+def _render_block(block: AdviceBlock, lang: str, extra_cautions: List[str]) -> str:
+    """Render one single-language AdviceBlock into a printable section."""
+    am_h, pm_h, caut_h, tips_h = _HEADERS[lang]
+    cautions = extra_cautions + block.cautions
+
+    sections: List[str] = []
+    if block.summary.strip():
+        sections.append(block.summary.strip())
+    sections.append(
+        f"{am_h}:\n"
+        + "\n".join(f"  {i}. {s}" for i, s in enumerate(block.am_steps, 1))
+    )
+    sections.append(
+        f"{pm_h}:\n"
+        + "\n".join(f"  {i}. {s}" for i, s in enumerate(block.pm_steps, 1))
+    )
+    if cautions:
+        sections.append(f"{caut_h}:\n" + "\n".join(f"  • {c}" for c in cautions))
+    if block.tips:
+        sections.append(f"{tips_h}:\n" + "\n".join(f"  • {t}" for t in block.tips))
+    return "\n\n".join(sections)
 
 
 def coach_node(state: AgentState) -> dict:
@@ -217,13 +285,18 @@ def coach_node(state: AgentState) -> dict:
         }
 
     profile: Optional[UserProfile] = state.get("user_profile")
-    pregnancy_flags = _pregnancy_cautions(state, profile)
+    user_name = state.get("user_name")
+    preg_ja, preg_en = _pregnancy_cautions(state, profile)
 
     human_prompt = (
         f"## Product Analysis\n{_product_context(state)}\n\n"
-        f"## {_user_context(profile)}\n\n"
-        "Provide AM routine advice, PM routine advice, "
-        "user-specific cautions, and practical tips for this product."
+        f"## {_user_context(profile, user_name)}\n\n"
+        "Write a personalised 'summary' opening that names the scanned product, "
+        "states its purpose in one sentence, and tells the user whether it suits "
+        "them — citing their name and relevant traits. Then provide AM routine "
+        "advice, PM routine advice, user-specific cautions, and practical tips. "
+        "Produce the WHOLE thing twice: once entirely in Japanese ('japanese'), "
+        "once entirely in English ('english')."
     )
 
     model = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2)
@@ -234,35 +307,33 @@ def coach_node(state: AgentState) -> dict:
         ),
     )
 
-    # Flatten into the two AgentState output fields.
-    all_cautions = pregnancy_flags + response.cautions
-    recommendations: List[str] = (
-        [f"[AM] {s}" for s in response.am_steps]
-        + [f"[PM] {s}" for s in response.pm_steps]
-        + all_cautions
-        + response.tips
+    ja, en = response.japanese, response.english
+
+    # Japanese version in full, then a separator, then the English version.
+    ja_text = _render_block(ja, "ja", preg_ja)
+    en_text = _render_block(en, "en", preg_en)
+    coach_advice = (
+        "【日本語】\n" + ja_text + "\n\n" + "=" * 60 + "\n\n"
+        "【English】\n" + en_text
     )
 
-    sections = [
-        "AM Routine:\n"
-        + "\n".join(f"  {i}. {s}" for i, s in enumerate(response.am_steps, 1)),
-        "PM Routine:\n"
-        + "\n".join(f"  {i}. {s}" for i, s in enumerate(response.pm_steps, 1)),
-    ]
-    if all_cautions:
-        sections.append("Cautions:\n" + "\n".join(f"  • {c}" for c in all_cautions))
-    if response.tips:
-        sections.append("Tips:\n" + "\n".join(f"  • {t}" for t in response.tips))
-    coach_advice = "\n\n".join(sections)
+    # Machine-readable list keeps the English steps for downstream consumers.
+    all_cautions_en = preg_en + en.cautions
+    recommendations: List[str] = (
+        [f"[AM] {s}" for s in en.am_steps]
+        + [f"[PM] {s}" for s in en.pm_steps]
+        + all_cautions_en
+        + en.tips
+    )
 
     report = state["safety_report"]
     logging.info(
-        "Coach: score=%.2f, %d AM step(s), %d PM step(s), %d caution(s), %d tip(s).",
+        "Coach: score=%.2f, %d AM / %d PM step(s), %d caution(s), %d tip(s).",
         report.safety_score,
-        len(response.am_steps),
-        len(response.pm_steps),
-        len(all_cautions),
-        len(response.tips),
+        len(en.am_steps),
+        len(en.pm_steps),
+        len(all_cautions_en),
+        len(en.tips),
     )
 
     return {
