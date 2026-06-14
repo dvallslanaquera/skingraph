@@ -100,3 +100,7 @@ class AgentState(TypedDict):
     # language gate
     detected_language: Optional[str]
     language_supported: Optional[bool]
+
+    # registry + normalization
+    registry_matched: Optional[bool]
+    unmatched_ingredients: Optional[List[str]]

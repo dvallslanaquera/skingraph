@@ -10,3 +10,9 @@ PRO_MODEL = "gemini-3.1-pro-preview"
 # Anything outside this set is routed to a clean "unsupported language" exit
 # instead of silently failing the registry lookup.
 SUPPORTED_LANGUAGES = {"JP"}
+
+# Normalizer: maps raw ingredient names to canonical INCI keys.
+INGREDIENT_MASTER_PATH = "data/ingredient_master.json"
+NORMALIZER_FUZZY_THRESHOLD = 90  # rapidfuzz score below which a name stays unmapped
+# Where un-registered products are logged so they can be added to the registry later.
+REGISTRY_CANDIDATES_PATH = "data/registry_candidates.json"

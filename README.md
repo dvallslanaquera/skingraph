@@ -319,14 +319,16 @@ skincare-coach/
 │   └── nodes/
 │       ├── scanner.py    # Flash & Pro VLM nodes + image optimisation
 │       ├── registry.py   # Fuzzy registry match (early check + full lookup)
+│       ├── normalizer.py # Maps raw ingredient names -> canonical INCI keys
 │       ├── auditor.py    # Safety audit node (in progress)
 │       └── coach.py      # Advice generation node (in progress)
 ├── data/
-│   ├── golden_set/          # 40 product label images (2 ground-truthed)
-│   ├── ground_truth.json    # Annotated ground truth (brand, ingredients, safety triggers)
-│   ├── registry.json        # Verified product + ingredient database
-│   ├── ingredients.json     # JCIA ingredient reference
-│   └── ocr_out/             # Raw OCR text output (benchmark artefacts, not production)
+│   ├── golden_set/             # 40 product label images (4 ground-truthed)
+│   ├── ground_truth.json       # Annotated ground truth (brand, ingredients, safety triggers)
+│   ├── registry.json           # Verified product + ingredient database
+│   ├── ingredient_master.json  # Canonical INCI ledger (synonyms -> INCI key)
+│   ├── registry_candidates.json # Auto-logged products not yet in the registry
+│   └── ocr_out/                # Raw OCR text output (benchmark artefacts, not production)
 ├── scripts/
 │   └── run_ocr.py           # ⚠️ Standalone OCR benchmark — NOT wired into the graph
 ├── run_pipeline.py          # CLI entry point
