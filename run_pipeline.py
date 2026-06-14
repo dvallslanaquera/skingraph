@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
 from src.state import UserProfile
+from src.user_store import get_user, save_user
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -20,6 +21,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("image_path", help="Path to the product image (e.g. data/golden_set/prod_001.jpg)")
     parser.add_argument("--image-type", choices=["front", "back"], default="back", help="Side of the product label (default: back)")
     parser.add_argument("--user-profile", default=None, help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)")
+    parser.add_argument("--user-id", default=None, help="Load a saved user profile from the database by id")
+    parser.add_argument("--save-user", nargs="?", const="", default=None, help="Save the --user-profile to the database (optionally with a name) and print its id")
     return parser.parse_args()
 
 
@@ -63,10 +66,19 @@ def main():
     args = parse_args()
 
     user_profile = None
-    if args.user_profile:
+    if args.user_id:
+        user_profile = get_user(args.user_id)
+        if user_profile is None:
+            logging.error("No user found with id: %s", args.user_id)
+            sys.exit(1)
+        logging.info("Loaded user profile from DB: %s", args.user_id)
+    elif args.user_profile:
         with open(args.user_profile, "r", encoding="utf-8") as f:
             user_profile = UserProfile.model_validate(json.load(f))
         logging.info("Loaded user profile: %s", args.user_profile)
+        if args.save_user is not None:
+            new_id = save_user(user_profile, name=args.save_user or None)
+            logging.info("Saved user profile to DB with id: %s", new_id)
 
     inputs = {
         "image_path": args.image_path,

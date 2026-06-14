@@ -27,6 +27,11 @@ _PREGNANCY_FLAGGED_INCI = {
 _SYSTEM_PROMPT = """
 You are a Japanese skincare specialist assistant providing cosmetics usage guidance.
 
+━━ VOICE ━━
+Write like a knowledgeable friend, not a pamphlet. Be warm, specific, and concise.
+No filler sentences, no generic platitudes ("everyone's skin is different",
+"consistency is key"). Every sentence must carry real, product-specific information.
+
 ━━ 薬機法 COMPLIANCE — MANDATORY ━━
 You advise on COSMETICS only, not pharmaceuticals or medical treatments.
 
@@ -48,6 +53,31 @@ REQUIRED — use only compliant phrasings:
 PREGNANCY: whenever relevant, include:
 妊娠中・授乳中の方は医師にご相談の上ご使用ください
 
+━━ SKIN TYPE → BEHAVIOUR ━━
+Adapt texture, layering, and frequency to the user's skin type:
+• dry         → lean on humectants + occlusives; layer onto damp skin; richer
+                textures; avoid high-alcohol products that can feel stripping.
+• oily        → favour lightweight/gel textures; don't over-cleanse (can trigger
+                rebound oiliness); go easy on heavy occlusives.
+• combination → zone it: lighter application on the T-zone, more nourishing on
+                the cheeks.
+• normal      → maintain balance; focus on barrier upkeep and sun protection.
+• sensitive   → prefer fragrance-free; introduce one new active at a time; patch
+                test first; be cautious with essential oils and fragrance components.
+
+━━ GOALS → INGREDIENTS (cite only ones actually in the product) ━━
+Connect the user's goals to ingredients PRESENT in this product. Never promise outcomes.
+• brightening    → Niacinamide, Ascorbic Acid & derivatives (Ascorbyl Glucoside,
+                   Magnesium Ascorbyl Phosphate, Tetrahexyldecyl Ascorbate) → 明るい印象の肌へ
+• anti_aging / エイジングケア → Retinol, peptides (Palmitoyl/Acetyl...), Niacinamide,
+                   antioxidants (Tocopherol) → 肌を整える, ハリのある印象
+• hydration      → Sodium Hyaluronate, Glycerin, Ceramides, Panthenol, Squalane → うるおいを与える
+• acne_control   → Salicylic Acid, Niacinamide; lightweight textures; keep wording to
+                   肌を清潔に保つ / clear-LOOKING skin (never "treats acne")
+• barrier_repair → Ceramides, Panthenol, Phytosterols, fatty alcohols; avoid stacking exfoliants
+If the product contains nothing relevant to a stated goal, say so honestly rather
+than inventing a benefit.
+
 ━━ SCOPE ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
@@ -56,19 +86,21 @@ PREGNANCY: whenever relevant, include:
 
 
 class CoachResponse(BaseModel):
-    am_advice: str = Field(
+    am_steps: List[str] = Field(
+        default_factory=list,
         description=(
-            "How to use this product in the AM routine: step order, "
-            "what to layer before/after, any morning-specific notes. "
-            "2-4 sentences. 薬機法-compliant."
-        )
+            "Ordered AM routine steps showing where THIS product fits. Each item is "
+            "one concise, actionable step (e.g. 'Cleanse with a gentle cleanser', "
+            "'Apply this product to damp skin', 'Finish with SPF'). 薬機法-compliant."
+        ),
     )
-    pm_advice: str = Field(
+    pm_steps: List[str] = Field(
+        default_factory=list,
         description=(
-            "How to use this product in the PM routine. Note any PM-only "
-            "constraints (photosensitising citrus oils, retinoids, etc.). "
-            "2-4 sentences. 薬機法-compliant."
-        )
+            "Ordered PM routine steps showing where THIS product fits. Flag any "
+            "PM-only constraints (photosensitising citrus oils, retinoids). "
+            "薬機法-compliant."
+        ),
     )
     cautions: List[str] = Field(
         default_factory=list,
@@ -205,23 +237,30 @@ def coach_node(state: AgentState) -> dict:
     # Flatten into the two AgentState output fields.
     all_cautions = pregnancy_flags + response.cautions
     recommendations: List[str] = (
-        [f"[AM] {response.am_advice}", f"[PM] {response.pm_advice}"]
+        [f"[AM] {s}" for s in response.am_steps]
+        + [f"[PM] {s}" for s in response.pm_steps]
         + all_cautions
         + response.tips
     )
 
-    sections = [f"AM: {response.am_advice}", f"PM: {response.pm_advice}"]
+    sections = [
+        "AM Routine:\n"
+        + "\n".join(f"  {i}. {s}" for i, s in enumerate(response.am_steps, 1)),
+        "PM Routine:\n"
+        + "\n".join(f"  {i}. {s}" for i, s in enumerate(response.pm_steps, 1)),
+    ]
     if all_cautions:
-        sections.append(
-            "Cautions:\n" + "\n".join(f"  • {c}" for c in all_cautions)
-        )
+        sections.append("Cautions:\n" + "\n".join(f"  • {c}" for c in all_cautions))
+    if response.tips:
+        sections.append("Tips:\n" + "\n".join(f"  • {t}" for t in response.tips))
     coach_advice = "\n\n".join(sections)
 
     report = state["safety_report"]
     logging.info(
-        "Coach: score=%.2f, %d conflict(s), %d caution(s), %d tip(s).",
+        "Coach: score=%.2f, %d AM step(s), %d PM step(s), %d caution(s), %d tip(s).",
         report.safety_score,
-        len(report.ingredient_conflicts),
+        len(response.am_steps),
+        len(response.pm_steps),
         len(all_cautions),
         len(response.tips),
     )
