@@ -5,15 +5,26 @@ from langgraph.graph import END, StateGraph
 
 from src.config import (FLASH_ACCEPT_THRESHOLD, FLASH_ESCALATE_THRESHOLD,
                         IDENTITY_CONFIDENCE_THRESHOLD, MAX_CORRECTIONS,
-                        MIN_INGREDIENTS_FOR_AUDIT, SUPPORTED_LANGUAGES)
+                        MIN_INGREDIENTS_FOR_AUDIT)
 from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
-from src.nodes.scanner import flash_scanner_node, pro_scanner_node
+from src.nodes.scanner import (classify_side_node, flash_scanner_node,
+                               pro_scanner_node)
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
                                  verify_identity_node, web_search_node)
 from src.state import AgentState
+
+
+def side_router(state: AgentState) -> str:
+    """Route on the detected image side.
+
+    A front photo (branding only) has no readable ingredient list, so we go
+    straight to identity verification + web search. A back photo carries the
+    ingredient list, so we scan it off the label.
+    """
+    return "front" if state.get("image_type") == "front" else "back"
 
 
 def inference_router(state: AgentState) -> str:
@@ -65,38 +76,15 @@ def retake_node(state: AgentState) -> dict:
     }
 
 
-def language_gate_node(state: AgentState) -> dict:
-    """Record the detected label language and whether it's supported downstream.
+def tag_language_node(state: AgentState) -> dict:
+    """Record the detected label language for downstream use (no gating).
 
-    Runs only after a confident extraction (flash- or pro-accept), so the
-    language read here comes from a reliable scan rather than a noisy one.
+    Any label language is accepted; this just surfaces what was read so the
+    registry candidate log and final summary can report it.
     """
     extracted = state["extracted_data"]
     lang = (extracted.source_language or "").strip().upper() if extracted else ""
-    supported = lang in SUPPORTED_LANGUAGES
-    if not supported:
-        logging.info(
-            "Language gate: detected '%s', not in supported set %s.",
-            lang or "unknown",
-            sorted(SUPPORTED_LANGUAGES),
-        )
-    return {"detected_language": lang, "language_supported": supported}
-
-
-def language_router(state: AgentState) -> str:
-    return "supported" if state.get("language_supported") else "unsupported"
-
-
-def unsupported_language_node(state: AgentState) -> dict:
-    lang = state.get("detected_language") or "unknown"
-    return {
-        "is_ready_for_logic": False,
-        "coach_advice": (
-            f"This label appears to be in '{lang}'. SkinGraph currently supports "
-            "Japanese (JP) labels only, so ingredient verification and safety "
-            "analysis aren't available for this product yet."
-        ),
-    }
+    return {"detected_language": lang, "language_supported": True}
 
 
 def post_registry_router(state: AgentState) -> str:
@@ -125,11 +113,12 @@ def web_result_router(state: AgentState) -> str:
 
 workflow = StateGraph(state_schema=AgentState)
 
+workflow.add_node("classify_side", classify_side_node)
 workflow.add_node("flash_scanner", flash_scanner_node)
 workflow.add_node("early_registry_check", early_registry_check_node)
 workflow.add_node("correction", correction_node)
 workflow.add_node("pro_scanner", pro_scanner_node)
-workflow.add_node("language_gate", language_gate_node)
+workflow.add_node("tag_language", tag_language_node)
 workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
 workflow.add_node("auditor", auditor_node)
@@ -139,15 +128,23 @@ workflow.add_node("web_search", web_search_node)
 workflow.add_node("confirm_identity", confirm_identity_node)
 workflow.add_node("search_failed", search_failed_node)
 workflow.add_node("retake_request", retake_node)
-workflow.add_node("unsupported_language", unsupported_language_node)
 
-workflow.set_entry_point("flash_scanner")
+workflow.set_entry_point("classify_side")
+
+workflow.add_conditional_edges(
+    "classify_side",
+    side_router,
+    {
+        "front": "verify_identity",
+        "back": "flash_scanner",
+    },
+)
 
 workflow.add_conditional_edges(
     "flash_scanner",
     inference_router,
     {
-        "accept": "language_gate",
+        "accept": "tag_language",
         "correct": "early_registry_check",
         "escalate": "pro_scanner",
     },
@@ -168,19 +165,12 @@ workflow.add_conditional_edges(
     "pro_scanner",
     pro_scanner_router,
     {
-        "accept": "language_gate",
+        "accept": "tag_language",
         "retake": "retake_request",
     },
 )
 
-workflow.add_conditional_edges(
-    "language_gate",
-    language_router,
-    {
-        "supported": "registry_lookup",
-        "unsupported": "unsupported_language",
-    },
-)
+workflow.add_edge("tag_language", "registry_lookup")
 
 workflow.add_conditional_edges(
     "registry_lookup",
@@ -215,6 +205,5 @@ workflow.add_edge("coach", END)
 workflow.add_edge("confirm_identity", END)
 workflow.add_edge("search_failed", END)
 workflow.add_edge("retake_request", END)
-workflow.add_edge("unsupported_language", END)
 
 app = workflow.compile()

@@ -19,7 +19,7 @@ from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL, MIN_INGREDIENTS_FOR_AUDIT
 from src.nodes.scanner import encode_image
-from src.state import AgentState, Ingredient
+from src.state import AgentState, Ingredient, ProductExtraction
 
 
 class ProductIdentity(BaseModel):
@@ -50,7 +50,7 @@ Return:
 
 
 _SEARCH_PROMPT = """
-Find the official FULL ingredient list (全成分) for this cosmetic product:
+Find the official FULL ingredient list for this cosmetic product:
 
   Brand: {brand}
   Product: {product_name}
@@ -61,7 +61,8 @@ EXACTLY as published, in label order.
 
 OUTPUT FORMAT (strict):
 - One ingredient per line. No numbering, no bullets, no commentary.
-- Use the Japanese 成分表示名称 where available; otherwise the INCI name.
+- Use the INCI name where available; otherwise the name as published
+  (e.g. the Japanese 成分表示名称).
 - After the list, add ONE final line:  SOURCE: <the url you used>
 - If you cannot find a reliable full ingredient list, reply with exactly:
   NOT_FOUND
@@ -97,15 +98,28 @@ def verify_identity_node(state: AgentState) -> dict:
     )
 
     result: dict = {"identity_confidence": identity.identity_confidence}
-    # Adopt the focused re-read of the name (more reliable than the bulk scan).
     data = state.get("extracted_data")
     if data is not None:
+        # Adopt the focused re-read of the name (more reliable than the bulk scan).
         result["extracted_data"] = data.model_copy(
             update={
                 "brand": identity.brand,
                 "product_name": identity.product_name,
             }
         )
+    else:
+        # Front-photo path: no scan ran, so seed a minimal extraction the web
+        # search can populate with ingredients. The label language is unknown
+        # from a branding-only read, so leave it blank.
+        result["extracted_data"] = ProductExtraction(
+            brand=identity.brand,
+            product_name=identity.product_name,
+            ingredients=[],
+            source_language="",
+            extraction_confidence=identity.identity_confidence,
+            system_status="INCOMPLETE",
+        )
+        result["model_used"] = "web"
     return result
 
 

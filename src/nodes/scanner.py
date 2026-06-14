@@ -2,9 +2,10 @@
 import base64
 import io
 import logging
-from typing import Dict, Any, cast
+from typing import Dict, Any, Literal, cast
 from uuid import uuid4
 from PIL import Image
+from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from src.state import AgentState, ProductExtraction
@@ -50,6 +51,64 @@ Your task is to extract and standardize skincare product information with high a
   "system_status": "SUCCESS | INCOMPLETE | RETAKE_REQUIRED"
 }
 """
+
+
+CLASSIFY_PROMPT = """
+Look at this single product photo and decide which side of the package it shows.
+
+- "front": the marketing/branding side — brand, product name, hero copy. The full
+  ingredient list (全成分 / "Ingredients:") is NOT legibly visible.
+- "back": the information side where the full ingredient list is printed and
+  readable (paragraph of ingredient names, often headed 全成分 or "Ingredients").
+
+Rule of thumb: if you can read an actual ingredient LIST, it's "back". If you only
+see branding and no readable ingredient list, it's "front".
+
+Return:
+- side: "front" or "back"
+- confidence: 0.0-1.0 — how certain you are.
+""".strip()
+
+
+class ImageSide(BaseModel):
+    side: Literal["front", "back"] = Field(
+        description="Which side of the product the photo shows."
+    )
+    confidence: float = Field(
+        description="0.0-1.0 confidence in the front/back classification."
+    )
+
+
+def classify_side_node(state: AgentState) -> Dict[str, Any]:
+    """Auto-detect whether the photo is the front (branding) or back (ingredients).
+
+    An explicitly passed ``image_type`` (CLI override) wins and skips the call.
+    """
+    override = state.get("image_type")
+    if override in ("front", "back"):
+        logging.info("Image side overridden by caller: %s", override)
+        return {"image_type": override}
+
+    logging.info("Classifying image side (front vs back)...")
+    llm = ChatGoogleGenerativeAI(
+        model=FLASH_MODEL, temperature=0.0, timeout=120, max_retries=3
+    ).with_structured_output(ImageSide)
+
+    base64_image = encode_image(state["image_path"])
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": CLASSIFY_PROMPT},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+            },
+        ]
+    )
+    result = cast(ImageSide, llm.invoke([message]))
+    logging.info(
+        "Image side: %s (confidence %.2f)", result.side, result.confidence
+    )
+    return {"image_type": result.side}
 
 
 def downscale_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:

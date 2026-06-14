@@ -153,15 +153,20 @@ GOOGLE_API_KEY=your_key_here
 実行:
 
 ```bash
-# 単一画像（裏ラベル・デフォルト）
+# 単一画像（表/裏は写真から自動判定）
 poetry run python run_pipeline.py data/golden_set/prod_001.jpg
 
-# 表ラベル
+# ユーザープロファイル付き（パーソナライズされた注意事項）
+poetry run python run_pipeline.py data/golden_set/prod_001.jpg --user-profile data/user_profile_sample.json
+
+# 自動判定の代わりに面を明示指定
 poetry run python run_pipeline.py data/golden_set/prod_001.jpg --image-type front
 
 # 精度評価
 poetry run python evaluate.py --model both
 ```
+
+**ルーティング:** まず軽量な分類器が、写真が**表面**（ブランド情報のみ → 製品を特定し**成分をオンライン検索**）か**裏面**（成分表示 → ラベルから読み取り）かを判定します。両経路は単一のバイリンガル**レコメンドカード**に集約されます：製品名、用途（1文）、ユーザー個別の注意事項（乾燥・紫外線敏感性のリスクを含む）、使用タイミング（AM / PM / 両方）、使用頻度。
 
 > **OCRについて:** `scripts/run_ocr.py` はYomiToku日本語OCRエンジンをゴールデンセット画像に対して実行し、プレーンテキストを `data/ocr_out/` に出力します。**Phase 0ベンチマーク**として、OCRとVLMの精度差を定量化するためだけに存在します。プロダクショングラフ（`src/graph.py`）には組み込まれておらず、グラフはGemini VLM推論のみを使用します。
 
@@ -187,15 +192,12 @@ poetry run python evaluate.py --model both
 ## ⚠️ 現在の制限とロードマップ
 
 **現在の制限:**
-- **日本語（JP）のみ対応** — 言語ゲートが他の言語を早期終了させる
+- **全言語対応・JPが最適化済み** — レジストリ/正規化/監査データはJP中心のため、非JPラベルでは一部成分が未マッチになることがある（失敗ではなく明示）
 - **グラウンドトゥルースはN=3** — 評価セットが小規模
-- **`auditor.py` / `coach.py` はスタブ** — 安全性監査とコーチアドバイスは未実装
 - **レジストリは小規模** — 現在2製品。未登録製品は`registry_candidates.json`に自動ログ
 - **本番APIなし** — FastAPI / Docker / CI/CD は未実装
 
 **ロードマップ:**
-- [ ] 🔬 **安全性監査エンジン** — 成分禁忌（レチノール/AHA、ナイアシンアミド/ビタミンC）のトゥルーテーブル
-- [ ] 💬 **コーチノード** — パーソナライズされたスキンケアルーティンアドバイス
 - [ ] 🌐 **セマンティック多言語対応** — 日本語・韓国語・英語の名称を単一のUniversal INCI IDにマッピング
 - [ ] 📱 **API抽象化** — 本番デプロイ向けFastAPIラッパー
 - [ ] 🏷️ **バーコード統合** — JAN/UPCコード事前照合で既知商品のVLMを完全スキップ
@@ -402,15 +404,20 @@ GOOGLE_API_KEY=your_key_here
 ### Run
 
 ```bash
-# Single image — back label (default)
+# Single image — front/back side is auto-detected from the photo
 poetry run python run_pipeline.py data/golden_set/prod_001.jpg
 
-# Front label
+# With a user profile (personalised warnings)
+poetry run python run_pipeline.py data/golden_set/prod_001.jpg --user-profile data/user_profile_sample.json
+
+# Force the side instead of auto-detecting
 poetry run python run_pipeline.py data/golden_set/prod_001.jpg --image-type front
 
 # Run accuracy evaluation
 poetry run python evaluate.py --model both
 ```
+
+**How it routes:** a lightweight classifier first decides whether the photo shows the **front** (branding only → identify the product and **search its ingredients online**) or the **back** (ingredient list → read it off the label). Both paths converge on a single bilingual **recommendation card**: product name, one-line purpose, user-tailored warnings (including dehydration / sun-sensitivity risk), best timing (AM / PM / both), and use frequency.
 
 > **Note on OCR:** `scripts/run_ocr.py` runs a local YomiToku Japanese OCR engine on the golden-set images and writes plain-text output to `data/ocr_out/`. It exists purely as a **Phase 0 benchmark baseline** to quantify the OCR-vs-VLM accuracy gap — intentionally excluded from the production graph (`src/graph.py`). The graph uses Gemini VLM inference exclusively.
 
@@ -436,15 +443,12 @@ Accuracy measured with `evaluate.py` against hand-annotated ground truth, using 
 ## ⚠️ Current Limitations & Roadmap
 
 **What's currently missing or limited:**
-- **Japanese (JP) only** — the language gate rejects all other label languages with a clear user message
+- **Any label language accepted, JP best-tuned** — the registry/normalizer/audit data are JP-centric, so non-JP labels may leave some ingredients unmatched (surfaced, not fatal)
 - **Ground truth is N=3** — small eval set; scores are directional
-- **`auditor.py` and `coach.py` are stubs** — safety audit and advice generation are not yet implemented
 - **Registry is small** — 2 verified products; un-registered products are auto-logged to `registry_candidates.json`
 - **No production API** — FastAPI / Docker / CI/CD not yet implemented
 
 **Next:**
-- [ ] 🔬 **Safety Audit Engine** — hard-coded truth table for ingredient contraindications (Retinol/AHA, Niacinamide/Vitamin C)
-- [ ] 💬 **Coach Node** — personalised skincare routine advice engine
 - [ ] 🌐 **Semantic Multilingual Support** — map Japanese, Korean, and English names to a single Universal INCI ID
 - [ ] 📱 **API Abstraction** — FastAPI wrapper for production deployment
 - [ ] 🏷️ **Barcode Integration** — pre-scan JAN/UPC codes to skip VLM entirely for known products
