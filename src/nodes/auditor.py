@@ -10,32 +10,16 @@ import json
 import logging
 from typing import Dict, List, Optional, Set
 
+from src.conflicts import load_conflict_matrix
 from src.state import AgentState, SafetyAudit
 from src.config import (
-    CONFLICT_MATRIX_PATH,
     IRRITANT_REGISTRY_PATH,
     CONFLICT_PENALTY,
     IRRITANT_PENALTY,
 )
 
 # Loaded once on first call, then reused across invocations.
-_CONFLICTS_CACHE: Optional[dict] = None
 _IRRITANTS_CACHE: Optional[Dict[str, dict]] = None
-
-
-def _load_conflicts() -> dict:
-    """Load the group-based conflict matrix: {"groups": {...}, "rules": [...]}."""
-    global _CONFLICTS_CACHE
-    if _CONFLICTS_CACHE is None:
-        with open(CONFLICT_MATRIX_PATH, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        logging.info(
-            "Auditor: loaded %d conflict rule(s) over %d group(s).",
-            len(data.get("rules", [])),
-            len(data.get("groups", {})),
-        )
-        _CONFLICTS_CACHE = data
-    return _CONFLICTS_CACHE
 
 
 def _load_irritants() -> Dict[str, dict]:
@@ -67,7 +51,7 @@ def _present_inci(state: AgentState) -> Set[str]:
 
 def auditor_node(state: AgentState) -> dict:
     present = _present_inci(state)
-    conflicts = _load_conflicts()
+    conflicts = load_conflict_matrix()
     irritants = _load_irritants()
 
     score = 1.0

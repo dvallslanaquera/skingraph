@@ -13,7 +13,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL
-from src.state import AgentState, UserProfile
+from src.state import AgentState, RoutineFit, UserProfile
 
 # Ingredients that are contraindicated during pregnancy / breastfeeding.
 _PREGNANCY_FLAGGED_INCI = {
@@ -126,6 +126,22 @@ Recommend how often to use it:
   toner) → "Daily" (sunscreen: every morning).
 Be concrete; never say "as needed" without a number or "Daily".
 
+━━ ROUTINE FIT (only when a "Routine Context" block is provided) ━━
+When the user message includes a "Routine Context" block, ALSO fill the
+routine_japanese and routine_english cards. Ground EVERY line ONLY in the
+findings listed there — never invent a conflict, overlap, or benefit that is
+not in the context. If NO Routine Context block is provided, leave both routine
+cards completely empty.
+• risks      — one line per cross-product CONFLICT listed. Name the existing
+               product it clashes with and say why, using 注意が必要です (never
+               危険 / 有害). Include EVERY conflict listed; omit none.
+• redundancy — gentle overlap notes (役割が重なります / "overlaps with ...");
+               state which existing product shares the role. Not alarming.
+• value_add  — how this product complements the routine toward a stated goal
+               (〜の目標に役立つ可能性があります / "supports..."). Never promise outcomes.
+Both routine cards follow the same bilingual rule: 'routine_japanese' entirely
+in Japanese, 'routine_english' entirely in English, conveying the same content.
+
 ━━ OUTPUT CONTRACT ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
@@ -175,12 +191,43 @@ class Recommendation(BaseModel):
     )
 
 
+class RoutineFitCard(BaseModel):
+    """How the product fits the user's existing routine, in a single language.
+
+    Populated only when a Routine Context block is provided; otherwise empty.
+    """
+
+    risks: List[str] = Field(
+        default_factory=list,
+        description=(
+            "One line per cross-product conflict from the routine context, "
+            "naming the existing product. Empty if none."
+        ),
+    )
+    redundancy: List[str] = Field(
+        default_factory=list,
+        description="Gentle notes that the product overlaps an existing one.",
+    )
+    value_add: List[str] = Field(
+        default_factory=list,
+        description="How the product helps an otherwise-uncovered user goal.",
+    )
+
+
 class CoachResponse(BaseModel):
     japanese: Recommendation = Field(
         description="The card written ONLY in Japanese (敬体, 薬機法-compliant)."
     )
     english: Recommendation = Field(
         description="The same card written ONLY in English."
+    )
+    routine_japanese: RoutineFitCard = Field(
+        default_factory=RoutineFitCard,
+        description="Routine-fit notes in Japanese; empty if no routine context.",
+    )
+    routine_english: RoutineFitCard = Field(
+        default_factory=RoutineFitCard,
+        description="Routine-fit notes in English; empty if no routine context.",
     )
 
 
@@ -250,6 +297,40 @@ def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
     if profile.budget:
         lines.append(f"  Budget: {profile.budget}")
 
+    return "\n".join(lines)
+
+
+def _has_routine_findings(fit: Optional[RoutineFit]) -> bool:
+    return bool(fit and (fit.conflicts or fit.redundancy or fit.value_add))
+
+
+def _routine_context(fit: Optional[RoutineFit]) -> str:
+    """Grounding block describing the new product vs the user's saved routine.
+
+    Returns "" when there is nothing to report, so the coach can omit the whole
+    Routine Fit section (and tell the model to leave the routine cards empty).
+    """
+    if not _has_routine_findings(fit):
+        return ""
+
+    lines = ["## Routine Context (the user's CURRENT routine — ground every routine line in these findings ONLY)"]
+    if fit.existing_products:
+        lines.append("Current products: " + "; ".join(fit.existing_products))
+    if fit.conflicts:
+        lines.append(
+            "Cross-product CONFLICTS (surface EVERY one as a risk line, both languages):"
+        )
+        for c in fit.conflicts:
+            lines.append(
+                f"  • [{c.severity.upper()}] new product's {c.groups[0]} vs "
+                f"{c.with_product}'s {c.groups[1]}: {c.reason}"
+            )
+    if fit.redundancy:
+        lines.append("Redundancy candidates (phrase as gentle overlap notes):")
+        lines.extend(f"  • {r}" for r in fit.redundancy)
+    if fit.value_add:
+        lines.append("Value-add candidates (phrase as how it complements the goal):")
+        lines.extend(f"  • {v}" for v in fit.value_add)
     return "\n".join(lines)
 
 
@@ -345,6 +426,29 @@ def _render_recommendation(
     return "\n".join(lines)
 
 
+def _render_routine_fit(card: RoutineFitCard, lang: str) -> str:
+    """Render one single-language routine-fit card (risks / redundancy / value)."""
+    labels = {
+        "ja": ("リスク", "重複", "追加価値"),
+        "en": ("Risks", "Redundancy", "Adds value"),
+    }[lang]
+    risk_l, red_l, val_l = labels
+    none_text = "特になし" if lang == "ja" else "None"
+
+    lines: List[str] = []
+    for label, items in (
+        (risk_l, card.risks),
+        (red_l, card.redundancy),
+        (val_l, card.value_add),
+    ):
+        if items:
+            lines.append(f"{label}:")
+            lines.extend(f"  • {x}" for x in items)
+        else:
+            lines.append(f"{label}: {none_text}")
+    return "\n".join(lines)
+
+
 def coach_node(state: AgentState) -> dict:
     if state.get("safety_report") is None:
         logging.warning("Coach reached without safety_report — returning placeholder.")
@@ -363,6 +467,9 @@ def coach_node(state: AgentState) -> dict:
     extra_ja = preg_ja + sun_ja
     extra_en = preg_en + sun_en
 
+    routine_fit: Optional[RoutineFit] = state.get("routine_fit")
+    routine_context = _routine_context(routine_fit)
+
     human_prompt = (
         f"## Product Analysis\n{_product_context(state)}\n\n"
         f"## {_user_context(profile, user_name)}\n\n"
@@ -373,6 +480,13 @@ def coach_node(state: AgentState) -> dict:
         "frequency. Produce the WHOLE card twice: once entirely in Japanese "
         "('japanese'), once entirely in English ('english')."
     )
+    if routine_context:
+        human_prompt += (
+            f"\n\n{routine_context}\n\n"
+            "ALSO fill the routine_japanese and routine_english cards from the "
+            "Routine Context above (risks, redundancy, value_add), grounded only "
+            "in those findings."
+        )
 
     model = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2)
     response: CoachResponse = cast(
@@ -392,6 +506,17 @@ def coach_node(state: AgentState) -> dict:
         "【English】\n" + en_text
     )
 
+    # Routine Fit section (only when there is a routine to compare against).
+    if routine_context:
+        rf_ja = _render_routine_fit(response.routine_japanese, "ja")
+        rf_en = _render_routine_fit(response.routine_english, "en")
+        coach_advice += (
+            "\n\n" + "=" * 60 + "\n\n"
+            "【ルーティン適合 / Routine Fit】\n\n"
+            "[日本語]\n" + rf_ja + "\n\n"
+            "[English]\n" + rf_en
+        )
+
     # Machine-readable card keeps the English fields for downstream consumers.
     all_warnings_en = extra_en + en.warnings
     recommendations: List[str] = (
@@ -401,6 +526,17 @@ def coach_node(state: AgentState) -> dict:
         + [f"[TIMING] {en.timing}"]
         + [f"[FREQUENCY] {en.frequency}"]
     )
+
+    # Deterministic routine findings, always emitted regardless of LLM phrasing,
+    # so the machine-readable trace never drops a cross-product risk.
+    if _has_routine_findings(routine_fit):
+        recommendations += [
+            f"[ROUTINE-RISK] {c.severity.upper()} vs {c.with_product} "
+            f"({c.groups[0]} ↔ {c.groups[1]}): {c.reason}"
+            for c in routine_fit.conflicts
+        ]
+        recommendations += [f"[ROUTINE-REDUNDANCY] {r}" for r in routine_fit.redundancy]
+        recommendations += [f"[ROUTINE-VALUE] {v}" for v in routine_fit.value_add]
 
     report = state["safety_report"]
     logging.info(

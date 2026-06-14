@@ -37,8 +37,23 @@ IRRITANT_REGISTRY_PATH = "data/irritant_registry.json"
 CONFLICT_PENALTY = {"high": 0.30, "medium": 0.15, "low": 0.05}
 IRRITANT_PENALTY = {"high": 0.15, "medium": 0.08, "low": 0.03}
 
-# Coach: local SQLite store for returning users' skincare profiles.
+# Coach: local SQLite store for returning users' skincare profiles + routines.
 USER_DB_PATH = "data/users.db"
+
+# Routine advisor: function/active taxonomy for redundancy + value-add analysis
+# (safety conflicts reuse conflict_matrix.json instead). Maps a function category
+# to its defining canonical INCI markers; see the file's _comment for the rules.
+FUNCTION_GROUPS_PATH = "data/function_groups.json"
+# Maps a user goal (UserProfile.goals) to the function categories that serve it.
+# Drives value-add: a new product earns a value-add note when it introduces one
+# of these categories for a stated goal that the existing routine does not cover.
+GOAL_TO_FUNCTION = {
+    "brightening": ["Vitamin C", "Niacinamide"],
+    "anti_aging": ["Retinoids", "Peptides"],
+    "hydration": ["Hydration"],
+    "acne_control": ["BHA", "Niacinamide"],
+    "barrier_repair": ["Barrier"],
+}
 
 # Web-search fallback: only fires when the registry misses AND the photo
 # yielded fewer than this many ingredients (i.e. no usable list to audit).

@@ -98,12 +98,168 @@ _SEED_PERSONAS = [
         routine_time="extensive", budget="premium")),
 ]
 
+# Routine products for each persona. Intentionally includes conflict-prone
+# combinations (Retinol + Ascorbic Acid, BHA + AHA over-exfoliation) so the
+# auditor and coach nodes have real signals to fire on.
+_SEED_ROUTINES = {
+    # Aiko — combination skin, brightening + anti-aging focus.
+    # CONFLICT: Rohto Melano CC (Ascorbic Acid, PM) + DHC Retinol Cream (Retinol, PM)
+    "Aiko": [
+        {
+            "brand": "Hada Labo",
+            "product_name": "Gokujyun Hyaluronic Acid Lotion (AM+PM)",
+            "ingredients": [
+                "Water", "Butylene Glycol", "Glycerin", "Sodium Hyaluronate",
+                "Hyaluronic Acid", "Hydroxyethylcellulose", "Citric Acid",
+                "Sodium Citrate", "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+        {
+            "brand": "Rohto",
+            "product_name": "Melano CC Vitamin C Intensive Spot Essence (PM)",
+            "ingredients": [
+                "Water", "Ascorbic Acid", "Dipropylene Glycol", "Isopropanol",
+                "Polyethylene Glycol 400", "dl-alpha-Tocopherol", "Citric Acid",
+                "Sodium Citrate",
+            ],
+            "is_quasi_drug": True,
+        },
+        {
+            # Retinol conflicts with Ascorbic Acid above when used same night
+            "brand": "DHC",
+            "product_name": "Retinol Night Cream (PM)",
+            "ingredients": [
+                "Water", "Glycerin", "Dimethicone", "Cyclopentasiloxane", "Retinol",
+                "Cetyl Alcohol", "Niacinamide", "BHT", "Phenoxyethanol",
+            ],
+            "is_quasi_drug": False,
+        },
+    ],
+
+    # Haruto — oily/acne-prone, budget, minimal routine.
+    # CONFLICT: Salicylic Acid (BHA) in toner + Glycolic Acid (AHA) in peeling lotion
+    #           = overexfoliation risk; two BHA products = redundancy.
+    "Haruto": [
+        {
+            "brand": "Biore",
+            "product_name": "UV Aqua Rich Watery Essence SPF50+ (AM)",
+            "ingredients": [
+                "Water", "Alcohol", "Ethylhexyl Methoxycinnamate",
+                "Diethylamino Hydroxybenzoyl Hexyl Benzoate",
+                "Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine",
+                "Glycerin", "Dimethicone", "Carbomer", "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+        {
+            "brand": "Mentholatum",
+            "product_name": "Acnes Medicated Serum Toner (AM+PM)",
+            "ingredients": [
+                "Water", "Butylene Glycol", "Salicylic Acid", "Niacinamide",
+                "Dipotassium Glycyrrhizate", "Methylparaben",
+            ],
+            "is_quasi_drug": True,
+        },
+        {
+            # Salicylic Acid again = redundant BHA on top of Acnes toner
+            "brand": "Rohto",
+            "product_name": "Acnes Creamy Wash (PM)",
+            "ingredients": [
+                "Water", "Myristic Acid", "Potassium Hydroxide", "Glycerin",
+                "Salicylic Acid", "Dipotassium Glycyrrhizate", "Panthenol",
+                "Methylparaben",
+            ],
+            "is_quasi_drug": True,
+        },
+        {
+            # AHA + BHA same PM routine = over-exfoliation burden
+            "brand": "Hada Labo",
+            "product_name": "Koi-Gokujyun Alpha Lotion (PM)",
+            "ingredients": [
+                "Water", "Glycerin", "Butylene Glycol", "Sodium Hyaluronate",
+                "Glycolic Acid", "Lactic Acid", "Citric Acid", "Niacinamide",
+                "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+        {
+            "brand": "Kose",
+            "product_name": "Softymo Speedy Cleansing Oil (PM)",
+            "ingredients": [
+                "Liquid Paraffin", "PEG-8 Glyceryl Isostearate",
+                "Isopropyl Myristate", "PEG-20 Glyceryl Triisostearate",
+                "Squalane", "Tocopherol", "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+    ],
+
+    # Mei — sensitive + pregnant; single ultra-gentle product, no actives.
+    "Mei": [
+        {
+            "brand": "Hada Labo",
+            "product_name": "Gokujyun Premium Moist Lotion (AM+PM)",
+            "ingredients": [
+                "Water", "Butylene Glycol", "Glycerin", "Sodium Hyaluronate",
+                "Hydroxyethylcellulose", "Citric Acid", "Sodium Citrate",
+                "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+    ],
+
+    # Yuki — dry, 52, anti-aging + brightening, severe sun damage.
+    # CONFLICT: Ascorbic Acid (Melano CC, PM) + Retinol (DHC Cream, PM)
+    "Yuki": [
+        {
+            "brand": "Anessa",
+            "product_name": "Perfect UV Sunscreen Skincare Milk SPF50+ PA++++ (AM)",
+            "ingredients": [
+                "Water", "Ethylhexyl Methoxycinnamate",
+                "Diethylamino Hydroxybenzoyl Hexyl Benzoate",
+                "Alcohol", "Glycerin", "Titanium Dioxide", "Zinc Oxide",
+                "Niacinamide", "Dimethicone", "Methylparaben",
+            ],
+            "is_quasi_drug": False,
+        },
+        {
+            "brand": "Rohto",
+            "product_name": "Melano CC Vitamin C Intensive Spot Essence (PM)",
+            "ingredients": [
+                "Water", "Ascorbic Acid", "Dipropylene Glycol", "Isopropanol",
+                "dl-alpha-Tocopherol", "Citric Acid", "Sodium Citrate",
+            ],
+            "is_quasi_drug": True,
+        },
+        {
+            # Retinol conflicts with Ascorbic Acid above; heavy active for dry skin
+            "brand": "DHC",
+            "product_name": "Retinol Night Cream (PM)",
+            "ingredients": [
+                "Water", "Glycerin", "Dimethicone", "Cyclopentasiloxane", "Retinol",
+                "Cetyl Alcohol", "Niacinamide", "BHT", "Phenoxyethanol",
+            ],
+            "is_quasi_drug": False,
+        },
+    ],
+}
+
 
 def cmd_seed(_args):
     print("Seeding dummy personas:")
     for name, profile in _SEED_PERSONAS:
         uid = user_store.save_user(profile, name=name)
         print(f"  {uid}  {name}  ({profile.skin_type}, goals={profile.goals})")
+        for prod in _SEED_ROUTINES.get(name, []):
+            pid = user_store.add_routine_product(
+                uid,
+                prod["brand"],
+                prod["product_name"],
+                prod["ingredients"],
+                prod.get("is_quasi_drug"),
+            )
+            print(f"    + {prod['brand']} — {prod['product_name']}  [{pid}]")
 
 
 def build_parser() -> argparse.ArgumentParser:

@@ -22,3 +22,16 @@ dependencies = [
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.pytest.ini_options]
+# Offline, deterministic suite: every Gemini and vector-store call is mocked.
+# testpaths is scoped to tests/ so the legacy root-level test_scanner.py manual
+# script (which needs an API key + image) is never collected.
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-q"
+
+[dependency-groups]
+dev = [
+    "pytest (>=9.1.0,<10.0.0)"
+]
