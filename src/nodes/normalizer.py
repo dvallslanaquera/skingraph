@@ -7,10 +7,9 @@ import logging
 import unicodedata
 from typing import Dict, List, Optional, Tuple
 
-from rapidfuzz import fuzz, process
-
+from src.config import INGREDIENT_MASTER_PATH, INGREDIENT_MATCH_THRESHOLD
 from src.state import AgentState
-from src.config import INGREDIENT_MASTER_PATH, NORMALIZER_FUZZY_THRESHOLD
+from src.vectorstore import search_ingredient
 
 # Built once on first call, then reused across invocations.
 _INDEX_CACHE: Optional[Dict[str, str]] = None
@@ -46,15 +45,20 @@ def _load_index() -> Dict[str, str]:
 
 
 def _resolve(raw_name: str, index: Dict[str, str]) -> Tuple[Optional[str], str]:
-    """Resolve one raw name to (inci_or_None, method)."""
+    """Resolve one raw name to (inci_or_None, method).
+
+    Tier 1 is an exact normalized-dict lookup (free, deterministic, handles the
+    common case). Tier 2 is a Qdrant semantic search that catches synonyms,
+    transliterations, and OCR variants the exact lookup misses.
+    """
     key = _normalize(raw_name)
     if not key:
         return None, "empty"
     if key in index:
         return index[key], "exact"
-    match = process.extractOne(key, index.keys(), scorer=fuzz.WRatio)
-    if match and match[1] >= NORMALIZER_FUZZY_THRESHOLD:
-        return index[match[0]], "fuzzy"
+    payload, score = search_ingredient(raw_name)
+    if payload and score >= INGREDIENT_MATCH_THRESHOLD:
+        return payload.get("inci"), "vector"
     return None, "unmatched"
 
 
@@ -84,13 +88,13 @@ def normalizer_node(state: AgentState) -> dict:
 
     normalized: List[dict] = []
     unmatched: List[str] = []
-    exact = fuzzy = 0
+    exact = vector = 0
     for name_raw, is_active, lang in raw_items:
         inci, method = _resolve(name_raw, index)
         if method == "exact":
             exact += 1
-        elif method == "fuzzy":
-            fuzzy += 1
+        elif method == "vector":
+            vector += 1
         elif method == "unmatched":
             unmatched.append(name_raw)
         normalized.append(
@@ -103,13 +107,13 @@ def normalizer_node(state: AgentState) -> dict:
         )
 
     total = len(normalized)
-    matched = exact + fuzzy
+    matched = exact + vector
     logging.info(
-        "Normalizer: %d/%d mapped to INCI (%d exact, %d fuzzy, %d unmatched).",
+        "Normalizer: %d/%d mapped to INCI (%d exact, %d vector, %d unmatched).",
         matched,
         total,
         exact,
-        fuzzy,
+        vector,
         len(unmatched),
     )
     if unmatched:

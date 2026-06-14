@@ -1,8 +1,14 @@
-from rapidfuzz import process, fuzz
-import json
+# Product registry lookup via Qdrant semantic search.
+#
+# Embeds the scanned "{brand} {product_name}" and finds the nearest product in
+# the vector store. A hit returns the curated ingredient list from the payload,
+# short-circuiting the rest of the pipeline (the normalizer still runs to map
+# those curated names to canonical INCI).
 import logging
+
+from src.config import PRODUCT_EARLY_THRESHOLD, PRODUCT_MATCH_THRESHOLD
 from src.state import AgentState
-from src.config import REGISTRY_MATCH_THRESHOLD, REGISTRY_EARLY_THRESHOLD
+from src.vectorstore import search_product
 
 
 def _run_registry_match(state: AgentState, threshold: float) -> tuple[bool, dict]:
@@ -10,30 +16,35 @@ def _run_registry_match(state: AgentState, threshold: float) -> tuple[bool, dict
     if extracted is None:
         return False, {"is_ready_for_logic": False}
 
-    with open("data/registry.json", "r", encoding="utf-8") as f:
-        registry = json.load(f)
-
     query = f"{extracted.brand} {extracted.product_name}"
-    choices = [f"{item['brand']} {item['product_name']}" for item in registry["products"]]
-    best_match, score, index = process.extractOne(query, choices, scorer=fuzz.WRatio)
+    payload, score = search_product(query)
 
-    if score >= threshold:
-        logging.info("Registry match (%.1f%%): %s", score, best_match)
-        verified = registry["products"][index]
+    if payload and score >= threshold:
+        logging.info(
+            "Registry match (%.3f cosine): %s - %s",
+            score,
+            payload.get("brand"),
+            payload.get("product_name"),
+        )
         standardized = [
             {"name_raw": name, "name_standardized": name, "source_language": "JP"}
-            for name in verified["ingredients_jp"]
+            for name in payload.get("ingredients_jp", [])
         ]
         return True, {
             "model_used": "database",
-            "inference_confidence": score / 100,
+            "inference_confidence": score,
             "is_ready_for_logic": True,
             "registry_matched": True,
             "ingredient_source": "registry",
             "standardized_ingredients": standardized,
         }
 
-    logging.info("No registry match (best: %s at %.1f%%)", best_match, score)
+    best = (
+        f"{payload.get('brand')} {payload.get('product_name')}"
+        if payload
+        else "none"
+    )
+    logging.info("No registry match (best: %s at %.3f cosine)", best, score)
     return False, {
         "is_ready_for_logic": False,
         "registry_matched": False,
@@ -42,10 +53,10 @@ def _run_registry_match(state: AgentState, threshold: float) -> tuple[bool, dict
 
 
 def registry_lookup_node(state: AgentState) -> dict:
-    _, result = _run_registry_match(state, REGISTRY_MATCH_THRESHOLD)
+    _, result = _run_registry_match(state, PRODUCT_MATCH_THRESHOLD)
     return result
 
 
 def early_registry_check_node(state: AgentState) -> dict:
-    _, result = _run_registry_match(state, REGISTRY_EARLY_THRESHOLD)
+    _, result = _run_registry_match(state, PRODUCT_EARLY_THRESHOLD)
     return result
