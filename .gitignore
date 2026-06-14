@@ -4,4 +4,6 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 data/golden_set/*.jpg
+data/users.db
+data/registry_candidates.json
 .DS_Store

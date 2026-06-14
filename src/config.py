@@ -23,3 +23,6 @@ IRRITANT_REGISTRY_PATH = "data/irritant_registry.json"
 # safety_score starts at 1.0; each finding subtracts by severity, clamped to [0, 1].
 CONFLICT_PENALTY = {"high": 0.30, "medium": 0.15, "low": 0.05}
 IRRITANT_PENALTY = {"high": 0.15, "medium": 0.08, "low": 0.03}
+
+# Coach: local SQLite store for returning users' skincare profiles.
+USER_DB_PATH = "data/users.db"
