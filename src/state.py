@@ -126,5 +126,10 @@ class AgentState(TypedDict):
     registry_matched: Optional[bool]
     unmatched_ingredients: Optional[List[str]]
 
+    # web-search fallback (last resort when registry + photo both lack a list)
+    identity_confidence: Optional[float]
+    ingredient_source: Optional[str]  # "registry" | "label" | "web"
+    web_sources: Optional[List[str]]
+
     # personalised coaching
     user_profile: Optional[UserProfile]

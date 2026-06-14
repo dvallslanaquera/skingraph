@@ -26,3 +26,10 @@ IRRITANT_PENALTY = {"high": 0.15, "medium": 0.08, "low": 0.03}
 
 # Coach: local SQLite store for returning users' skincare profiles.
 USER_DB_PATH = "data/users.db"
+
+# Web-search fallback: only fires when the registry misses AND the photo
+# yielded fewer than this many ingredients (i.e. no usable list to audit).
+MIN_INGREDIENTS_FOR_AUDIT = 5
+# Minimum confidence in the re-verified brand+product name before we trust it
+# enough to query the web for that specific product's ingredients.
+IDENTITY_CONFIDENCE_THRESHOLD = 0.8

@@ -110,11 +110,15 @@ def main():
         logging.info(f"Trace ID: {final_state.get('trace_id')}")
 
     if final_state.get("standardized_ingredients"):
-        source = "Registry" if final_state.get("registry_matched") else "VLM extraction"
+        source = final_state.get("ingredient_source") or "unknown"
         logging.info(f"Normalized Ingredients (source: {source}):")
         for ing in final_state["standardized_ingredients"]:
             inci = ing.get("name_standardized") or "??? (unmapped)"
             logging.info(f"  - {ing.get('name_raw')}  ->  {inci}")
+
+    web_sources = final_state.get("web_sources")
+    if web_sources:
+        logging.info(f"Web sources: {', '.join(web_sources)}")
 
     unmatched = final_state.get("unmatched_ingredients")
     if unmatched:
@@ -132,21 +136,23 @@ def main():
         for warning in report.warnings:
             logging.info(f"  {warning}")
 
-    if final_state.get("coach_advice") and final_state.get("is_ready_for_logic"):
+    ready = final_state.get("is_ready_for_logic")
+    advice = final_state.get("coach_advice")
+    if advice and ready:
         logging.info("--- COACH ADVICE ---")
-        for line in final_state["coach_advice"].splitlines():
+        for line in advice.splitlines():
             logging.info(line)
         recs = final_state.get("routine_recommendations") or []
         if recs:
             logging.info("--- ROUTINE RECOMMENDATIONS ---")
             for rec in recs:
                 logging.info("  %s", rec)
+    elif advice:
+        # Graceful exit: retake, unsupported language, identity, or search miss.
+        logging.warning(f"ACTION NEEDED: {advice}")
 
-    if final_state.get("retake_requested"):
-        logging.warning(f"RETAKE REQUESTED: {final_state.get('coach_advice')}")
-    elif final_state.get("language_supported") is False:
-        logging.warning(f"UNSUPPORTED LANGUAGE: {final_state.get('coach_advice')}")
-    elif final_state.get("registry_matched") is False:
+    # Log un-registered products only when we proceeded with a usable list.
+    if final_state.get("registry_matched") is False and ready:
         data = final_state.get("extracted_data")
         if data is not None:
             record_registry_candidate(final_state)

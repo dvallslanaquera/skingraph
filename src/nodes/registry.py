@@ -29,11 +29,16 @@ def _run_registry_match(state: AgentState, threshold: float) -> tuple[bool, dict
             "inference_confidence": score / 100,
             "is_ready_for_logic": True,
             "registry_matched": True,
+            "ingredient_source": "registry",
             "standardized_ingredients": standardized,
         }
 
     logging.info("No registry match (best: %s at %.1f%%)", best_match, score)
-    return False, {"is_ready_for_logic": False, "registry_matched": False}
+    return False, {
+        "is_ready_for_logic": False,
+        "registry_matched": False,
+        "ingredient_source": "label",
+    }
 
 
 def registry_lookup_node(state: AgentState) -> dict:

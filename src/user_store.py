@@ -133,6 +133,15 @@ def list_users() -> List[Tuple[str, Optional[str]]]:
     return [(r["user_id"], r["name"]) for r in rows]
 
 
+def list_users_with_profiles() -> List[Tuple[str, Optional[str], UserProfile]]:
+    """Return (user_id, name, profile) tuples, most recently updated first."""
+    with _connect() as conn:
+        rows = conn.execute(
+            "SELECT * FROM users ORDER BY updated_at DESC"
+        ).fetchall()
+    return [(r["user_id"], r["name"], _row_to_profile(r)) for r in rows]
+
+
 def delete_user(user_id: str) -> bool:
     """Delete a profile by id. Returns True if a row was removed."""
     with _connect() as conn:
