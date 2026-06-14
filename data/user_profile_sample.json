@@ -1,0 +1,11 @@
+{
+  "skin_type": "combination",
+  "age": 32,
+  "gender": "female",
+  "goals": ["brightening", "anti_aging", "hydration"],
+  "is_pregnant": false,
+  "skin_conditions": [],
+  "sun_damage_history": "mild",
+  "routine_time": "moderate",
+  "budget": "mid-range"
+}
