@@ -9,7 +9,15 @@
     "Niacinamide": ["Niacinamide"],
     "Hydroquinone": ["Hydroquinone"],
     "Copper Peptides": ["Copper Tripeptide-1"],
-    "Peptides": [],
+    "Peptides": [
+      "Palmitoyl Tripeptide-1",
+      "Palmitoyl Tetrapeptide-7",
+      "Palmitoyl Pentapeptide-4",
+      "Acetyl Hexapeptide-8",
+      "Copper Tripeptide-1",
+      "Glutathione",
+      "Carnosine"
+    ],
     "Fragrance / Essential Oils": [
       "Lavandula Angustifolia (Lavender) Oil",
       "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
@@ -17,7 +25,12 @@
       "Citrus Aurantium Dulcis (Orange) Peel Oil",
       "Citrus Aurantium Dulcis (Orange) Oil",
       "Lavandula Angustifolia (Lavender) Flower Extract",
-      "Citrus Junos Fruit Extract"
+      "Citrus Junos Fruit Extract",
+      "Linalool",
+      "Limonene",
+      "Citral",
+      "Geraniol",
+      "Citronellol"
     ]
   },
   "rules": [
