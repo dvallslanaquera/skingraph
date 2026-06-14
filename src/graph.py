@@ -11,6 +11,7 @@ from src.config import (
 )
 from src.nodes.registry import registry_lookup_node, early_registry_check_node
 from src.nodes.normalizer import normalizer_node
+from src.nodes.auditor import auditor_node
 
 
 def inference_router(state: AgentState) -> str:
@@ -105,6 +106,7 @@ workflow.add_node("pro_scanner", pro_scanner_node)
 workflow.add_node("language_gate", language_gate_node)
 workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
+workflow.add_node("auditor", auditor_node)
 workflow.add_node("retake_request", retake_node)
 workflow.add_node("unsupported_language", unsupported_language_node)
 
@@ -150,7 +152,8 @@ workflow.add_conditional_edges(
 )
 
 workflow.add_edge("registry_lookup", "normalizer")
-workflow.add_edge("normalizer", END)
+workflow.add_edge("normalizer", "auditor")
+workflow.add_edge("auditor", END)
 workflow.add_edge("retake_request", END)
 workflow.add_edge("unsupported_language", END)
 

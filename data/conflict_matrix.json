@@ -1,0 +1,105 @@
+{
+  "_comment": "Group-based conflict matrix. A rule fires when at least one present ingredient from each of its two groups is found. Group members are canonical INCI keys from ingredient_master.json; members not yet in the ledger stay dormant until added.",
+  "groups": {
+    "Retinoids": ["Retinol"],
+    "AHA": ["Glycolic Acid", "Lactic Acid"],
+    "BHA": ["Salicylic Acid"],
+    "Vitamin C": ["Ascorbic Acid"],
+    "Benzoyl Peroxide": ["Benzoyl Peroxide"],
+    "Niacinamide": ["Niacinamide"],
+    "Hydroquinone": ["Hydroquinone"],
+    "Copper Peptides": ["Copper Tripeptide-1"],
+    "Peptides": [],
+    "Fragrance / Essential Oils": [
+      "Lavandula Angustifolia (Lavender) Oil",
+      "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
+      "Rosmarinus Officinalis (Rosemary) Leaf Oil",
+      "Citrus Aurantium Dulcis (Orange) Peel Oil",
+      "Citrus Aurantium Dulcis (Orange) Oil",
+      "Lavandula Angustifolia (Lavender) Flower Extract",
+      "Citrus Junos Fruit Extract"
+    ]
+  },
+  "rules": [
+    {
+      "groups": ["Retinoids", "AHA"],
+      "severity": "high",
+      "reason": "Extreme risk of over-exfoliation, barrier damage, and redness."
+    },
+    {
+      "groups": ["Retinoids", "BHA"],
+      "severity": "high",
+      "reason": "Can severely dry out the skin and compromise the moisture barrier."
+    },
+    {
+      "groups": ["Retinoids", "Benzoyl Peroxide"],
+      "severity": "high",
+      "reason": "Benzoyl peroxide oxidizes and degrades traditional retinol, rendering both less effective."
+    },
+    {
+      "groups": ["Vitamin C", "Retinoids"],
+      "severity": "high",
+      "reason": "Best used at different times of day due to differing optimal pH and combined irritation risk."
+    },
+    {
+      "groups": ["Vitamin C", "AHA"],
+      "severity": "medium",
+      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it."
+    },
+    {
+      "groups": ["Vitamin C", "BHA"],
+      "severity": "medium",
+      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it."
+    },
+    {
+      "groups": ["Vitamin C", "Benzoyl Peroxide"],
+      "severity": "high",
+      "reason": "Benzoyl peroxide oxidizes vitamin C, making it largely ineffective."
+    },
+    {
+      "groups": ["Vitamin C", "Copper Peptides"],
+      "severity": "medium",
+      "reason": "Copper can oxidize L-ascorbic acid, reducing its antioxidant benefit."
+    },
+    {
+      "groups": ["Niacinamide", "Vitamin C"],
+      "severity": "low",
+      "reason": "Contested; older studies suggested flushing, but modern formulations are generally stable."
+    },
+    {
+      "groups": ["Peptides", "AHA"],
+      "severity": "medium",
+      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness."
+    },
+    {
+      "groups": ["Peptides", "BHA"],
+      "severity": "medium",
+      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness."
+    },
+    {
+      "groups": ["Hydroquinone", "AHA"],
+      "severity": "medium",
+      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis."
+    },
+    {
+      "groups": ["Hydroquinone", "BHA"],
+      "severity": "medium",
+      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis."
+    },
+    {
+      "groups": ["Fragrance / Essential Oils", "AHA"],
+      "severity": "medium",
+      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate."
+    },
+    {
+      "groups": ["Fragrance / Essential Oils", "BHA"],
+      "severity": "medium",
+      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate."
+    },
+    {
+      "groups": ["Fragrance / Essential Oils", "Retinoids"],
+      "severity": "medium",
+      "reason": "Retinoids compromise the barrier slightly, letting fragrance allergens penetrate deeper and irritate."
+    }
+  ]
+}
