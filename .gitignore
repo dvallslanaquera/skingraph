@@ -6,4 +6,5 @@ __pycache__/
 data/golden_set/*.jpg
 data/users.db
 data/registry_candidates.json
+data/qdrant/
 .DS_Store

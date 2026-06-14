@@ -1,19 +1,30 @@
 FLASH_ACCEPT_THRESHOLD = 0.85
 FLASH_ESCALATE_THRESHOLD = 0.5
 MAX_CORRECTIONS = 2
-REGISTRY_MATCH_THRESHOLD = 90
-REGISTRY_EARLY_THRESHOLD = 99
 FLASH_MODEL = "gemini-3.1-flash-lite"
 PRO_MODEL = "gemini-3.1-pro-preview"
+
+# Qdrant vector retrieval (embedded/local mode) — replaces the rapidfuzz scans
+# for both product registry lookup and ingredient normalization. The store is
+# an on-disk path (no server); embeddings come from a local multilingual model,
+# so the whole retrieval layer runs offline once the model is downloaded once.
+QDRANT_PATH = "data/qdrant"
+EMBEDDING_MODEL = "intfloat/multilingual-e5-small"  # 384-dim, CPU-friendly, multilingual
+EMBEDDING_DIM = 384
+PRODUCT_COLLECTION = "products"
+INGREDIENT_COLLECTION = "ingredients"
+# Cosine-similarity gates (0..1) for vector hits. Tune against the eval harness.
+PRODUCT_MATCH_THRESHOLD = 0.86   # normal product retrieval
+PRODUCT_EARLY_THRESHOLD = 0.93   # high-confidence early short-circuit
+INGREDIENT_MATCH_THRESHOLD = 0.86  # normalizer's semantic tier (after exact lookup)
 
 # Label languages the downstream registry/normalizer/auditor support.
 # Anything outside this set is routed to a clean "unsupported language" exit
 # instead of silently failing the registry lookup.
 SUPPORTED_LANGUAGES = {"JP"}
 
-# Normalizer: maps raw ingredient names to canonical INCI keys.
+# Normalizer: seeds the ingredient vector index; tier-1 exact lookup still uses it.
 INGREDIENT_MASTER_PATH = "data/ingredient_master.json"
-NORMALIZER_FUZZY_THRESHOLD = 90  # rapidfuzz score below which a name stays unmapped
 # Where un-registered products are logged so they can be added to the registry later.
 REGISTRY_CANDIDATES_PATH = "data/registry_candidates.json"
 
