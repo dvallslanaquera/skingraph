@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
 from src.state import UserProfile
-from src.user_store import get_user, save_user
+from src.user_store import get_user, get_user_name, save_user
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -66,11 +66,13 @@ def main():
     args = parse_args()
 
     user_profile = None
+    user_name = None
     if args.user_id:
         user_profile = get_user(args.user_id)
         if user_profile is None:
             logging.error("No user found with id: %s", args.user_id)
             sys.exit(1)
+        user_name = get_user_name(args.user_id)
         logging.info("Loaded user profile from DB: %s", args.user_id)
     elif args.user_profile:
         with open(args.user_profile, "r", encoding="utf-8") as f:
@@ -90,6 +92,7 @@ def main():
         "retake_requested": False,
         "is_ready_for_logic": False,
         "user_profile": user_profile,
+        "user_name": user_name,
     }
 
     logging.info("--- STARTING FULL PIPELINE INVOCATION ---")

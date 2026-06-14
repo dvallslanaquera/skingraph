@@ -124,6 +124,15 @@ def get_user(user_id: str) -> Optional[UserProfile]:
     return _row_to_profile(row) if row else None
 
 
+def get_user_name(user_id: str) -> Optional[str]:
+    """Return the stored display name for a user id, or None."""
+    with _connect() as conn:
+        row = conn.execute(
+            "SELECT name FROM users WHERE user_id = ?", (user_id,)
+        ).fetchone()
+    return row["name"] if row else None
+
+
 def list_users() -> List[Tuple[str, Optional[str]]]:
     """Return (user_id, name) pairs, most recently updated first."""
     with _connect() as conn:

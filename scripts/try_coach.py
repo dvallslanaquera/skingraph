@@ -32,7 +32,8 @@ def _user_label(name: str | None, uid: str, p) -> str:
     if p.skin_type:
         parts.append(p.skin_type)
     if p.age:
-        parts.append(f"{p.age}{'F' if p.gender == 'female' else 'M' if p.gender == 'male' else ''}")
+        suffix = "F" if p.gender == "female" else "M" if p.gender == "male" else ""
+        parts.append(f"{p.age}{suffix}")
     if p.goals:
         parts.append("/".join(p.goals))
     if p.is_pregnant:
@@ -41,6 +42,7 @@ def _user_label(name: str | None, uid: str, p) -> str:
         parts.append(", ".join(p.skin_conditions))
     desc = " · ".join(parts) if parts else "no profile data"
     return f"{name or '(unnamed)'}  [{uid[:8]}…]  — {desc}"
+
 
 GOLDEN_SET = Path("data/golden_set")
 
@@ -75,18 +77,19 @@ def main():
     img_idx = _pick("Image #:", [p.name for p in images])
     image_path = str(images[img_idx])
 
-    users = user_store.list_users()
+    users = user_store.list_users_with_profiles()
     print("\n=== Choose a user ===")
     if not users:
         print("  (no saved users — run scripts/manage_users.py seed)")
-    labels = [f"{name or '(unnamed)'}  [{uid[:8]}…]" for uid, name in users]
+    labels = [_user_label(name, uid, p) for uid, name, p in users]
     user_idx = _pick("User #:", labels, allow_none=True) if users else None
 
     profile = None
+    uname = None
     if user_idx is not None:
-        uid = users[user_idx][0]
-        profile = user_store.get_user(uid)
-        print(f"\nUsing profile: {users[user_idx][1]}  (goals: {', '.join(profile.goals) or 'none'})")
+        uid, uname, profile = users[user_idx]
+        goals_str = ", ".join(profile.goals) or "none"
+        print(f"\nUsing profile: {uname}  (goals: {goals_str})")
     else:
         print("\nUsing no profile (generic advice).")
 
@@ -101,6 +104,7 @@ def main():
         "retake_requested": False,
         "is_ready_for_logic": False,
         "user_profile": profile,
+        "user_name": uname,
     })
 
     _print_results(final_state)
@@ -111,7 +115,9 @@ def _print_results(state):
     print("=" * 60)
     if data:
         print(f"PRODUCT : {data.brand} — {data.product_name}")
-        print(f"LANGUAGE: {state.get('detected_language')}  |  MODEL: {state.get('model_used')}")
+        lang = state.get("detected_language")
+        model = state.get("model_used")
+        print(f"LANGUAGE: {lang}  |  MODEL: {model}")
     if state.get("ingredient_source"):
         print(f"SOURCE  : {state.get('ingredient_source')}")
     if state.get("web_sources"):
