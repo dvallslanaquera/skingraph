@@ -24,6 +24,30 @@ _PREGNANCY_FLAGGED_INCI = {
     "Lactic Acid",
 }
 
+# Drying / barrier-stripping agents — flag a dehydration caution when present.
+_DRYING_INCI = {
+    "Alcohol Denat.",
+    "Isopropyl Alcohol",
+    "SD Alcohol 40-B",
+    "Ethanol",
+    "Sodium Lauryl Sulfate",
+}
+
+# Actives that raise sun sensitivity (or are phototoxic) — flag a sun-damage
+# caution and a daily-SPF reminder when present.
+_PHOTOSENSITISING_INCI = {
+    "Retinol",
+    "Glycolic Acid",
+    "Lactic Acid",
+    "Salicylic Acid",
+    "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
+    "Citrus Limon (Lemon) Peel Oil",
+    "Citrus Aurantifolia (Lime) Oil",
+    "Citrus Aurantium Dulcis (Orange) Peel Oil",
+    "Citrus Aurantium Dulcis (Orange) Oil",
+    "Citrus Junos Fruit Extract",
+}
+
 _SYSTEM_PROMPT = """
 You are a Japanese skincare specialist assistant providing cosmetics usage guidance.
 
@@ -84,65 +108,79 @@ Connect the user's goals to ingredients PRESENT in this product. Never promise o
 If the product contains nothing relevant to a stated goal, say so honestly rather
 than inventing a benefit.
 
-━━ SCOPE ━━
+━━ TIMING (AM / PM / AM & PM) ━━
+Decide when this product is best used, from its type and ingredients:
+• PM-leaning: Retinol/retinoids, AHA (Glycolic/Lactic Acid), BHA (Salicylic
+  Acid), and other exfoliating or photosensitising actives — they degrade in
+  light and/or raise sun sensitivity, so favour night use.
+• AM-leaning: sunscreens / SPF day products, antioxidant serums worn under SPF.
+• AM & PM: gentle daily steps — cleansers, hydrating toners, moisturisers,
+  ceramide/hyaluronic-acid products with no photosensitising actives.
+Output exactly one of: "AM", "PM", or "AM & PM".
+
+━━ FREQUENCY (X times per week) ━━
+Recommend how often to use it:
+• Strong actives (retinoids, exfoliating acids) → start low, e.g.
+  "2–3 times per week", building up as tolerated.
+• Daily-safe products (moisturiser, sunscreen, gentle cleanser, hydrating
+  toner) → "Daily" (sunscreen: every morning).
+Be concrete; never say "as needed" without a number or "Daily".
+
+━━ OUTPUT CONTRACT ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
-• TWO COMPLETE VERSIONS — produce the entire advice twice:
+• Produce a single recommendation card with exactly these fields:
+    product   — "Brand — Product Name" as given in the context.
+    purpose   — ONE sentence on what this product is for.
+    warnings  — user-tailored cautions; one concern per item. MUST call out if
+                the product can make skin more prone to dehydration or to sun
+                damage (raised sun sensitivity). [] if genuinely none.
+    timing    — "AM", "PM", or "AM & PM" per the rules above.
+    frequency — e.g. "Daily" or "2–3 times per week".
+• TWO COMPLETE VERSIONS — fill the card twice:
     'japanese': every field written ONLY in Japanese (敬体, 薬機法-compliant).
-    'english':  the SAME advice written ONLY in English.
-  Each version is self-contained: do NOT mix languages within a field. The two
-  versions must convey the same content, just in different languages.
+    'english':  the SAME card written ONLY in English.
+  Each version is self-contained: do NOT mix languages within a field. Both
+  versions must convey the same content; 'timing' stays "AM"/"PM"/"AM & PM"
+  in both.
 """.strip()
 
 
-class AdviceBlock(BaseModel):
-    """One complete set of advice, written entirely in a single language."""
+class Recommendation(BaseModel):
+    """One complete recommendation card, written entirely in a single language."""
 
-    summary: str = Field(
+    product: str = Field(
         default="",
-        description=(
-            "A personalised opening (2-4 sentences) shown before the routine. "
-            "It MUST: (1) name the scanned product (brand + product name); "
-            "(2) state in one sentence what this product is for / its purpose; "
-            "(3) say whether it is a good fit for THIS user, explicitly citing the "
-            "user's name and their relevant traits (skin type, goals, pregnancy, "
-            "skin conditions) so they can see their profile was considered. "
-            "Address the user by name. Never promise outcomes or use medical claims."
-        ),
+        description="The scanned product as 'Brand — Product Name'.",
     )
-    am_steps: List[str] = Field(
-        default_factory=list,
-        description="Ordered AM routine steps showing where THIS product fits.",
+    purpose: str = Field(
+        default="",
+        description="ONE sentence describing what this product is intended for.",
     )
-    pm_steps: List[str] = Field(
+    warnings: List[str] = Field(
         default_factory=list,
         description=(
-            "Ordered PM routine steps. Flag PM-only constraints "
-            "(photosensitising citrus oils, retinoids)."
+            "User-tailored cautions, one concern per item. MUST flag if the "
+            "product can make skin more prone to dehydration or sun damage. "
+            "Empty list if there are genuinely none."
         ),
     )
-    cautions: List[str] = Field(
-        default_factory=list,
-        description=(
-            "User-profile-specific cautions (skin conditions, conflicts, "
-            "sensitivity). One concern per item."
-        ),
+    timing: str = Field(
+        default="",
+        description="Best time to use: exactly 'AM', 'PM', or 'AM & PM'.",
     )
-    tips: List[str] = Field(
-        default_factory=list,
-        description=(
-            "3-5 practical tips for this user's skin type, goals, routine "
-            "time, and budget."
-        ),
+    frequency: str = Field(
+        default="",
+        description="How often to use, e.g. 'Daily' or '2–3 times per week'.",
     )
 
 
 class CoachResponse(BaseModel):
-    japanese: AdviceBlock = Field(
-        description="The complete advice written ONLY in Japanese (敬体, 薬機法-compliant)."
+    japanese: Recommendation = Field(
+        description="The card written ONLY in Japanese (敬体, 薬機法-compliant)."
     )
-    english: AdviceBlock = Field(
-        description="The same complete advice written ONLY in English."
+    english: Recommendation = Field(
+        description="The same card written ONLY in English."
     )
 
 
@@ -243,34 +281,68 @@ def _pregnancy_cautions(
     ]
 
 
-# Section headers per language: (am, pm, cautions, tips).
-_HEADERS = {
-    "ja": ("朝のお手入れ", "夜のお手入れ", "注意事項", "アドバイス"),
-    "en": ("AM Routine", "PM Routine", "Cautions", "Tips"),
-}
+def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
+    """Deterministic dehydration + sun-damage cautions as (japanese, english).
+
+    These are the safety-critical warnings the user specifically asked for, so
+    they are derived from the ingredient list rather than left to the model.
+    """
+    present = {
+        i["name_standardized"]
+        for i in (state.get("standardized_ingredients") or [])
+        if i.get("name_standardized")
+    }
+    ja: List[str] = []
+    en: List[str] = []
+
+    drying = sorted(present & _DRYING_INCI)
+    if drying:
+        ja.append(
+            f"乾燥に注意: {', '.join(drying)} を含むため、肌のうるおいが奪われ"
+            "やすくなることがあります。保湿を十分に行ってください。"
+        )
+        en.append(
+            f"Dehydration caution: contains {', '.join(drying)}, which can leave "
+            "skin more prone to dehydration — follow with good moisturisation."
+        )
+
+    photo = sorted(present & _PHOTOSENSITISING_INCI)
+    if photo:
+        ja.append(
+            f"紫外線に注意: {', '.join(photo)} は日中の紫外線に対する肌の"
+            "敏感さを高めることがあります。日中は毎日の日焼け止めをご使用ください。"
+        )
+        en.append(
+            f"Sun-sensitivity caution: {', '.join(photo)} can make skin more "
+            "prone to sun damage — wear a daily SPF."
+        )
+    return ja, en
 
 
-def _render_block(block: AdviceBlock, lang: str, extra_cautions: List[str]) -> str:
-    """Render one single-language AdviceBlock into a printable section."""
-    am_h, pm_h, caut_h, tips_h = _HEADERS[lang]
-    cautions = extra_cautions + block.cautions
+def _render_recommendation(
+    card: Recommendation, lang: str, extra_warnings: List[str]
+) -> str:
+    """Render one single-language Recommendation as the 5-point card."""
+    labels = {
+        "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度"),
+        "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency"),
+    }[lang]
+    prod_l, purp_l, warn_l, time_l, freq_l = labels
+    warnings = extra_warnings + card.warnings
 
-    sections: List[str] = []
-    if block.summary.strip():
-        sections.append(block.summary.strip())
-    sections.append(
-        f"{am_h}:\n"
-        + "\n".join(f"  {i}. {s}" for i, s in enumerate(block.am_steps, 1))
-    )
-    sections.append(
-        f"{pm_h}:\n"
-        + "\n".join(f"  {i}. {s}" for i, s in enumerate(block.pm_steps, 1))
-    )
-    if cautions:
-        sections.append(f"{caut_h}:\n" + "\n".join(f"  • {c}" for c in cautions))
-    if block.tips:
-        sections.append(f"{tips_h}:\n" + "\n".join(f"  • {t}" for t in block.tips))
-    return "\n\n".join(sections)
+    none_text = "特になし" if lang == "ja" else "None"
+    lines = [
+        f"1. {prod_l}: {card.product}",
+        f"2. {purp_l}: {card.purpose}",
+    ]
+    if warnings:
+        lines.append(f"3. {warn_l}:")
+        lines.extend(f"   • {w}" for w in warnings)
+    else:
+        lines.append(f"3. {warn_l}: {none_text}")
+    lines.append(f"4. {time_l}: {card.timing}")
+    lines.append(f"5. {freq_l}: {card.frequency}")
+    return "\n".join(lines)
 
 
 def coach_node(state: AgentState) -> dict:
@@ -287,16 +359,19 @@ def coach_node(state: AgentState) -> dict:
     profile: Optional[UserProfile] = state.get("user_profile")
     user_name = state.get("user_name")
     preg_ja, preg_en = _pregnancy_cautions(state, profile)
+    sun_ja, sun_en = _dehydration_sun_flags(state)
+    extra_ja = preg_ja + sun_ja
+    extra_en = preg_en + sun_en
 
     human_prompt = (
         f"## Product Analysis\n{_product_context(state)}\n\n"
         f"## {_user_context(profile, user_name)}\n\n"
-        "Write a personalised 'summary' opening that names the scanned product, "
-        "states its purpose in one sentence, and tells the user whether it suits "
-        "them — citing their name and relevant traits. Then provide AM routine "
-        "advice, PM routine advice, user-specific cautions, and practical tips. "
-        "Produce the WHOLE thing twice: once entirely in Japanese ('japanese'), "
-        "once entirely in English ('english')."
+        "Fill the recommendation card for this product and user: the product "
+        "name (brand + product name), its purpose in one sentence, "
+        "user-tailored warnings (including dehydration or sun-sensitivity risk "
+        "where relevant), the best timing (AM / PM / AM & PM), and the use "
+        "frequency. Produce the WHOLE card twice: once entirely in Japanese "
+        "('japanese'), once entirely in English ('english')."
     )
 
     model = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2)
@@ -310,30 +385,30 @@ def coach_node(state: AgentState) -> dict:
     ja, en = response.japanese, response.english
 
     # Japanese version in full, then a separator, then the English version.
-    ja_text = _render_block(ja, "ja", preg_ja)
-    en_text = _render_block(en, "en", preg_en)
+    ja_text = _render_recommendation(ja, "ja", extra_ja)
+    en_text = _render_recommendation(en, "en", extra_en)
     coach_advice = (
         "【日本語】\n" + ja_text + "\n\n" + "=" * 60 + "\n\n"
         "【English】\n" + en_text
     )
 
-    # Machine-readable list keeps the English steps for downstream consumers.
-    all_cautions_en = preg_en + en.cautions
+    # Machine-readable card keeps the English fields for downstream consumers.
+    all_warnings_en = extra_en + en.warnings
     recommendations: List[str] = (
-        [f"[AM] {s}" for s in en.am_steps]
-        + [f"[PM] {s}" for s in en.pm_steps]
-        + all_cautions_en
-        + en.tips
+        [f"[PRODUCT] {en.product}"]
+        + [f"[PURPOSE] {en.purpose}"]
+        + [f"[WARNING] {w}" for w in all_warnings_en]
+        + [f"[TIMING] {en.timing}"]
+        + [f"[FREQUENCY] {en.frequency}"]
     )
 
     report = state["safety_report"]
     logging.info(
-        "Coach: score=%.2f, %d AM / %d PM step(s), %d caution(s), %d tip(s).",
+        "Coach: score=%.2f, timing=%s, frequency=%s, %d warning(s).",
         report.safety_score,
-        len(en.am_steps),
-        len(en.pm_steps),
-        len(all_cautions_en),
-        len(en.tips),
+        en.timing,
+        en.frequency,
+        len(all_warnings_en),
     )
 
     return {

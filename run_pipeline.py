@@ -19,7 +19,7 @@ logging.basicConfig(level=logging.INFO)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the skincare coach pipeline on an image.")
     parser.add_argument("image_path", help="Path to the product image (e.g. data/golden_set/prod_001.jpg)")
-    parser.add_argument("--image-type", choices=["front", "back"], default="back", help="Side of the product label (default: back)")
+    parser.add_argument("--image-type", choices=["front", "back"], default=None, help="Override the side of the product label; omit to auto-detect from the image")
     parser.add_argument("--user-profile", default=None, help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)")
     parser.add_argument("--user-id", default=None, help="Load a saved user profile from the database by id")
     parser.add_argument("--save-user", nargs="?", const="", default=None, help="Save the --user-profile to the database (optionally with a name) and print its id")

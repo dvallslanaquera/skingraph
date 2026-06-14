@@ -1,13 +1,8 @@
-# pydantic schemes
-# define AgentState as a TypedDict for a controlled data flow between nodes
+from typing import List, Literal, Optional, TypedDict
 
-from typing import List, TypedDict, Optional, Literal
 from pydantic import BaseModel, Field
 
 
-#! Why keep everything in three different classes
-#!. what are the different syntaxs of states
-# pydantic models to force JSON output of the LLM nodes
 class Ingredient(BaseModel):
     name_raw: str = Field(
         ..., description="original name of the ingredient as extracted from the image"
@@ -96,11 +91,12 @@ class UserProfile(BaseModel):
 class AgentState(TypedDict):
     # input data
     image_path: str
-    image_type: Literal["front", "back"]
+    # None on input → the classify_side node auto-detects front vs back.
+    image_type: Optional[Literal["front", "back"]]
 
     # extraction state
     extracted_data: Optional[ProductExtraction]
-    model_used: Literal["flash", "pro", "database"]
+    model_used: Literal["flash", "pro", "database", "web"]
     inference_confidence: float
 
     # processed data

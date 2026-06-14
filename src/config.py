@@ -18,9 +18,11 @@ PRODUCT_MATCH_THRESHOLD = 0.86   # normal product retrieval
 PRODUCT_EARLY_THRESHOLD = 0.93   # high-confidence early short-circuit
 INGREDIENT_MATCH_THRESHOLD = 0.86  # normalizer's semantic tier (after exact lookup)
 
-# Label languages the downstream registry/normalizer/auditor support.
-# Anything outside this set is routed to a clean "unsupported language" exit
-# instead of silently failing the registry lookup.
+# Label languages the registry/normalizer/auditor are best tuned for. The
+# pipeline no longer gates on language (any product is accepted and routed to a
+# recommendation); this set is kept only as documentation of the strongest
+# coverage. Non-JP labels may leave some ingredients unmatched, which is
+# surfaced rather than treated as a failure.
 SUPPORTED_LANGUAGES = {"JP"}
 
 # Normalizer: seeds the ingredient vector index; tier-1 exact lookup still uses it.
