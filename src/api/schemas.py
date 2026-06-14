@@ -1,0 +1,111 @@
+# Request / response contracts for the HTTP layer.
+#
+# The graph already speaks in Pydantic models (ProductExtraction, SafetyAudit,
+# RoutineFit, ...), so the response models below mostly re-expose those nested
+# models. AgentState is a TypedDict of loosely-typed dicts; the response models
+# pin down exactly which fields the API surfaces and coerce the normalizer's
+# plain-dict ingredients into a typed shape.
+from typing import List, Literal, Optional
+
+from pydantic import BaseModel, Field
+
+from src.state import ProductExtraction, RoutineFit, SafetyAudit, UserProfile
+
+# --- /scan ------------------------------------------------------------------
+
+# Where the final graph state landed, summarised for the client:
+#   complete        — a full recommendation card was produced.
+#   retake_required — the label couldn't be read; the user should retake.
+#   action_needed   — identity/ingredients unresolved; coach_advice says what to do.
+#   incomplete      — the graph exited without advice (unexpected; inspect fields).
+ScanStatus = Literal["complete", "retake_required", "action_needed", "incomplete"]
+
+
+class NormalizedIngredient(BaseModel):
+    """One normalizer output row (raw label name → canonical INCI key)."""
+
+    name_raw: str
+    name_standardized: Optional[str] = None
+    is_active: Optional[bool] = None
+    source_language: Optional[str] = None
+
+
+class ScanResponse(BaseModel):
+    """Serialised final graph state for a single scan."""
+
+    status: ScanStatus = Field(description="High-level outcome of the scan.")
+    trace_id: Optional[str] = None
+    model_used: Optional[str] = Field(
+        None, description="Which path produced the extraction: flash | pro | database | web."
+    )
+    inference_confidence: Optional[float] = None
+    registry_matched: Optional[bool] = None
+    ingredient_source: Optional[str] = Field(
+        None, description="Where the ingredient list came from: registry | label | web."
+    )
+    detected_language: Optional[str] = None
+
+    product: Optional[ProductExtraction] = Field(
+        None, description="Brand, product name, and raw extracted ingredients."
+    )
+    standardized_ingredients: List[NormalizedIngredient] = Field(default_factory=list)
+    unmatched_ingredients: List[str] = Field(
+        default_factory=list, description="Raw names with no INCI mapping (surfaced, not fatal)."
+    )
+    safety_report: Optional[SafetyAudit] = None
+    routine_fit: Optional[RoutineFit] = Field(
+        None, description="Cross-product evaluation against the user's saved routine."
+    )
+
+    coach_advice: Optional[str] = Field(
+        None, description="Bilingual recommendation card, or a graceful-exit message."
+    )
+    routine_recommendations: List[str] = Field(default_factory=list)
+    web_sources: List[str] = Field(default_factory=list)
+
+    added_product_id: Optional[str] = Field(
+        None, description="Set when add_to_routine saved this product to the shelf."
+    )
+
+
+# --- users ------------------------------------------------------------------
+
+
+class UserUpsertRequest(BaseModel):
+    """Create or replace a user: an optional display name plus their profile."""
+
+    name: Optional[str] = None
+    profile: UserProfile
+
+
+class UserCreateResponse(BaseModel):
+    user_id: str
+
+
+class UserSummary(BaseModel):
+    user_id: str
+    name: Optional[str] = None
+
+
+class UserDetail(BaseModel):
+    user_id: str
+    name: Optional[str] = None
+    profile: UserProfile
+
+
+# --- routine ("shelf") ------------------------------------------------------
+
+
+class RoutineProductRequest(BaseModel):
+    """Manually add a product to a user's routine (without a scan)."""
+
+    brand: str
+    product_name: str
+    ingredients: List[str] = Field(
+        default_factory=list, description="Canonical INCI names of the product."
+    )
+    is_quasi_drug: Optional[bool] = None
+
+
+class RoutineProductResponse(BaseModel):
+    product_id: str
