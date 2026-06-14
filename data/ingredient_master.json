@@ -127,5 +127,19 @@
   "Pantolactone": ["パントラクトン", "pantolactone"],
   "Sodium Metabisulfite": ["ピロ亜硫酸ナトリウム", "sodium metabisulfite", "sodium pyrosulfite"],
 
-  "Dipentaerythrityl Hexahydroxystearate/Hexastearate/Hexarosinate": ["ヘキサ(ヒドロキシステアリン酸/ステアリン酸/ロジン酸)ジペンタエリスリチル", "dipentaerythrityl hexahydroxystearate/hexastearate/hexarosinate"]
+  "Dipentaerythrityl Hexahydroxystearate/Hexastearate/Hexarosinate": ["ヘキサ(ヒドロキシステアリン酸/ステアリン酸/ロジン酸)ジペンタエリスリチル", "dipentaerythrityl hexahydroxystearate/hexastearate/hexarosinate"],
+
+  "Linalool": ["リナロール", "linalool"],
+  "Limonene": ["リモネン", "d-リモネン", "limonene", "d-limonene"],
+  "Citral": ["シトラール", "citral"],
+  "Geraniol": ["ゲラニオール", "geraniol"],
+  "Citronellol": ["シトロネロール", "citronellol"],
+
+  "Copper Tripeptide-1": ["銅トリペプチド-1", "copper tripeptide-1"],
+  "Palmitoyl Tripeptide-1": ["パルミトイルトリペプチド-1", "palmitoyl tripeptide-1"],
+  "Palmitoyl Tetrapeptide-7": ["パルミトイルテトラペプチド-7", "palmitoyl tetrapeptide-7"],
+  "Palmitoyl Pentapeptide-4": ["パルミトイルペンタペプチド-4", "palmitoyl pentapeptide-4", "palmitoyl pentapeptide-3"],
+  "Acetyl Hexapeptide-8": ["アセチルヘキサペプチド-8", "アセチルヘキサペプチド-3", "acetyl hexapeptide-8", "acetyl hexapeptide-3", "argireline"],
+  "Glutathione": ["グルタチオン", "glutathione"],
+  "Carnosine": ["カルノシン", "carnosine"]
 }
