@@ -25,6 +25,23 @@ from dotenv import load_dotenv  # noqa: E402
 from src import user_store  # noqa: E402
 from src.graph import app  # noqa: E402
 
+
+def _user_label(name: str | None, uid: str, p) -> str:
+    """Build a one-line menu label with the most distinctive profile traits."""
+    parts = []
+    if p.skin_type:
+        parts.append(p.skin_type)
+    if p.age:
+        parts.append(f"{p.age}{'F' if p.gender == 'female' else 'M' if p.gender == 'male' else ''}")
+    if p.goals:
+        parts.append("/".join(p.goals))
+    if p.is_pregnant:
+        parts.append("pregnant")
+    if p.skin_conditions:
+        parts.append(", ".join(p.skin_conditions))
+    desc = " · ".join(parts) if parts else "no profile data"
+    return f"{name or '(unnamed)'}  [{uid[:8]}…]  — {desc}"
+
 GOLDEN_SET = Path("data/golden_set")
 
 # Keep the pipeline's own INFO logs quiet so the menu stays readable.
@@ -95,12 +112,17 @@ def _print_results(state):
     if data:
         print(f"PRODUCT : {data.brand} — {data.product_name}")
         print(f"LANGUAGE: {state.get('detected_language')}  |  MODEL: {state.get('model_used')}")
+    if state.get("ingredient_source"):
+        print(f"SOURCE  : {state.get('ingredient_source')}")
+    if state.get("web_sources"):
+        print(f"WEB SRC : {', '.join(state['web_sources'])}")
 
-    if state.get("retake_requested"):
-        print(f"\nRETAKE REQUESTED: {state.get('coach_advice')}")
-        return
-    if state.get("language_supported") is False:
-        print(f"\nUNSUPPORTED LANGUAGE: {state.get('coach_advice')}")
+    advice = state.get("coach_advice")
+    if not state.get("is_ready_for_logic"):
+        # Graceful exit: retake, unsupported language, identity, or search miss.
+        if advice:
+            print(f"\nACTION NEEDED: {advice}")
+        print("=" * 60)
         return
 
     report = state.get("safety_report")
@@ -109,7 +131,6 @@ def _print_results(state):
         for w in report.warnings:
             print(f"  {w}")
 
-    advice = state.get("coach_advice")
     if advice:
         print("\n" + "-" * 60)
         print("COACH ADVICE")

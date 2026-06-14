@@ -4,12 +4,15 @@ import logging
 from langgraph.graph import END, StateGraph
 
 from src.config import (FLASH_ACCEPT_THRESHOLD, FLASH_ESCALATE_THRESHOLD,
-                        MAX_CORRECTIONS, SUPPORTED_LANGUAGES)
+                        IDENTITY_CONFIDENCE_THRESHOLD, MAX_CORRECTIONS,
+                        MIN_INGREDIENTS_FOR_AUDIT, SUPPORTED_LANGUAGES)
 from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
 from src.nodes.scanner import flash_scanner_node, pro_scanner_node
+from src.nodes.websearch import (confirm_identity_node, search_failed_node,
+                                 verify_identity_node, web_search_node)
 from src.state import AgentState
 
 
@@ -96,6 +99,30 @@ def unsupported_language_node(state: AgentState) -> dict:
     }
 
 
+def post_registry_router(state: AgentState) -> str:
+    """After the registry lookup, decide whether we already have a usable list.
+
+    A registry hit is always enough. On a miss we trust the photo only if it
+    yielded enough ingredients; otherwise we fall through to the web search.
+    """
+    if state.get("registry_matched"):
+        return "have_ingredients"
+    data = state.get("extracted_data")
+    count = len(data.ingredients) if data else 0
+    return "have_ingredients" if count >= MIN_INGREDIENTS_FOR_AUDIT else "need_search"
+
+
+def identity_router(state: AgentState) -> str:
+    conf = state.get("identity_confidence") or 0.0
+    return "confident" if conf >= IDENTITY_CONFIDENCE_THRESHOLD else "uncertain"
+
+
+def web_result_router(state: AgentState) -> str:
+    data = state.get("extracted_data")
+    count = len(data.ingredients) if data else 0
+    return "found" if count >= MIN_INGREDIENTS_FOR_AUDIT else "not_found"
+
+
 workflow = StateGraph(state_schema=AgentState)
 
 workflow.add_node("flash_scanner", flash_scanner_node)
@@ -107,6 +134,10 @@ workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
 workflow.add_node("auditor", auditor_node)
 workflow.add_node("coach", coach_node)
+workflow.add_node("verify_identity", verify_identity_node)
+workflow.add_node("web_search", web_search_node)
+workflow.add_node("confirm_identity", confirm_identity_node)
+workflow.add_node("search_failed", search_failed_node)
 workflow.add_node("retake_request", retake_node)
 workflow.add_node("unsupported_language", unsupported_language_node)
 
@@ -151,10 +182,38 @@ workflow.add_conditional_edges(
     },
 )
 
-workflow.add_edge("registry_lookup", "normalizer")
+workflow.add_conditional_edges(
+    "registry_lookup",
+    post_registry_router,
+    {
+        "have_ingredients": "normalizer",
+        "need_search": "verify_identity",
+    },
+)
+
+workflow.add_conditional_edges(
+    "verify_identity",
+    identity_router,
+    {
+        "confident": "web_search",
+        "uncertain": "confirm_identity",
+    },
+)
+
+workflow.add_conditional_edges(
+    "web_search",
+    web_result_router,
+    {
+        "found": "normalizer",
+        "not_found": "search_failed",
+    },
+)
+
 workflow.add_edge("normalizer", "auditor")
 workflow.add_edge("auditor", "coach")
 workflow.add_edge("coach", END)
+workflow.add_edge("confirm_identity", END)
+workflow.add_edge("search_failed", END)
 workflow.add_edge("retake_request", END)
 workflow.add_edge("unsupported_language", END)
 
