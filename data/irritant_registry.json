@@ -1,0 +1,193 @@
+[
+  {
+    "ingredient": "Hydroquinone",
+    "level": "high",
+    "reason": "Regulated skin-lightening agent; restricted in leave-on cosmetics in many markets."
+  },
+  {
+    "ingredient": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
+    "level": "medium",
+    "reason": "Known contact sensitizer; highly sensitizing if used undiluted or oxidized."
+  },
+  {
+    "ingredient": "Lavandula Angustifolia (Lavender) Oil",
+    "level": "medium",
+    "reason": "Contains linalool and linalyl acetate; a recognized fragrance allergen."
+  },
+  {
+    "ingredient": "Rosmarinus Officinalis (Rosemary) Leaf Oil",
+    "level": "medium",
+    "reason": "Aromatic essential oil; potential fragrance allergen for sensitive skin."
+  },
+  {
+    "ingredient": "Citrus Aurantium Dulcis (Orange) Peel Oil",
+    "level": "medium",
+    "reason": "Citrus peel oil may contain furanocoumarins; can cause phototoxicity under UV."
+  },
+  {
+    "ingredient": "Citrus Aurantium Dulcis (Orange) Oil",
+    "level": "medium",
+    "reason": "Citrus oil may contain furanocoumarins; can cause phototoxicity under UV."
+  },
+  {
+    "ingredient": "Lavandula Angustifolia (Lavender) Flower Extract",
+    "level": "low",
+    "reason": "Lavender-derived; may carry trace fragrance allergens."
+  },
+  {
+    "ingredient": "Citrus Junos Fruit Extract",
+    "level": "low",
+    "reason": "Citrus-derived; mild photosensitivity potential for reactive skin."
+  },
+  {
+    "ingredient": "Ethanol",
+    "level": "low",
+    "reason": "Can be drying or stinging on compromised barriers at high concentration."
+  },
+  {
+    "ingredient": "Methylparaben",
+    "level": "low",
+    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request."
+  },
+  {
+    "ingredient": "Propylparaben",
+    "level": "low",
+    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request."
+  },
+  {
+    "ingredient": "Phenoxyethanol",
+    "level": "low",
+    "reason": "Preservative; rare sensitizer at typical use levels."
+  },
+  {
+    "ingredient": "Benzyl Alcohol",
+    "level": "low",
+    "reason": "Preservative and fragrance component; occasional contact allergen."
+  },
+  {
+    "ingredient": "BHT",
+    "level": "low",
+    "reason": "Synthetic antioxidant; a common avoidance request despite broad regulatory acceptance."
+  },
+
+  {
+    "ingredient": "Alcohol Denat.",
+    "level": "medium",
+    "reason": "Denatured alcohol; strips the skin barrier and can cause dryness."
+  },
+  {
+    "ingredient": "Isopropyl Alcohol",
+    "level": "medium",
+    "reason": "Highly drying solvent; can irritate and dehydrate the skin barrier."
+  },
+  {
+    "ingredient": "SD Alcohol 40-B",
+    "level": "medium",
+    "reason": "Fast-evaporating solvent alcohol that can dehydrate the epidermis."
+  },
+
+  {
+    "ingredient": "Sodium Lauryl Sulfate",
+    "level": "medium",
+    "reason": "Harsh foaming surfactant known to disrupt the skin lipid barrier."
+  },
+  {
+    "ingredient": "Sodium Laureth Sulfate",
+    "level": "low",
+    "reason": "Milder than SLS but still a frequent trigger for sensitive or eczema-prone skin."
+  },
+
+  {
+    "ingredient": "Methylchloroisothiazolinone",
+    "level": "high",
+    "reason": "Potent contact allergen; typically restricted to rinse-off products."
+  },
+  {
+    "ingredient": "Methylisothiazolinone",
+    "level": "high",
+    "reason": "Frequent cause of allergic contact dermatitis."
+  },
+  {
+    "ingredient": "DMDM Hydantoin",
+    "level": "medium",
+    "reason": "Formaldehyde releaser; can trigger contact allergy in sensitive skin."
+  },
+  {
+    "ingredient": "Diazolidinyl Urea",
+    "level": "medium",
+    "reason": "Formaldehyde releaser; potential contact allergen."
+  },
+  {
+    "ingredient": "Imidazolidinyl Urea",
+    "level": "medium",
+    "reason": "Formaldehyde releaser; potential contact allergen."
+  },
+  {
+    "ingredient": "Quaternium-15",
+    "level": "medium",
+    "reason": "Formaldehyde releaser; one of the more sensitizing preservatives."
+  },
+
+  {
+    "ingredient": "Fragrance",
+    "level": "medium",
+    "reason": "Blanket term that can mask numerous undisclosed allergens."
+  },
+  {
+    "ingredient": "Linalool",
+    "level": "medium",
+    "reason": "Fragrance component; its oxidized form is a known sensitizer."
+  },
+  {
+    "ingredient": "Limonene",
+    "level": "medium",
+    "reason": "Fragrance component; its oxidized form is a known sensitizer."
+  },
+  {
+    "ingredient": "Citral",
+    "level": "medium",
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+  },
+  {
+    "ingredient": "Geraniol",
+    "level": "medium",
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+  },
+  {
+    "ingredient": "Citronellol",
+    "level": "medium",
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+  },
+
+  {
+    "ingredient": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
+    "level": "medium",
+    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure."
+  },
+  {
+    "ingredient": "Citrus Limon (Lemon) Peel Oil",
+    "level": "medium",
+    "reason": "Citrus peel oil; can cause phototoxic reactions under UV exposure."
+  },
+  {
+    "ingredient": "Citrus Aurantifolia (Lime) Oil",
+    "level": "medium",
+    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure."
+  },
+
+  {
+    "ingredient": "Menthol",
+    "level": "medium",
+    "reason": "Cooling agent; the cooling sensation can indicate localized irritation."
+  },
+  {
+    "ingredient": "Mentha Piperita (Peppermint) Oil",
+    "level": "medium",
+    "reason": "Cooling essential oil that can irritate and sensitize skin."
+  },
+  {
+    "ingredient": "Eucalyptus Globulus Leaf Oil",
+    "level": "medium",
+    "reason": "Aromatic essential oil that can irritate sensitive skin."
+  }
+]

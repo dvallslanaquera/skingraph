@@ -56,18 +56,21 @@ class ProductExtraction(BaseModel):
 
 
 class SafetyAudit(BaseModel):
-    conflicts_with_conditions: Optional[list[str]] = Field(
-        None,
-        description="list of health conditions that may conflict with the product's ingredients",
+    ingredient_conflicts: List[str] = Field(
+        default_factory=list,
+        description="pairwise ingredient conflicts found, e.g. 'Retinol + Ascorbic Acid: ...'",
     )
-    warnings: Optional[list[str]] = Field(
-        None, description="list of warnings related to the product's ingredients"
+    risk_ingredients: List[str] = Field(
+        default_factory=list,
+        description="individual INCI names flagged as irritant, sensitizer, or regulated",
     )
-    safety_score: Optional[float] = Field(
-        None, description="safety score of the product based on its ingredients"
+    warnings: List[str] = Field(
+        default_factory=list,
+        description="human-readable, severity-tagged warning lines for the coach node",
     )
-    risk_ingredients: Optional[list[str]] = Field(
-        None, description="list of potentially risky ingredients found in the product"
+    safety_score: float = Field(
+        1.0,
+        description="0.0 (high concern) to 1.0 (no flags); starts at 1.0, penalized per finding",
     )
 
 

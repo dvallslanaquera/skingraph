@@ -96,6 +96,18 @@ def main():
     if unmatched:
         logging.warning(f"{len(unmatched)} ingredient(s) had no INCI mapping: {', '.join(unmatched)}")
 
+    report = final_state.get("safety_report")
+    if report is not None:
+        logging.info(f"Safety Score:     {report.safety_score:.2f}")
+        if report.ingredient_conflicts:
+            logging.info(f"Ingredient Conflicts ({len(report.ingredient_conflicts)}):")
+            for conflict in report.ingredient_conflicts:
+                logging.info(f"  - {conflict}")
+        if report.risk_ingredients:
+            logging.info(f"Risk Ingredients: {', '.join(report.risk_ingredients)}")
+        for warning in report.warnings:
+            logging.info(f"  {warning}")
+
     if final_state.get("retake_requested"):
         logging.warning(f"RETAKE REQUESTED: {final_state.get('coach_advice')}")
     elif final_state.get("language_supported") is False:
