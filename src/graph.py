@@ -1,17 +1,16 @@
 # stategraph definition
 import logging
-from langgraph.graph import StateGraph, END
-from src.state import AgentState
-from src.nodes.scanner import flash_scanner_node, pro_scanner_node
-from src.config import (
-    FLASH_ACCEPT_THRESHOLD,
-    FLASH_ESCALATE_THRESHOLD,
-    MAX_CORRECTIONS,
-    SUPPORTED_LANGUAGES,
-)
-from src.nodes.registry import registry_lookup_node, early_registry_check_node
-from src.nodes.normalizer import normalizer_node
+
+from langgraph.graph import END, StateGraph
+
+from src.config import (FLASH_ACCEPT_THRESHOLD, FLASH_ESCALATE_THRESHOLD,
+                        MAX_CORRECTIONS, SUPPORTED_LANGUAGES)
 from src.nodes.auditor import auditor_node
+from src.nodes.coach import coach_node
+from src.nodes.normalizer import normalizer_node
+from src.nodes.registry import early_registry_check_node, registry_lookup_node
+from src.nodes.scanner import flash_scanner_node, pro_scanner_node
+from src.state import AgentState
 
 
 def inference_router(state: AgentState) -> str:
@@ -107,6 +106,7 @@ workflow.add_node("language_gate", language_gate_node)
 workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
 workflow.add_node("auditor", auditor_node)
+workflow.add_node("coach", coach_node)
 workflow.add_node("retake_request", retake_node)
 workflow.add_node("unsupported_language", unsupported_language_node)
 
@@ -153,7 +153,8 @@ workflow.add_conditional_edges(
 
 workflow.add_edge("registry_lookup", "normalizer")
 workflow.add_edge("normalizer", "auditor")
-workflow.add_edge("auditor", END)
+workflow.add_edge("auditor", "coach")
+workflow.add_edge("coach", END)
 workflow.add_edge("retake_request", END)
 workflow.add_edge("unsupported_language", END)
 

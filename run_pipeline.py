@@ -4,9 +4,12 @@ import json
 import logging
 import os
 import sys
+
 from dotenv import load_dotenv
-from src.graph import app
+
 from src.config import REGISTRY_CANDIDATES_PATH
+from src.graph import app
+from src.state import UserProfile
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +19,7 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the skincare coach pipeline on an image.")
     parser.add_argument("image_path", help="Path to the product image (e.g. data/golden_set/prod_001.jpg)")
     parser.add_argument("--image-type", choices=["front", "back"], default="back", help="Side of the product label (default: back)")
+    parser.add_argument("--user-profile", default=None, help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)")
     return parser.parse_args()
 
 
@@ -57,6 +61,13 @@ def main():
             stream.reconfigure(encoding="utf-8")
 
     args = parse_args()
+
+    user_profile = None
+    if args.user_profile:
+        with open(args.user_profile, "r", encoding="utf-8") as f:
+            user_profile = UserProfile.model_validate(json.load(f))
+        logging.info("Loaded user profile: %s", args.user_profile)
+
     inputs = {
         "image_path": args.image_path,
         "image_type": args.image_type,
@@ -66,6 +77,7 @@ def main():
         "correction_feedback": None,
         "retake_requested": False,
         "is_ready_for_logic": False,
+        "user_profile": user_profile,
     }
 
     logging.info("--- STARTING FULL PIPELINE INVOCATION ---")
@@ -107,6 +119,16 @@ def main():
             logging.info(f"Risk Ingredients: {', '.join(report.risk_ingredients)}")
         for warning in report.warnings:
             logging.info(f"  {warning}")
+
+    if final_state.get("coach_advice") and final_state.get("is_ready_for_logic"):
+        logging.info("--- COACH ADVICE ---")
+        for line in final_state["coach_advice"].splitlines():
+            logging.info(line)
+        recs = final_state.get("routine_recommendations") or []
+        if recs:
+            logging.info("--- ROUTINE RECOMMENDATIONS ---")
+            for rec in recs:
+                logging.info("  %s", rec)
 
     if final_state.get("retake_requested"):
         logging.warning(f"RETAKE REQUESTED: {final_state.get('coach_advice')}")

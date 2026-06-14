@@ -74,6 +74,24 @@ class SafetyAudit(BaseModel):
     )
 
 
+class UserProfile(BaseModel):
+    skin_type: Optional[Literal["dry", "oily", "combination", "normal", "sensitive"]] = None
+    age: Optional[int] = None
+    gender: Optional[str] = None
+    goals: List[str] = Field(
+        default_factory=list,
+        description="e.g. anti_aging, brightening, hydration, acne_control, barrier_repair",
+    )
+    is_pregnant: bool = False
+    skin_conditions: List[str] = Field(
+        default_factory=list,
+        description="e.g. eczema, rosacea, acne, psoriasis, hyperpigmentation",
+    )
+    sun_damage_history: Optional[Literal["none", "mild", "moderate", "severe"]] = None
+    routine_time: Optional[Literal["minimal", "moderate", "extensive"]] = None
+    budget: Optional[Literal["budget", "mid-range", "premium"]] = None
+
+
 # graph state: shared memory bus between nodes, also used for routing decisions
 class AgentState(TypedDict):
     # input data
@@ -107,3 +125,6 @@ class AgentState(TypedDict):
     # registry + normalization
     registry_matched: Optional[bool]
     unmatched_ingredients: Optional[List[str]]
+
+    # personalised coaching
+    user_profile: Optional[UserProfile]
