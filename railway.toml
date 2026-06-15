@@ -1,6 +1,7 @@
 [build]
-dockerfilePath   = "Dockerfile"
-dockerBuildTarget = "api"
+# No build target is set: Railway builds the LAST Dockerfile stage, which is
+# `api` by design. (ocr-worker sits earlier so it stays out of the deploy.)
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand       = "/app/entrypoint.sh"

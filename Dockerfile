@@ -40,13 +40,13 @@ RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
 
 
 # ────────────────────────────────────────────────────────────
-# Stage 2 – api   (default production target)
+# Stage 2 – base
 #
-# Runs the FastAPI / LangGraph service.
-# No YomiToku, no OpenCV, no GPU runtime.
-# Build:  docker build --target api -t skincare-coach-api .
+# Shared runtime layer for both `api` and `ocr-worker`: the venv,
+# the pre-baked embedding model, source, scripts, and seed data.
+# No EXPOSE / CMD here so the two leaf stages set their own.
 # ────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS api
+FROM python:3.12-slim AS base
 
 WORKDIR /app
 
@@ -63,7 +63,7 @@ RUN apt-get update \
 COPY --from=builder /opt/venv /opt/venv
 
 # Pre-download the sentence-transformers model into the image layer.
-# Without this, ECS cold starts hit HuggingFace at first request (~30-60 s delay).
+# Without this, cold starts hit HuggingFace at first request (~30-60 s delay).
 # Placed before COPY src/ so Docker cache survives source-only changes.
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
 
@@ -80,25 +80,20 @@ COPY data/*.json ./seed/
 COPY entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
-EXPOSE 8000
-
-# PORT is injected by Railway; defaults to 8000 for ECS and local Docker.
-# On first start the entrypoint builds the Qdrant index if the volume is empty.
-CMD ["/app/entrypoint.sh"]
-
 
 # ────────────────────────────────────────────────────────────
 # Stage 3 – ocr-worker   (optional, profile: ocr)
 #
-# Adds YomiToku + OpenCV on top of the api layer for the
+# Adds YomiToku + OpenCV on top of the base layer for the
 # standalone OCR benchmark in scripts/run_ocr.py.
-# This stage is NOT needed to run the production API.
+# This stage is NOT in the production deploy path — it pulls in
+# torchvision, which is intentionally absent from `api`.
 #
 # Build:  docker compose --profile ocr build ocr-worker
 # Run:    docker compose --profile ocr run ocr-worker \
 #           python scripts/run_ocr.py data/golden_set/ --device cpu
 # ────────────────────────────────────────────────────────────
-FROM api AS ocr-worker
+FROM base AS ocr-worker
 
 # Additional system libs required by OpenCV on slim
 RUN apt-get update \
@@ -113,3 +108,22 @@ RUN apt-get update \
 RUN pip install --no-cache-dir opencv-python-headless yomitoku
 
 CMD ["python", "scripts/run_ocr.py", "--help"]
+
+
+# ────────────────────────────────────────────────────────────
+# Stage 4 – api   (default production target — MUST stay last)
+#
+# Runs the FastAPI / LangGraph service. No YomiToku, no OpenCV,
+# no torchvision. Because it is the final stage, a plain
+# `docker build` (and Railway, which ignores build-target config)
+# builds THIS image by default — not the heavier ocr-worker.
+#
+# Build:  docker build --target api -t skincare-coach-api .
+# ────────────────────────────────────────────────────────────
+FROM base AS api
+
+EXPOSE 8000
+
+# PORT is injected by Railway; defaults to 8000 for ECS and local Docker.
+# On first start the entrypoint builds the Qdrant index if the volume is empty.
+CMD ["/app/entrypoint.sh"]
