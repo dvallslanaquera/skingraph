@@ -72,13 +72,14 @@ COPY src/ ./src/
 COPY scripts/ ./scripts/
 # Only static JSON reference data; users.db and qdrant/ are mounted as volumes.
 COPY data/*.json ./data/
+COPY entrypoint.sh ./entrypoint.sh
+RUN chmod +x entrypoint.sh
 
 EXPOSE 8000
 
-CMD ["uvicorn", "src.api.main:app", \
-     "--host", "0.0.0.0", \
-     "--port", "8000", \
-     "--workers", "1"]
+# PORT is injected by Railway; defaults to 8000 for ECS and local Docker.
+# On first start the entrypoint builds the Qdrant index if the volume is empty.
+CMD ["/app/entrypoint.sh"]
 
 
 # ────────────────────────────────────────────────────────────
