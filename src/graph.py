@@ -39,15 +39,12 @@ def inference_router(state: AgentState) -> str:
 
 
 def early_registry_router(state: AgentState) -> str:
-    if state.get("is_ready_for_logic", False):
-        return "registry_hit"
-    return "continue"
+    return "registry_hit" if state.get("is_ready_for_logic", False) else "continue"
 
 
 def pro_scanner_router(state: AgentState) -> str:
-    if state["inference_confidence"] >= FLASH_ACCEPT_THRESHOLD:
-        return "accept"
-    return "retake"
+    accept = state["inference_confidence"] >= FLASH_ACCEPT_THRESHOLD
+    return "accept" if accept else "retake"
 
 
 def correction_node(state: AgentState) -> dict:
@@ -85,7 +82,7 @@ def tag_language_node(state: AgentState) -> dict:
     """
     extracted = state["extracted_data"]
     lang = (extracted.source_language or "").strip().upper() if extracted else ""
-    return {"detected_language": lang, "language_supported": True}
+    return {"detected_language": lang}
 
 
 def post_registry_router(state: AgentState) -> str:

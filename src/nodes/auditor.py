@@ -11,7 +11,7 @@ import logging
 from typing import Dict, List, Optional, Set
 
 from src.conflicts import load_conflict_matrix
-from src.state import AgentState, SafetyAudit
+from src.state import AgentState, SafetyAudit, inci_names
 from src.config import (
     IRRITANT_REGISTRY_PATH,
     CONFLICT_PENALTY,
@@ -41,12 +41,7 @@ def _present_inci(state: AgentState) -> Set[str]:
     names can be audited reliably, so unmapped ones are skipped here and
     surfaced separately via ``unmatched_ingredients``.
     """
-    items = state.get("standardized_ingredients") or []
-    return {
-        item["name_standardized"]
-        for item in items
-        if item.get("name_standardized")
-    }
+    return set(inci_names(state.get("standardized_ingredients")))
 
 
 def auditor_node(state: AgentState) -> dict:

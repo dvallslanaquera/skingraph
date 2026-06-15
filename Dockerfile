@@ -80,6 +80,18 @@ COPY data/*.json ./seed/
 COPY entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
+# Pre-build the Qdrant index at image-build time and stage it under /app/seed.
+# Embedding ~500 ingredient forms on Railway's shared CPU at boot took ~8 min
+# and blew past the healthcheck window; doing it here (cached, no healthcheck)
+# makes first boot a fast file-copy instead. build_index.py reads data/*.json
+# and writes data/qdrant, so stage the JSON into data/ for the build, move the
+# result into seed/, then drop the temp data/ (the volume provides it at runtime).
+RUN mkdir -p data \
+ && cp seed/*.json data/ \
+ && python scripts/build_index.py \
+ && mv data/qdrant seed/qdrant \
+ && rm -rf data
+
 
 # ────────────────────────────────────────────────────────────
 # Stage 3 – ocr-worker   (optional, profile: ocr)

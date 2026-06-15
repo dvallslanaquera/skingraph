@@ -24,6 +24,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 from src import user_store  # noqa: E402
 from src.graph import app  # noqa: E402
+from src.state import build_initial_state  # noqa: E402
 
 
 def _user_label(name: str | None, uid: str, p) -> str:
@@ -94,18 +95,11 @@ def main():
         print("\nUsing no profile (generic advice).")
 
     print(f"\nRunning pipeline on {Path(image_path).name} … (this calls the API)\n")
-    final_state = app.invoke({
-        "image_path": image_path,
-        "image_type": "back",
-        "extracted_data": None,
-        "inference_confidence": 0.0,
-        "correction_attempts": 0,
-        "correction_feedback": None,
-        "retake_requested": False,
-        "is_ready_for_logic": False,
-        "user_profile": profile,
-        "user_name": uname,
-    })
+    final_state = app.invoke(
+        build_initial_state(
+            image_path, "back", user_profile=profile, user_name=uname
+        )
+    )
 
     _print_results(final_state)
 

@@ -11,7 +11,15 @@ from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from src.config import USER_DB_PATH
-from src.state import RoutineProduct, UserProfile
+from src.state import RoutineProduct, UserProfile, inci_names
+
+
+class UserNotFoundError(Exception):
+    """Raised when a scan/routine call references an unknown user_id."""
+
+    def __init__(self, user_id: str):
+        self.user_id = user_id
+        super().__init__(f"No user found with id: {user_id}")
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -252,3 +260,35 @@ def remove_routine_product(product_id: str) -> bool:
         )
         conn.commit()
         return cur.rowcount > 0
+
+
+# --- shared entry-point helpers (used by both the CLI and the API) ----------
+
+
+def load_user_context(
+    user_id: str,
+) -> Tuple[UserProfile, Optional[str], List[RoutineProduct]]:
+    """Load a saved user's (profile, name, routine), or raise UserNotFoundError.
+
+    Single source of truth for the "run as a saved user" lookup shared by the
+    CLI and the API service.
+    """
+    profile = get_user(user_id)
+    if profile is None:
+        raise UserNotFoundError(user_id)
+    return profile, get_user_name(user_id), get_routine(user_id)
+
+
+def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
+    """Persist a scanned product to the user's shelf; return its product_id.
+
+    Returns None (saves nothing) when the scan didn't yield a usable product, so
+    the CLI's --add-to-routine and the API's add_to_routine behave identically.
+    """
+    data = final_state.get("extracted_data")
+    if not final_state.get("is_ready_for_logic") or data is None:
+        return None
+    inci = inci_names(final_state.get("standardized_ingredients"))
+    return add_routine_product(
+        user_id, data.brand, data.product_name, inci, data.is_quasi_drug
+    )

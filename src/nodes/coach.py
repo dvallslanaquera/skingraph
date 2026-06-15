@@ -13,7 +13,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL
-from src.state import AgentState, RoutineFit, UserProfile
+from src.state import AgentState, RoutineFit, UserProfile, inci_names
 
 # Ingredients that are contraindicated during pregnancy / breastfeeding.
 _PREGNANCY_FLAGGED_INCI = {
@@ -242,8 +242,7 @@ def _product_context(state: AgentState) -> str:
                 "Classification: 医薬部外品 (quasi-drug; contains regulated active ingredients)"
             )
 
-    ingredients = state.get("standardized_ingredients") or []
-    inci = [i["name_standardized"] for i in ingredients if i.get("name_standardized")]
+    inci = inci_names(state.get("standardized_ingredients"))
     if inci:
         lines.append(f"Verified INCI ingredients ({len(inci)}): {', '.join(inci)}")
 
@@ -340,11 +339,7 @@ def _pregnancy_cautions(
     """Deterministic pregnancy flags as (japanese, english) caution lists."""
     if profile is None or not profile.is_pregnant:
         return [], []
-    present = {
-        i["name_standardized"]
-        for i in (state.get("standardized_ingredients") or [])
-        if i.get("name_standardized")
-    }
+    present = set(inci_names(state.get("standardized_ingredients")))
     flagged = sorted(present & _PREGNANCY_FLAGGED_INCI)
     consult = "妊娠中・授乳中の方は医師にご相談の上ご使用ください。"
     if flagged:
@@ -368,11 +363,7 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
     These are the safety-critical warnings the user specifically asked for, so
     they are derived from the ingredient list rather than left to the model.
     """
-    present = {
-        i["name_standardized"]
-        for i in (state.get("standardized_ingredients") or [])
-        if i.get("name_standardized")
-    }
+    present = set(inci_names(state.get("standardized_ingredients")))
     ja: List[str] = []
     en: List[str] = []
 
@@ -400,18 +391,27 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
     return ja, en
 
 
+# Field labels + "none" placeholder per language, hoisted so the renderers don't
+# rebuild these tables on every call.
+_REC_LABELS = {
+    "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度"),
+    "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency"),
+}
+_FIT_LABELS = {
+    "ja": ("リスク", "重複", "追加価値"),
+    "en": ("Risks", "Redundancy", "Adds value"),
+}
+_NONE_TEXT = {"ja": "特になし", "en": "None"}
+
+
 def _render_recommendation(
     card: Recommendation, lang: str, extra_warnings: List[str]
 ) -> str:
     """Render one single-language Recommendation as the 5-point card."""
-    labels = {
-        "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度"),
-        "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency"),
-    }[lang]
-    prod_l, purp_l, warn_l, time_l, freq_l = labels
+    prod_l, purp_l, warn_l, time_l, freq_l = _REC_LABELS[lang]
     warnings = extra_warnings + card.warnings
 
-    none_text = "特になし" if lang == "ja" else "None"
+    none_text = _NONE_TEXT[lang]
     lines = [
         f"1. {prod_l}: {card.product}",
         f"2. {purp_l}: {card.purpose}",
@@ -428,12 +428,8 @@ def _render_recommendation(
 
 def _render_routine_fit(card: RoutineFitCard, lang: str) -> str:
     """Render one single-language routine-fit card (risks / redundancy / value)."""
-    labels = {
-        "ja": ("リスク", "重複", "追加価値"),
-        "en": ("Risks", "Redundancy", "Adds value"),
-    }[lang]
-    risk_l, red_l, val_l = labels
-    none_text = "特になし" if lang == "ja" else "None"
+    risk_l, red_l, val_l = _FIT_LABELS[lang]
+    none_text = _NONE_TEXT[lang]
 
     lines: List[str] = []
     for label, items in (

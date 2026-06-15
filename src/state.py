@@ -172,9 +172,8 @@ class AgentState(TypedDict):
     correction_feedback: Optional[str]
     trace_id: Optional[str]
 
-    # language gate
+    # detected label language (recorded for reporting; no longer gated on)
     detected_language: Optional[str]
-    language_supported: Optional[bool]
 
     # registry + normalization
     registry_matched: Optional[bool]
@@ -193,3 +192,45 @@ class AgentState(TypedDict):
     # deterministic cross-product evaluation of the new scan against it.
     routine_products: Optional[List[RoutineProduct]]
     routine_fit: Optional[RoutineFit]
+
+
+def inci_names(standardized: Optional[List[dict]]) -> List[str]:
+    """Canonical INCI names from a normalizer-shaped ingredient list.
+
+    Each normalizer row carries a ``name_standardized`` field that is the INCI
+    key, or ``None`` when the name could not be mapped. Unmapped rows are dropped
+    so callers always see auditable canonical names. Order is preserved.
+    """
+    return [
+        item["name_standardized"]
+        for item in (standardized or [])
+        if item.get("name_standardized")
+    ]
+
+
+def build_initial_state(
+    image_path: str,
+    image_type: Optional[str] = None,
+    *,
+    user_profile: Optional[UserProfile] = None,
+    user_name: Optional[str] = None,
+    routine_products: Optional[List[RoutineProduct]] = None,
+) -> dict:
+    """Assemble the graph's initial state with all flags at their defaults.
+
+    Single source of truth for the entry-point dict so the CLI, the API service,
+    and the interactive scripts can't drift on which keys the graph expects.
+    """
+    return {
+        "image_path": image_path,
+        "image_type": image_type,
+        "extracted_data": None,
+        "inference_confidence": 0.0,
+        "correction_attempts": 0,
+        "correction_feedback": None,
+        "retake_requested": False,
+        "is_ready_for_logic": False,
+        "user_profile": user_profile,
+        "user_name": user_name,
+        "routine_products": routine_products,
+    }

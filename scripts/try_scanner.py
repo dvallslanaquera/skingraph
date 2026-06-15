@@ -1,7 +1,20 @@
+"""Manual smoke test for the Gemini scanner nodes (makes live API calls).
+
+    poetry run python scripts/try_scanner.py
+
+Runs the Flash and Pro scanners against a single golden-set image and prints the
+extracted JSON. Needs GOOGLE_API_KEY in .env. Not a pytest test — the automated,
+fully-mocked coverage lives in tests/test_scanner.py.
+"""
 import os
-import json
-from dotenv import load_dotenv
-from src.nodes.scanner import flash_scanner_node, pro_scanner_node
+import sys
+
+# Make `src` importable no matter where this script is launched from.
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from dotenv import load_dotenv  # noqa: E402
+
+from src.nodes.scanner import flash_scanner_node, pro_scanner_node  # noqa: E402
 
 load_dotenv()
 
