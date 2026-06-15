@@ -1,0 +1,101 @@
+# ────────────────────────────────────────────────────────────
+# Stage 1 – builder
+#
+# Resolves all production deps via Poetry and installs them
+# into /opt/venv.  CPU-only torch is installed first so pip
+# never fetches a CUDA wheel; sentence-transformers picks it
+# up and the final image stays ~1 GB lighter.
+# ────────────────────────────────────────────────────────────
+FROM python:3.12-slim AS builder
+
+WORKDIR /build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends gcc \
+ && rm -rf /var/lib/apt/lists/*
+
+# poetry-plugin-export is bundled in Poetry 2.x; installing
+# it explicitly here also covers older 1.8.x pip-installed builds.
+RUN pip install --no-cache-dir poetry==2.1.0 poetry-plugin-export
+
+ENV POETRY_NO_INTERACTION=1
+
+COPY pyproject.toml poetry.lock ./
+
+RUN poetry export --without dev --without-hashes \
+        -f requirements.txt -o requirements.txt
+
+RUN python -m venv /opt/venv
+
+# Install torch CPU wheel before the rest of the requirements.
+# pip treats the installed +cpu local tag as satisfying the
+# bare version constraint in requirements.txt and skips re-downloading.
+RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/venv/bin/pip install --no-cache-dir \
+        torch \
+        --index-url https://download.pytorch.org/whl/cpu \
+ && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
+
+
+# ────────────────────────────────────────────────────────────
+# Stage 2 – api   (default production target)
+#
+# Runs the FastAPI / LangGraph service.
+# No YomiToku, no OpenCV, no GPU runtime.
+# Build:  docker build --target api -t skincare-coach-api .
+# ────────────────────────────────────────────────────────────
+FROM python:3.12-slim AS api
+
+WORKDIR /app
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    PATH="/opt/venv/bin:$PATH"
+
+# libgomp1 = OpenMP runtime required by torch even in CPU mode
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends libgomp1 \
+ && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
+
+COPY src/ ./src/
+# Utility scripts (build_index.py, manage_users.py) are useful inside the
+# container; run_ocr.py is harmless here — its deps are not installed.
+COPY scripts/ ./scripts/
+# Only static JSON reference data; users.db and qdrant/ are mounted as volumes.
+COPY data/*.json ./data/
+
+EXPOSE 8000
+
+CMD ["uvicorn", "src.api.main:app", \
+     "--host", "0.0.0.0", \
+     "--port", "8000", \
+     "--workers", "1"]
+
+
+# ────────────────────────────────────────────────────────────
+# Stage 3 – ocr-worker   (optional, profile: ocr)
+#
+# Adds YomiToku + OpenCV on top of the api layer for the
+# standalone OCR benchmark in scripts/run_ocr.py.
+# This stage is NOT needed to run the production API.
+#
+# Build:  docker compose --profile ocr build ocr-worker
+# Run:    docker compose --profile ocr run ocr-worker \
+#           python scripts/run_ocr.py data/golden_set/ --device cpu
+# ────────────────────────────────────────────────────────────
+FROM api AS ocr-worker
+
+# Additional system libs required by OpenCV on slim
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+        libglib2.0-0 \
+        libgl1 \
+ && rm -rf /var/lib/apt/lists/*
+
+# YomiToku downloads its model weights on first run (~hundreds of MB);
+# bind-mount a cache dir to avoid re-downloading across container restarts.
+RUN pip install --no-cache-dir opencv-python-headless yomitoku
+
+CMD ["python", "scripts/run_ocr.py", "--help"]
