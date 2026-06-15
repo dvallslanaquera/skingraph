@@ -71,8 +71,12 @@ COPY src/ ./src/
 # Utility scripts (build_index.py, manage_users.py) are useful inside the
 # container; run_ocr.py is harmless here — its deps are not installed.
 COPY scripts/ ./scripts/
-# Only static JSON reference data; users.db and qdrant/ are mounted as volumes.
-COPY data/*.json ./data/
+# Static JSON reference data is baked into /app/seed, NOT /app/data: Railway
+# mounts a persistent volume at /app/data that would otherwise shadow these
+# files. entrypoint.sh syncs them into /app/data on start. (On AWS only the
+# /app/data/qdrant subdir is volume-mounted, so the same sync is a no-op over
+# identical files.)
+COPY data/*.json ./seed/
 COPY entrypoint.sh ./entrypoint.sh
 RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
