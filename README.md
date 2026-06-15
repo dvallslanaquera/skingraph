@@ -199,6 +199,21 @@ poetry run python scripts/manage_users.py seed
 poetry run python scripts/manage_users.py list
 ```
 
+### API起動
+
+パイプラインはFastAPIサービス（`src/api/main.py`）としても公開しています：
+
+```bash
+# サーバー起動（対話ドキュメント: http://127.0.0.1:8000/docs）
+poetry run uvicorn src.api.main:app --reload
+
+# ラベルをスキャン（multipartアップロード。image_type / user_id / add_to_routine は任意）
+curl -F "image=@data/golden_set/prod_001.jpg" http://127.0.0.1:8000/scan
+```
+
+主なエンドポイント: `POST /scan`（スキャン）、`/users`・`/users/{id}`（プロファイルCRUD）、
+`/users/{id}/routine`・`/routine/{id}`（ルーティン棚の追加・削除）、`GET /health`。
+
 **ルーティング:** まず軽量な分類器が、写真が**表面**（ブランド情報のみ → 製品を特定し**成分をオンライン検索**）か**裏面**（成分表示 → ラベルから読み取り）かを判定します。両経路は単一のバイリンガル**レコメンドカード**に集約されます：製品名、用途（1文）、ユーザー個別の注意事項（乾燥・紫外線敏感性のリスクを含む）、使用タイミング（AM / PM / 両方）、使用頻度。
 
 > **OCRについて:** `scripts/run_ocr.py` はYomiToku日本語OCRエンジンをゴールデンセット画像に対して実行し、プレーンテキストを `data/ocr_out/` に出力します。**Phase 0ベンチマーク**として、OCRとVLMの精度差を定量化するためだけに存在します。プロダクショングラフ（`src/graph.py`）には組み込まれておらず、グラフはGemini VLM推論のみを使用します。
@@ -254,11 +269,11 @@ poetry run pytest -v
 - **全言語対応・JPが最適化済み** — レジストリ/正規化/監査データはJP中心のため、非JPラベルでは一部成分が未マッチになることがある（失敗ではなく明示）
 - **グラウンドトゥルースはN=3** — 評価セットが小規模
 - **レジストリは小規模** — 現在2製品。未登録製品は`registry_candidates.json`に自動ログ
-- **本番APIなし** — FastAPI / Docker / CI/CD は未実装
+- **API実装済み・デプロイは未対応** — FastAPIサービスは実装済み（`src/api/`）。Docker / CI/CD は未実装
 
 **ロードマップ:**
 - [ ] 🌐 **セマンティック多言語対応** — 日本語・韓国語・英語の名称を単一のUniversal INCI IDにマッピング
-- [ ] 📱 **API抽象化** — 本番デプロイ向けFastAPIラッパー
+- [x] 📱 **API抽象化** — FastAPIラッパー（`/scan` ＋ ユーザー/ルーティンCRUD）
 - [ ] 🏷️ **バーコード統合** — JAN/UPCコード事前照合で既知商品のVLMを完全スキップ
 
 ---
@@ -534,6 +549,31 @@ poetry run python scripts/manage_users.py seed
 poetry run python scripts/manage_users.py list
 ```
 
+### Run the API
+
+The pipeline is also exposed as a FastAPI service (`src/api/main.py`):
+
+```bash
+# Start the server (interactive docs at http://127.0.0.1:8000/docs)
+poetry run uvicorn src.api.main:app --reload
+
+# Scan a label (multipart upload). image_type / user_id / add_to_routine are optional.
+curl -F "image=@data/golden_set/prod_001.jpg" http://127.0.0.1:8000/scan
+
+# Scan as a saved user (loads their profile + routine) and shelf the product
+curl -F "image=@data/golden_set/prod_001.jpg" -F "user_id=<id>" -F "add_to_routine=true" \
+     http://127.0.0.1:8000/scan
+```
+
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/health` | Liveness probe |
+| `POST` | `/scan` | Run the pipeline on an uploaded photo |
+| `POST` / `GET` | `/users` | Create / list user profiles |
+| `GET` / `PUT` / `DELETE` | `/users/{id}` | Read / replace / delete a profile |
+| `GET` / `POST` | `/users/{id}/routine` | List / add products to the routine shelf |
+| `DELETE` | `/routine/{id}` | Remove a routine product |
+
 **How it routes:** a lightweight classifier first decides whether the photo shows the **front** (branding only → identify the product and **search its ingredients online**) or the **back** (ingredient list → read it off the label). Both paths converge on a single bilingual **recommendation card**: product name, one-line purpose, user-tailored warnings (including dehydration / sun-sensitivity risk), best timing (AM / PM / both), and use frequency.
 
 > **Note on OCR:** `scripts/run_ocr.py` runs a local YomiToku Japanese OCR engine on the golden-set images and writes plain-text output to `data/ocr_out/`. It exists purely as a **Phase 0 benchmark baseline** to quantify the OCR-vs-VLM accuracy gap — intentionally excluded from the production graph (`src/graph.py`). The graph uses Gemini VLM inference exclusively.
@@ -589,11 +629,11 @@ Accuracy measured with `evaluate.py` against hand-annotated ground truth, using 
 - **Any label language accepted, JP best-tuned** — the registry/normalizer/audit data are JP-centric, so non-JP labels may leave some ingredients unmatched (surfaced, not fatal)
 - **Ground truth is N=3** — small eval set; scores are directional
 - **Registry is small** — 2 verified products; un-registered products are auto-logged to `registry_candidates.json`
-- **No production API** — FastAPI / Docker / CI/CD not yet implemented
+- **API surfaced, deployment pending** — FastAPI service is implemented (`src/api/`); Docker / CI/CD are not yet
 
 **Next:**
 - [ ] 🌐 **Semantic Multilingual Support** — map Japanese, Korean, and English names to a single Universal INCI ID
-- [ ] 📱 **API Abstraction** — FastAPI wrapper for production deployment
+- [x] 📱 **API Abstraction** — FastAPI wrapper (`/scan` + user/routine CRUD)
 - [ ] 🏷️ **Barcode Integration** — pre-scan JAN/UPC codes to skip VLM entirely for known products
 
 ---
