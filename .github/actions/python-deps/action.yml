@@ -25,9 +25,7 @@ runs:
       shell: bash
       run: |
         python -m pip install --upgrade pip
-        pip install "poetry==2.4.0"
-        # poetry-plugin-export ships with Poetry 2.x; --without dev keeps the
-        # runtime set, pytest is added explicitly below.
+        pip install "poetry==2.4.0" poetry-plugin-export
         poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
 
     - name: Install dependencies (CPU torch first)
