@@ -59,6 +59,11 @@ RUN apt-get update \
 
 COPY --from=builder /opt/venv /opt/venv
 
+# Pre-download the sentence-transformers model into the image layer.
+# Without this, ECS cold starts hit HuggingFace at first request (~30-60 s delay).
+# Placed before COPY src/ so Docker cache survives source-only changes.
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
+
 COPY src/ ./src/
 # Utility scripts (build_index.py, manage_users.py) are useful inside the
 # container; run_ocr.py is harmless here — its deps are not installed.
