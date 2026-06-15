@@ -11,12 +11,13 @@ FROM python:3.12-slim AS builder
 WORKDIR /build
 
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends gcc \
  && rm -rf /var/lib/apt/lists/*
 
 # poetry-plugin-export is bundled in Poetry 2.x; installing
 # it explicitly here also covers older 1.8.x pip-installed builds.
-RUN pip install --no-cache-dir poetry==2.1.0 poetry-plugin-export
+RUN pip install --no-cache-dir poetry==2.4.0
 
 ENV POETRY_NO_INTERACTION=1
 
@@ -54,6 +55,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 # libgomp1 = OpenMP runtime required by torch even in CPU mode
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends libgomp1 \
  && rm -rf /var/lib/apt/lists/*
 
@@ -94,6 +96,7 @@ FROM api AS ocr-worker
 
 # Additional system libs required by OpenCV on slim
 RUN apt-get update \
+ && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends \
         libglib2.0-0 \
         libgl1 \
