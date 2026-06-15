@@ -9,6 +9,9 @@
 ![AWS](https://img.shields.io/badge/AWS_ECS_Fargate-Terraform-FF9900?style=for-the-badge&logo=amazonaws&logoColor=white)
 ![Status](https://img.shields.io/badge/Status-Active_Development-brightgreen?style=for-the-badge)
 
+[![CI](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml/badge.svg)](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml)
+[![Deploy](https://github.com/ShinBellator/skingraph/actions/workflows/deploy.yml/badge.svg)](https://github.com/ShinBellator/skingraph/actions/workflows/deploy.yml)
+
 [日本語](#japanese) · [English](#english)
 
 </div>
@@ -726,6 +729,44 @@ terraform output api_endpoint
 ```bash
 terraform destroy
 ```
+
+---
+
+## 🔄 CI/CD (GitHub Actions)
+
+Two workflows under [`.github/workflows`](.github/workflows) automate testing and deployment. A shared composite action ([`.github/actions/python-deps`](.github/actions/python-deps)) installs the CPU-only `torch` wheel before the rest of the deps — the same trick the Dockerfile uses — so CI never downloads the multi-GB CUDA build or the embedding model.
+
+### CI — [`ci.yml`](.github/workflows/ci.yml)
+
+Runs on every pull request and on pushes to `main`. Four independent gates, none requiring AWS credentials:
+
+| Job | What it does |
+|---|---|
+| **Backend tests** | `pytest` on Python 3.10 and 3.12 (offline/deterministic suite) |
+| **Frontend build** | `npm ci` + `npm run build` (`tsc -b && vite build`) in `ui/` |
+| **Docker image build** | Builds the `api` target to catch Dockerfile breakage (GHA layer cache, no push) |
+| **Terraform validate** | `terraform fmt -check`, `init -backend=false`, `validate` |
+
+### CD — [`deploy.yml`](.github/workflows/deploy.yml)
+
+Runs on every push to `main` (and on manual **Run workflow**). After a fast test gate it builds the `api` image, pushes it to ECR tagged with both the commit SHA and `latest`, then forces an ECS rolling deployment and waits for the service to stabilize.
+
+**One-time setup** in the repo's *Settings → Secrets and variables → Actions*:
+
+| Type | Name | Notes |
+|---|---|---|
+| Secret | `AWS_ACCESS_KEY_ID` | IAM user with ECR push + ECS deploy permissions |
+| Secret | `AWS_SECRET_ACCESS_KEY` | — |
+| Variable *(optional)* | `AWS_REGION` | defaults to `us-east-1` |
+| Variable *(optional)* | `ECR_REPOSITORY` | defaults to `skincare-coach-api` |
+| Variable *(optional)* | `ECS_CLUSTER` | defaults to `skincare-coach-cluster` |
+| Variable *(optional)* | `ECS_SERVICE` | defaults to `skincare-coach-service` |
+
+The defaults match the Terraform `app_name` (`skincare-coach`), so if you haven't renamed anything you only need the two secrets. The IAM user needs `ecr:GetAuthorizationToken`, `ecr:*` on the repository, `ecs:UpdateService`, and `ecs:DescribeServices`. Provision the AWS stack with Terraform (above) **before** the first deploy so the ECR repo and ECS service exist.
+
+> Deploys re-tag `:latest` and force a new deployment rather than running `terraform apply`, since the Terraform state here is local. To pin an immutable tag instead, set `image_tag` to a commit SHA in `terraform.tfvars` and re-apply.
+
+[Dependabot](.github/dependabot.yml) keeps the pip, npm, GitHub Actions, Docker, and Terraform dependencies updated weekly.
 
 ---
 
