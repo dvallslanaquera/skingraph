@@ -15,9 +15,10 @@ RUN apt-get update \
  && apt-get install -y --no-install-recommends gcc \
  && rm -rf /var/lib/apt/lists/*
 
-# poetry-plugin-export is bundled in Poetry 2.x; installing
-# it explicitly here also covers older 1.8.x pip-installed builds.
-RUN pip install --no-cache-dir poetry==2.4.0
+# Poetry 2.x removed `export` from core — it now lives in the separate
+# poetry-plugin-export package, which pip does NOT pull in automatically.
+# Install both so `poetry export` below is available.
+RUN pip install --no-cache-dir poetry==2.4.0 poetry-plugin-export
 
 ENV POETRY_NO_INTERACTION=1
 
@@ -73,7 +74,7 @@ COPY scripts/ ./scripts/
 # Only static JSON reference data; users.db and qdrant/ are mounted as volumes.
 COPY data/*.json ./data/
 COPY entrypoint.sh ./entrypoint.sh
-RUN chmod +x entrypoint.sh
+RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 
 EXPOSE 8000
 
