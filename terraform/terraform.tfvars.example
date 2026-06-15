@@ -1,0 +1,15 @@
+# Copy to terraform.tfvars and fill in real values.
+# terraform.tfvars is gitignored — never commit it (it contains your API key).
+
+aws_region     = "us-east-1"
+google_api_key = "AIza..."   # your Gemini API key from Google AI Studio
+
+# image_tag is updated on each deploy after docker push
+image_tag      = "latest"
+
+# Defaults below are suitable for a single-user / demo deployment.
+# task_cpu and task_memory must use Fargate-valid pairs:
+#   512/1024, 1024/2048, 2048/4096, 4096/8192, 8192/16384
+task_cpu      = 1024
+task_memory   = 2048
+desired_count = 1

@@ -8,3 +8,10 @@ data/users.db
 data/registry_candidates.json
 data/qdrant/
 .DS_Store
+
+# Terraform — contains secrets (google_api_key)
+terraform/terraform.tfvars
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
