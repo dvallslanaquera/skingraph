@@ -1,0 +1,108 @@
+# Continuous Deployment — builds the API image, pushes it to ECR, and rolls out
+# the ECS Fargate service. Runs automatically on every push to main (after the
+# test gate passes) and can be triggered manually from the Actions tab.
+#
+# Required GitHub secrets:
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY   (IAM user with ECR + ECS deploy rights)
+# Optional GitHub variables (defaults derived from terraform app_name = skincare-coach):
+#   AWS_REGION, ECR_REPOSITORY, ECS_CLUSTER, ECS_SERVICE, ECS_CONTAINER
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Never run two production rollouts at once; let an in-flight deploy finish.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION || 'us-east-1' }}
+  ECR_REPOSITORY: ${{ vars.ECR_REPOSITORY || 'skincare-coach-api' }}
+  ECS_CLUSTER: ${{ vars.ECS_CLUSTER || 'skincare-coach-cluster' }}
+  ECS_SERVICE: ${{ vars.ECS_SERVICE || 'skincare-coach-service' }}
+
+jobs:
+  # Fast pre-flight gate: pushes to main may land without a PR, so re-verify
+  # before shipping. Single interpreter version keeps the rollout snappy.
+  test:
+    name: Test gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+      - name: Run test suite
+        run: pytest
+
+  deploy:
+    name: Build, push & roll out
+    runs-on: ubuntu-latest
+    needs: test
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          target: api
+          push: true
+          # Immutable SHA tag for traceability/rollback; :latest is what the
+          # ECS task definition points at by default (image_tag = "latest").
+          tags: |
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
+            ${{ steps.ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Roll out ECS service
+        # The task definition references :latest; force-new-deployment makes
+        # Fargate pull the freshly pushed image and replace running tasks.
+        run: |
+          aws ecs update-service \
+            --cluster "$ECS_CLUSTER" \
+            --service "$ECS_SERVICE" \
+            --force-new-deployment \
+            --region "$AWS_REGION" \
+            --no-cli-pager
+
+      - name: Wait for service to stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster "$ECS_CLUSTER" \
+            --services "$ECS_SERVICE" \
+            --region "$AWS_REGION"
+
+      - name: Summary
+        run: |
+          echo "### Deployed \`${GITHUB_SHA::7}\` to ECS" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Cluster: \`$ECS_CLUSTER\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Service: \`$ECS_SERVICE\`" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Image tag: \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
