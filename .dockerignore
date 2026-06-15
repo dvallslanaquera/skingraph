@@ -1,0 +1,50 @@
+# Python bytecode & caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+
+# Local virtual environments
+.venv/
+venv/
+env/
+
+# Secrets — inject at runtime via env_file or environment variables
+.env
+*.env.*
+
+# Dev / test / benchmark files
+tests/
+evaluate.py
+test_scanner.py
+
+# Editor / OS artefacts
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+.gitattributes
+
+# Docs
+*.md
+TODO.md
+LICENSE
+
+# Mutable runtime data — mounted as Docker volumes instead
+data/users.db
+data/qdrant/
+
+# Benchmark-only assets — not required by the API image
+# (mounted as read-only volumes into the ocr-worker service)
+data/golden_set/
+data/ocr_out/
+
+# Miscellaneous non-JSON data files
+data/*.docx
