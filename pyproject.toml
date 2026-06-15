@@ -12,7 +12,6 @@ dependencies = [
     "pydantic (>=2.13.4,<3.0.0)",
     "python-dotenv (>=1.2.2,<2.0.0)",
     "rapidfuzz (>=3.14.5,<4.0.0)",
-    "pyahocorasick (>=2.3.1,<3.0.0)",
     "pillow (>=12.2.0,<13.0.0)",
     "qdrant-client (>=1.18.0,<2.0.0)",
     "sentence-transformers (>=5.5.1,<6.0.0)",
@@ -28,8 +27,8 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 # Offline, deterministic suite: every Gemini and vector-store call is mocked.
-# testpaths is scoped to tests/ so the legacy root-level test_scanner.py manual
-# script (which needs an API key + image) is never collected.
+# testpaths is scoped to tests/ so the manual scripts/ smoke tests (which need an
+# API key + image) are never collected.
 testpaths = ["tests"]
 pythonpath = ["."]
 addopts = "-q"

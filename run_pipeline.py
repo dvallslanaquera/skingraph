@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
-from src.state import UserProfile
-from src.user_store import (add_routine_product, get_routine, get_user,
-                            get_user_name, save_user)
+from src.state import UserProfile, build_initial_state
+from src.user_store import (UserNotFoundError, load_user_context,
+                            save_scanned_product, save_user)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -75,12 +75,13 @@ def main():
     user_name = None
     routine_products = None
     if args.user_id:
-        user_profile = get_user(args.user_id)
-        if user_profile is None:
-            logging.error("No user found with id: %s", args.user_id)
+        try:
+            user_profile, user_name, routine_products = load_user_context(
+                args.user_id
+            )
+        except UserNotFoundError as exc:
+            logging.error(str(exc))
             sys.exit(1)
-        user_name = get_user_name(args.user_id)
-        routine_products = get_routine(args.user_id)
         logging.info(
             "Loaded user profile from DB: %s (%d routine product(s))",
             args.user_id,
@@ -94,22 +95,16 @@ def main():
             new_id = save_user(user_profile, name=args.save_user or None)
             logging.info("Saved user profile to DB with id: %s", new_id)
 
-    inputs = {
-        "image_path": args.image_path,
-        "image_type": args.image_type,
-        "extracted_data": None,
-        "inference_confidence": 0.0,
-        "correction_attempts": 0,
-        "correction_feedback": None,
-        "retake_requested": False,
-        "is_ready_for_logic": False,
-        "user_profile": user_profile,
-        "user_name": user_name,
-        "routine_products": routine_products,
-    }
-
     logging.info("--- STARTING FULL PIPELINE INVOCATION ---")
-    final_state = app.invoke(inputs)
+    final_state = app.invoke(
+        build_initial_state(
+            args.image_path,
+            args.image_type,
+            user_profile=user_profile,
+            user_name=user_name,
+            routine_products=routine_products,
+        )
+    )
 
     logging.info("--- FINAL STATE SUMMARY ---")
     logging.info(f"Model Used:       {final_state.get('model_used')}")
@@ -179,19 +174,12 @@ def main():
 
     # Save this product into the user's routine when explicitly requested.
     if args.add_to_routine:
-        data = final_state.get("extracted_data")
-        if ready and data is not None:
-            inci = [
-                ing.get("name_standardized")
-                for ing in (final_state.get("standardized_ingredients") or [])
-                if ing.get("name_standardized")
-            ]
-            product_id = add_routine_product(
-                args.user_id, data.brand, data.product_name, inci, data.is_quasi_drug
-            )
+        product_id = save_scanned_product(args.user_id, final_state)
+        if product_id:
+            data = final_state["extracted_data"]
             logging.info(
-                "Added to routine: %s - %s (%d INCI) [product_id=%s]",
-                data.brand, data.product_name, len(inci), product_id,
+                "Added to routine: %s - %s [product_id=%s]",
+                data.brand, data.product_name, product_id,
             )
         else:
             logging.warning(

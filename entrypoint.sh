@@ -8,13 +8,19 @@ set -e
 mkdir -p /app/data
 cp /app/seed/*.json /app/data/
 
-# Build the Qdrant vector index on first start, when the volume has no index yet.
-# On Railway this runs once after the volume is attached; on ECS it fires on the
-# first task launch (replaces the manual exec approach).
+# Restore the Qdrant index onto the volume on first boot. It is pre-built into
+# /app/seed/qdrant at image-build time, so this is a fast copy rather than an
+# ~8 min CPU embedding that blew past the healthcheck window. Fall back to
+# building it live only if the pre-built copy is somehow missing.
 if [ ! -f "/app/data/qdrant/meta.json" ]; then
-  echo "==> First start: building Qdrant vector index (this takes ~60 s)..."
-  python scripts/build_index.py
-  echo "==> Index build complete."
+  if [ -d "/app/seed/qdrant" ]; then
+    echo "==> First start: restoring pre-built Qdrant index onto the volume..."
+    cp -r /app/seed/qdrant /app/data/qdrant
+  else
+    echo "==> First start: no pre-built index found, building live (slow)..."
+    python scripts/build_index.py
+  fi
+  echo "==> Index ready."
 fi
 
 exec uvicorn src.api.main:app \

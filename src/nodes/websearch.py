@@ -18,7 +18,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL, MIN_INGREDIENTS_FOR_AUDIT
-from src.nodes.scanner import encode_image
+from src.nodes.scanner import image_message
 from src.state import AgentState, Ingredient, ProductExtraction
 
 
@@ -79,16 +79,7 @@ def verify_identity_node(state: AgentState) -> dict:
         model=FLASH_MODEL, temperature=0.0, timeout=120, max_retries=3
     ).with_structured_output(ProductIdentity)
 
-    base64_image = encode_image(state["image_path"])
-    message = HumanMessage(
-        content=[
-            {"type": "text", "text": _VERIFY_PROMPT},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            },
-        ]
-    )
+    message = image_message(_VERIFY_PROMPT, state["image_path"])
     identity = cast(ProductIdentity, llm.invoke([message]))
     logging.info(
         "Identity: %s — %s (confidence %.2f)",

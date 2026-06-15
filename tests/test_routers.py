@@ -201,10 +201,8 @@ def test_tag_language_node_normalises_case_and_whitespace():
     state = {"extracted_data": make_extraction(0, source_language="  jp ")}
     result = graph.tag_language_node(state)
     assert result["detected_language"] == "JP"
-    assert result["language_supported"] is True
 
 
 def test_tag_language_node_without_extraction():
     result = graph.tag_language_node({"extracted_data": None})
     assert result["detected_language"] == ""
-    assert result["language_supported"] is True

@@ -79,6 +79,27 @@ class ImageSide(BaseModel):
     )
 
 
+def build_vlm(model: str, schema, *, temperature: float = 0.0):
+    """Configured Gemini client with structured output, shared by the VLM nodes."""
+    return ChatGoogleGenerativeAI(
+        model=model, temperature=temperature, timeout=120, max_retries=3
+    ).with_structured_output(schema)
+
+
+def image_message(text: str, image_path: str) -> HumanMessage:
+    """A HumanMessage carrying a text prompt plus the downscaled base64 image."""
+    base64_image = encode_image(image_path)
+    return HumanMessage(
+        content=[
+            {"type": "text", "text": text},
+            {
+                "type": "image_url",
+                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
+            },
+        ]
+    )
+
+
 def classify_side_node(state: AgentState) -> Dict[str, Any]:
     """Auto-detect whether the photo is the front (branding) or back (ingredients).
 
@@ -90,21 +111,8 @@ def classify_side_node(state: AgentState) -> Dict[str, Any]:
         return {"image_type": override}
 
     logging.info("Classifying image side (front vs back)...")
-    llm = ChatGoogleGenerativeAI(
-        model=FLASH_MODEL, temperature=0.0, timeout=120, max_retries=3
-    ).with_structured_output(ImageSide)
-
-    base64_image = encode_image(state["image_path"])
-    message = HumanMessage(
-        content=[
-            {"type": "text", "text": CLASSIFY_PROMPT},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            },
-        ]
-    )
-    result = cast(ImageSide, llm.invoke([message]))
+    llm = build_vlm(FLASH_MODEL, ImageSide)
+    result = cast(ImageSide, llm.invoke([image_message(CLASSIFY_PROMPT, state["image_path"])]))
     logging.info(
         "Image side: %s (confidence %.2f)", result.side, result.confidence
     )
@@ -128,73 +136,46 @@ def encode_image(image_path: str) -> str:
     return base64.b64encode(image_bytes).decode(encoding="utf-8")
 
 
-# Lightweight scanner (flash Gemini)
-def flash_scanner_node(state: AgentState) -> Dict[str, Any]:
-    logging.info("Starting lightweight flash scan using Gemini 2.5 Flash...")
-    flash_llm = ChatGoogleGenerativeAI(
-        model=FLASH_MODEL, temperature=0.0, timeout=120, max_retries=3
-    ).with_structured_output(ProductExtraction)
+# Both scanners share everything but the model, prompt, and the model tag they
+# record — so they delegate to one core and only differ in those three inputs.
+def _run_scanner(
+    state: AgentState, *, model: str, prompt: str, model_tag: str
+) -> Dict[str, Any]:
+    llm = build_vlm(model, ProductExtraction)
+    extracted = cast(
+        ProductExtraction, llm.invoke([image_message(prompt, state["image_path"])])
+    )
+    logging.info(
+        "%s scan completed with confidence %.2f",
+        model_tag,
+        extracted.extraction_confidence,
+    )
+    return {
+        "extracted_data": extracted,
+        "inference_confidence": extracted.extraction_confidence,
+        "model_used": model_tag,
+        "trace_id": str(uuid4()),
+    }
 
+
+# Lightweight scanner (Flash Gemini). On a correction retry, the deterministic
+# feedback from the correction node is appended to the system prompt.
+def flash_scanner_node(state: AgentState) -> Dict[str, Any]:
+    logging.info("Starting lightweight flash scan using %s...", FLASH_MODEL)
     prompt = SCANNER_SYSTEM_PROMPT
     if state.get("correction_attempts", 0) > 0:
         prompt += (
             f"\n\nPREVIOUS ATTEMPT FEEDBACK:\n{state['correction_feedback']}\n"
             "Correct specifically those issues. Do not repeat the same mistakes."
         )
-
-    base64_image = encode_image(state["image_path"])
-    message = HumanMessage(
-        content=[
-            {"type": "text", "text": prompt},
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            },
-        ]
-    )
-    extracted = cast(ProductExtraction, flash_llm.invoke([message]))
-    logging.info(
-        f"Flash scan completed with confidence {extracted.extraction_confidence:.2f}"
-    )
-
-    return {
-        "extracted_data": extracted,
-        "inference_confidence": extracted.extraction_confidence,
-        "model_used": "flash",
-        "trace_id": str(uuid4()),
-    }
+    return _run_scanner(state, model=FLASH_MODEL, prompt=prompt, model_tag="flash")
 
 
-# Heavyweight model (aka expert fallback)
+# Heavyweight model (aka expert fallback) for visually difficult labels.
 def pro_scanner_node(state: AgentState) -> Dict[str, Any]:
-    logging.info("Starting heavyweight pro scan using Gemini 2.5 Pro...")
-    # return with structured output
-    pro_llm = ChatGoogleGenerativeAI(
-        model=PRO_MODEL, temperature=0.0, timeout=120, max_retries=3
-    ).with_structured_output(ProductExtraction)
-
-    base64_image = encode_image(state["image_path"])
-    message = HumanMessage(
-        content=[
-            {
-                "type": "text",
-                "text": SCANNER_SYSTEM_PROMPT
-                + "\nFOCUS: Pay extreme attention to warped text on the edges of the bottle.",
-            },
-            {
-                "type": "image_url",
-                "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"},
-            },
-        ]
+    logging.info("Starting heavyweight pro scan using %s...", PRO_MODEL)
+    prompt = (
+        SCANNER_SYSTEM_PROMPT
+        + "\nFOCUS: Pay extreme attention to warped text on the edges of the bottle."
     )
-    extracted = cast(ProductExtraction, pro_llm.invoke([message]))
-    logging.info(
-        f"Pro scan completed with confidence {extracted.extraction_confidence:.2f}"
-    )
-
-    return {
-        "extracted_data": extracted,
-        "inference_confidence": extracted.extraction_confidence,
-        "model_used": "pro",
-        "trace_id": str(uuid4()),
-    }
+    return _run_scanner(state, model=PRO_MODEL, prompt=prompt, model_tag="pro")
