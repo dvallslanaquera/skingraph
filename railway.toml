@@ -1,0 +1,8 @@
+[build]
+dockerfilePath = "Dockerfile"
+buildTarget    = "api"
+
+[deploy]
+healthcheckPath    = "/health"
+# 300 s covers the Qdrant index build on first cold start (~60 s on Starter).
+healthcheckTimeout = 300
