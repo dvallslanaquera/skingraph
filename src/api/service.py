@@ -8,6 +8,7 @@ from typing import Optional
 
 from src.api.schemas import ScanResponse, ScanStatus
 from src.graph import app as graph_app
+from src.observability import scan_run_config
 from src.state import build_initial_state
 from src.user_store import (UserNotFoundError, load_user_context,
                             save_scanned_product)
@@ -69,7 +70,13 @@ def run_scan(
             user_profile=user_profile,
             user_name=user_name,
             routine_products=routine_products,
-        )
+        ),
+        scan_run_config(
+            entrypoint="api",
+            image_type=image_type,
+            user_id=user_id,
+            has_routine=bool(routine_products),
+        ),
     )
 
     added_product_id = None

@@ -152,6 +152,16 @@ class AgentState(TypedDict):
     # None on input → the classify_side node auto-detects front vs back.
     image_type: Optional[Literal["front", "back"]]
 
+    # input gating
+    # Tier-1 pixel pre-flight verdict (set by the image-quality gate): None when
+    # the frame passed, else a reason code ("too_dark" | "too_bright" | "blank" |
+    # "unreadable") used to craft the retake message.
+    image_quality_issue: Optional[str]
+    # Tier-2 content classification from the side/content classifier: "product",
+    # "not_a_product", or "multiple_products". Non-product / multi-product frames
+    # are rejected before extraction so the scanner never fabricates a product.
+    image_content: Optional[str]
+
     # extraction state
     extracted_data: Optional[ProductExtraction]
     model_used: Literal["flash", "pro", "database", "web"]

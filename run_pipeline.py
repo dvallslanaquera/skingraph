@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
+from src.observability import log_tracing_status, scan_run_config
 from src.state import UserProfile, build_initial_state
 from src.user_store import (UserNotFoundError, load_user_context,
                             save_scanned_product, save_user)
@@ -95,6 +96,7 @@ def main():
             new_id = save_user(user_profile, name=args.save_user or None)
             logging.info("Saved user profile to DB with id: %s", new_id)
 
+    log_tracing_status()
     logging.info("--- STARTING FULL PIPELINE INVOCATION ---")
     final_state = app.invoke(
         build_initial_state(
@@ -103,7 +105,13 @@ def main():
             user_profile=user_profile,
             user_name=user_name,
             routine_products=routine_products,
-        )
+        ),
+        scan_run_config(
+            entrypoint="cli",
+            image_type=args.image_type,
+            user_id=args.user_id,
+            has_routine=bool(routine_products),
+        ),
     )
 
     logging.info("--- FINAL STATE SUMMARY ---")
