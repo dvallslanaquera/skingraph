@@ -22,9 +22,13 @@
 
 <a name="japanese"></a>
 
-# 🌿 SkinGraph — AI マルチモーダル スキンケア解析パイプライン
+# 🌿 SkinGraph — スキンケア製品安全性・ルーティンアドバイザー
 
-Gemini VLMとLangGraphで構築した、日本語コスメラベルの成分抽出・INCI正規化パイプライン。
+新しいスキンケア製品を探していると、こんな疑問が浮かびませんか。自分の肌に安全か。今のルーティンとぶつかりはないか。妊娠中でも使えるか。そもそも追加する価値はあるのか。使うとしたら、どのタイミングで、今持っているアイテムとどう重ねるのか。
+
+SkinGraphは、これらの問いに答えるナレッジツールです。あなたの肌タイプ・目標・肌の悩みに合わせた個別のレコメンドを通じて、スキンケア探索をサポートします。あらゆる言語の製品に対応しますが、とくに日本・韓国市場の製品に特化した最適化が施されています。
+
+**技術概要:** SkinGraphはLangGraph StateGraphパイプラインで、OCR+VLMハイブリッド（YomiToku + Gemini Flash → Pro 階層型推論）を組み合わせてコスメラベルから成分を抽出・正規化します。Qdrantベクトルストアが確率的なVLM出力をキュレーション済みレジストリで接地します。2段の入力ゲート（決定論的ピクセル事前チェック＋内容分類器）が抽出前に使用不可能な画像を弾きます。安全性監査とクロスプロダクトのルーティン評価は完全に決定論的（LLM不使用）。コーチノードが監査結果を薬機法準拠のバイリンガルアドバイスに変換します。
 
 ---
 
@@ -514,9 +518,14 @@ Built with ❤️ and matcha 🍵
 
 <a name="english"></a>
 
-# 🌿 SkinGraph — AI Skincare Label Analysis Pipeline
+# 🌿 SkinGraph — Skincare Product Safety & Routine Advisor
 
-A production-grade LangGraph pipeline for extracting and normalizing ingredients from Japanese cosmetics labels using Gemini VLM — with deterministic safety auditing, cross-product routine conflict detection, and personalised bilingual coaching.
+When looking for a new skincare product, several questions pop up: Is it safe for you? Does it conflict with your current routine? Can you use it during pregnancy? Is it even worth adding? And if so, when should you apply it, and how do you layer it with what you already own?
+
+Skingraph is a knowledge tool that guides your skincare exploration, delivering recommendations tailored to your unique skin type, goals, and concerns. While it supports products in any language, its coverage is optimized specifically for the Japanese and Korean markets.
+
+**Technical overview:** 
+SkinGraph is a LangGraph StateGraph pipeline that combines an OCR+VLM hybrid (YomiToku + Gemini Flash → Pro tiered inference) to extract and normalise ingredients from cosmetics labels. A Qdrant vector store grounds probabilistic VLM output against a curated registry. Two OOD gates — a deterministic pixel pre-flight and a content classifier — block unusable images before extraction runs. Safety auditing and cross-product routine evaluation are fully deterministic, no LLM. A bilingual Coach node renders the grounded findings as `薬機法`-safe personalised advice.
 
 ---
 
