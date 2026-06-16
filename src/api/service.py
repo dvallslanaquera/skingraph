@@ -41,6 +41,8 @@ def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResp
         safety_report=final_state.get("safety_report"),
         routine_fit=final_state.get("routine_fit"),
         coach_advice=final_state.get("coach_advice"),
+        recommendation_score=final_state.get("recommendation_score"),
+        recommendation_rationale=final_state.get("recommendation_rationale"),
         routine_recommendations=final_state.get("routine_recommendations") or [],
         web_sources=final_state.get("web_sources") or [],
         added_product_id=added_product_id,

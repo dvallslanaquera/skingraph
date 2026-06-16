@@ -1,6 +1,7 @@
 // Renders a completed ScanResponse: status, coach advice, product details,
 // ingredients, safety findings, and routine fit.
 import type { ScanResponse, ScanStatus } from "../api/types";
+import { LeafScore } from "./LeafScore";
 
 const STATUS_META: Record<
   ScanStatus,
@@ -52,6 +53,21 @@ export function ScanResult({ result }: { result: ScanResponse }) {
       {result.coach_advice && (
         <section className="card coach-card">
           <h2 className="card-title">Your coach says</h2>
+          {result.recommendation_score != null && (
+            <div className="reco-score-banner">
+              <div className="reco-score-head">
+                <span className="reco-score-label">
+                  How recommendable for you
+                </span>
+                <LeafScore score={result.recommendation_score} />
+              </div>
+              {result.recommendation_rationale && (
+                <p className="reco-score-why">
+                  {result.recommendation_rationale}
+                </p>
+              )}
+            </div>
+          )}
           <div className="coach-advice">{result.coach_advice}</div>
         </section>
       )}

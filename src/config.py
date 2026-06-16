@@ -58,6 +58,50 @@ GOAL_TO_FUNCTION = {
     "barrier_repair": ["Barrier"],
 }
 
+# Goal → function categories that address it, covering the richer free-text goal
+# vocabulary the UI offers (ui/src/lib/profile.ts::GOAL_SUGGESTIONS) plus the five
+# canonical keys above. Drives the routine dashboard's per-goal coverage check and
+# the 5-leaf score (a goal is "covered" when the shelf contains ANY of its
+# categories). Keys are lowercase; goals absent here are shown as "not assessed".
+GOAL_COVERAGE = {
+    # canonical keys (kept aligned with GOAL_TO_FUNCTION)
+    "brightening": ["Vitamin C", "Niacinamide"],
+    "anti_aging": ["Retinoids", "Peptides", "Vitamin C"],
+    "hydration": ["Hydration", "Barrier"],
+    "acne_control": ["BHA", "Niacinamide"],
+    "barrier_repair": ["Barrier"],
+    # wrinkles / firmness
+    "fine lines": ["Retinoids", "Peptides", "Vitamin C"],
+    "deep wrinkles": ["Retinoids", "Peptides"],
+    "crow's feet": ["Retinoids", "Peptides"],
+    "crepey/thin skin": ["Retinoids", "Peptides", "Hydration"],
+    "sagging skin": ["Retinoids", "Peptides"],
+    "hollowness/volume loss": ["Peptides"],
+    # tone / pigment
+    "hyperpigmentation": ["Vitamin C", "Niacinamide", "AHA"],
+    "melasma": ["Vitamin C", "Niacinamide"],
+    "dullness": ["Vitamin C", "AHA", "Niacinamide"],
+    "uneven skin": ["Vitamin C", "AHA", "Niacinamide"],
+    "acne scars": ["Vitamin C", "AHA", "Niacinamide"],
+    # acne / pores / oil
+    "acne": ["BHA", "Niacinamide"],
+    "blackheads/whiteheads": ["BHA", "Retinoids"],
+    "enlarged pores": ["BHA", "Niacinamide", "Retinoids"],
+    "oiliness": ["BHA", "Niacinamide"],
+    # barrier / dryness / redness
+    "dryness/dehydration": ["Hydration", "Barrier"],
+    "flakiness/peeling": ["Barrier", "Hydration"],
+    "redness": ["Niacinamide", "Barrier"],
+    "rosacea": ["Niacinamide", "Barrier"],
+    # eye area (limited topical leverage)
+    "blue circles": ["Vitamin C", "Niacinamide"],
+    "under-eye bags": ["Peptides", "Niacinamide"],
+}
+
+# Routine dashboard pricing: when a priced product has no estimated months-of-supply
+# from the lookup, assume this many months when amortizing its cost per month.
+DEFAULT_MONTHS_SUPPLY = 3.0
+
 # Web-search fallback: only fires when the registry misses AND the photo
 # yielded fewer than this many ingredients (i.e. no usable list to audit).
 MIN_INGREDIENTS_FOR_AUDIT = 5

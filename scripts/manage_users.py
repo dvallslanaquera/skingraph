@@ -6,8 +6,9 @@ Usage:
     poetry run python scripts/manage_users.py delete <user_id>
     poetry run python scripts/manage_users.py seed
     poetry run python scripts/manage_users.py add --name Aiko --skin-type oily \\
-        --age 29 --goals brightening,hydration --pregnant \\
-        --conditions rosacea --sun-damage moderate --routine-time minimal --budget budget
+        --age 29 --goals "fine lines,hydration" --pregnant \\
+        --conditions rosacea --sun-damage moderate --routine-time minimal \\
+        --fitzpatrick 3 --undertone asian --devices --budget 75
 
 `seed` inserts a few diverse dummy personas (handy for testing how the coach
 adapts its advice). Run `list` afterwards to see the generated ids.
@@ -63,11 +64,14 @@ def cmd_add(args):
         skin_type=args.skin_type,
         age=args.age,
         gender=args.gender,
+        fitzpatrick=args.fitzpatrick,
+        skin_undertone=args.undertone,
         goals=_csv(args.goals),
         is_pregnant=args.pregnant,
         skin_conditions=_csv(args.conditions),
         sun_damage_history=args.sun_damage,
         routine_time=args.routine_time,
+        consider_devices=args.devices,
         budget=args.budget,
     )
     uid = user_store.save_user(profile, name=args.name)
@@ -78,24 +82,28 @@ def cmd_add(args):
 _SEED_PERSONAS = [
     ("Aiko", UserProfile(
         skin_type="combination", age=32, gender="female",
-        goals=["brightening", "anti_aging", "hydration"], is_pregnant=False,
+        fitzpatrick=3, skin_undertone="asian",
+        goals=["dullness", "fine lines", "dryness/dehydration"], is_pregnant=False,
         skin_conditions=[], sun_damage_history="mild",
-        routine_time="moderate", budget="mid-range")),
+        routine_time="moderate", consider_devices=True, budget=75)),
     ("Haruto", UserProfile(
         skin_type="oily", age=24, gender="male",
-        goals=["acne_control"], is_pregnant=False,
+        fitzpatrick=4, skin_undertone="asian",
+        goals=["acne", "blackheads/whiteheads", "enlarged pores"], is_pregnant=False,
         skin_conditions=["acne"], sun_damage_history="none",
-        routine_time="minimal", budget="budget")),
+        routine_time="minimal", consider_devices=False, budget=25)),
     ("Mei", UserProfile(
         skin_type="sensitive", age=29, gender="female",
-        goals=["barrier_repair", "hydration"], is_pregnant=True,
+        fitzpatrick=2, skin_undertone="asian",
+        goals=["redness", "dryness/dehydration"], is_pregnant=True,
         skin_conditions=["rosacea", "eczema"], sun_damage_history="none",
-        routine_time="moderate", budget="mid-range")),
+        routine_time="moderate", consider_devices=False, budget=75)),
     ("Yuki", UserProfile(
         skin_type="dry", age=52, gender="female",
-        goals=["anti_aging", "brightening"], is_pregnant=False,
+        fitzpatrick=2, skin_undertone="asian",
+        goals=["deep wrinkles", "hyperpigmentation", "sagging skin"], is_pregnant=False,
         skin_conditions=["hyperpigmentation"], sun_damage_history="severe",
-        routine_time="extensive", budget="premium")),
+        routine_time="extensive", consider_devices=True, budget=250)),
 ]
 
 # Routine products for each persona. Intentionally includes conflict-prone
@@ -281,13 +289,18 @@ def build_parser() -> argparse.ArgumentParser:
     p_add.add_argument("--name")
     p_add.add_argument("--skin-type", choices=["dry", "oily", "combination", "normal", "sensitive"])
     p_add.add_argument("--age", type=int)
-    p_add.add_argument("--gender")
-    p_add.add_argument("--goals", help="Comma-separated, e.g. brightening,hydration")
+    p_add.add_argument("--gender", choices=["male", "female", "other"])
+    p_add.add_argument("--fitzpatrick", type=int, choices=[1, 2, 3, 4, 5, 6],
+                       help="Fitzpatrick phototype 1 (I) to 6 (VI)")
+    p_add.add_argument("--undertone", choices=["asian", "non_asian"])
+    p_add.add_argument("--goals", help="Comma-separated, e.g. 'fine lines,redness'")
     p_add.add_argument("--pregnant", action="store_true")
     p_add.add_argument("--conditions", help="Comma-separated, e.g. rosacea,eczema")
     p_add.add_argument("--sun-damage", choices=["none", "mild", "moderate", "severe"])
     p_add.add_argument("--routine-time", choices=["minimal", "moderate", "extensive"])
-    p_add.add_argument("--budget", choices=["budget", "mid-range", "premium"])
+    p_add.add_argument("--devices", action="store_true",
+                       help="Open to devices / at-home treatments")
+    p_add.add_argument("--budget", type=int, help="Monthly budget in USD (0–250+)")
     p_add.set_defaults(func=cmd_add)
 
     return parser

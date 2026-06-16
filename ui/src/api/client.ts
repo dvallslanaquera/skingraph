@@ -3,6 +3,7 @@
 // Base URL comes from VITE_API_BASE_URL (see .env.example); defaults to the
 // local uvicorn / docker-compose port.
 import type {
+  RoutineDashboard,
   RoutineProduct,
   RoutineProductRequest,
   RoutineProductResponse,
@@ -105,6 +106,10 @@ export const api = {
 
   getRoutine(userId: string): Promise<RoutineProduct[]> {
     return request(`/users/${encodeURIComponent(userId)}/routine`);
+  },
+
+  getRoutineDashboard(userId: string): Promise<RoutineDashboard> {
+    return request(`/users/${encodeURIComponent(userId)}/routine/dashboard`);
   },
 
   addRoutineProduct(

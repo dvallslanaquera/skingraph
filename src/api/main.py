@@ -10,6 +10,7 @@
 #   DELETE /users/{user_id}              delete a user
 #   GET    /users/{user_id}/routine      list a user's saved routine ("shelf")
 #   POST   /users/{user_id}/routine      add a product to the routine
+#   GET    /users/{user_id}/routine/dashboard  aggregated routine dashboard
 #   DELETE /routine/{product_id}         remove a routine product
 import logging
 import os
@@ -28,6 +29,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from src.api import schemas
 from src.api.service import UserNotFoundError, run_scan
 from src.observability import log_tracing_status
+from src.routine_dashboard import build_dashboard
 from src.state import RoutineProduct
 from src.user_store import (add_routine_product, delete_user, get_routine,
                             get_user, get_user_name, init_db, list_users,
@@ -187,6 +189,18 @@ def add_routine(
         user_id, body.brand, body.product_name, body.ingredients, body.is_quasi_drug
     )
     return schemas.RoutineProductResponse(product_id=product_id)
+
+
+@app.get(
+    "/users/{user_id}/routine/dashboard",
+    response_model=schemas.RoutineDashboard,
+    tags=["routine"],
+)
+def read_routine_dashboard(user_id: str) -> schemas.RoutineDashboard:
+    dashboard = build_dashboard(user_id)
+    if dashboard is None:
+        raise HTTPException(404, f"No user found with id: {user_id}")
+    return schemas.RoutineDashboard(**dashboard)
 
 
 @app.delete("/routine/{product_id}", status_code=204, tags=["routine"])

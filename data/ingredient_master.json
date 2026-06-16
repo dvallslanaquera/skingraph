@@ -141,5 +141,16 @@
   "Palmitoyl Pentapeptide-4": ["パルミトイルペンタペプチド-4", "palmitoyl pentapeptide-4", "palmitoyl pentapeptide-3"],
   "Acetyl Hexapeptide-8": ["アセチルヘキサペプチド-8", "アセチルヘキサペプチド-3", "acetyl hexapeptide-8", "acetyl hexapeptide-3", "argireline"],
   "Glutathione": ["グルタチオン", "glutathione"],
-  "Carnosine": ["カルノシン", "carnosine"]
+  "Carnosine": ["カルノシン", "carnosine"],
+
+  "PEG-32": ["ＰＥＧ－３２", "PEG-32", "peg-32", "polyethylene glycol 1500"],
+  "Hexanediol": ["１，２－ヘキサンジオール", "1,2-ヘキサンジオール", "ヘキサンジオール", "hexanediol", "1,2-hexanediol"],
+  "Betaine": ["ベタイン", "betaine", "trimethylglycine"],
+  "Sodium PCA": ["ＰＣＡ－Ｎａ", "PCA-Na", "sodium pca"],
+  "Allantoin": ["アラントイン", "allantoin"],
+  "Hamamelis Virginiana (Witch Hazel) Water": ["ハマメリス水", "hamamelis virginiana water", "witch hazel water"],
+  "Cyclohexasiloxane": ["シクロヘキサシロキサン", "cyclohexasiloxane"],
+  "Cetyl PEG/PPG-10/1 Dimethicone": ["セチルＰＥＧ／ＰＰＧ－１０／１ジメチコン", "cetyl peg/ppg-10/1 dimethicone"],
+  "Sodium Chloride": ["塩化Ｎａ", "塩化ナトリウム", "sodium chloride"],
+  "Dimethicone/Vinyl Dimethicone Crosspolymer": ["（ジメチコン／ビニルジメチコン）クロスポリマー", "(ジメチコン/ビニルジメチコン)クロスポリマー", "dimethicone/vinyl dimethicone crosspolymer"]
 }

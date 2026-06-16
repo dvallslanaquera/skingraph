@@ -72,10 +72,19 @@ class SafetyAudit(BaseModel):
 class UserProfile(BaseModel):
     skin_type: Optional[Literal["dry", "oily", "combination", "normal", "sensitive"]] = None
     age: Optional[int] = None
+    # "male" | "female" | "other" (non-binary / prefer not to disclose). Kept as a
+    # free str (not a Literal) so older profiles and any future values still load.
     gender: Optional[str] = None
+    # Fitzpatrick phototype I–VI as an int 1–6, with the undertone palette the user
+    # picked it from (Asian skins skew warm/olive, others cooler/pink at the same
+    # phototype) — both feed the coach's sun-sensitivity guidance.
+    fitzpatrick: Optional[int] = Field(
+        None, ge=1, le=6, description="Fitzpatrick phototype, 1 (I) to 6 (VI)"
+    )
+    skin_undertone: Optional[Literal["asian", "non_asian"]] = None
     goals: List[str] = Field(
         default_factory=list,
-        description="e.g. anti_aging, brightening, hydration, acne_control, barrier_repair",
+        description="skin concerns, e.g. fine lines, hyperpigmentation, acne, redness",
     )
     is_pregnant: bool = False
     skin_conditions: List[str] = Field(
@@ -84,7 +93,11 @@ class UserProfile(BaseModel):
     )
     sun_damage_history: Optional[Literal["none", "mild", "moderate", "severe"]] = None
     routine_time: Optional[Literal["minimal", "moderate", "extensive"]] = None
-    budget: Optional[Literal["budget", "mid-range", "premium"]] = None
+    # When True, the coach may also suggest devices / at-home treatments (LED masks,
+    # at-home IPL, microneedle stamps, gua sha, etc.) on top of topical products.
+    consider_devices: bool = False
+    # Monthly skincare budget in USD. 0 means no spend; 250 is treated as "$250+".
+    budget: Optional[int] = Field(None, ge=0, description="monthly budget in USD")
 
 
 class RoutineProduct(BaseModel):
@@ -93,6 +106,11 @@ class RoutineProduct(BaseModel):
     ``ingredients`` holds canonical INCI names (the same keys the auditor reasons
     over), so a saved product can be re-analysed against a new scan without
     re-running OCR.
+
+    The ``timing`` / ``application_notes`` / price fields are populated when the
+    product is added via a scan (from the coach card + a web price lookup); they
+    stay ``None``/empty for products added manually, and the dashboard fills in a
+    deterministic timing fallback when ``timing`` is missing.
     """
 
     product_id: str = Field(..., description="stable id of the saved product")
@@ -104,6 +122,35 @@ class RoutineProduct(BaseModel):
     )
     is_quasi_drug: Optional[bool] = Field(
         None, description="whether the saved product is a quasi-drug"
+    )
+    # When to use the product: "AM" | "PM" | "AM & PM". None until classified.
+    timing: Optional[str] = Field(
+        None, description="best time to use: 'AM', 'PM', or 'AM & PM'"
+    )
+    # Short application/sequencing cautions (e.g. "apply to completely dry skin",
+    # "wait ~1 min before the next layer"), from the coach card.
+    application_notes: List[str] = Field(
+        default_factory=list,
+        description="how-to-apply / sequencing notes for this product",
+    )
+    # Amortizable price info, looked up once at add-time (best-effort).
+    price_usd: Optional[float] = Field(
+        None, description="unit price converted to USD"
+    )
+    price_native: Optional[float] = Field(
+        None, description="unit price in its native market currency"
+    )
+    price_currency: Optional[str] = Field(
+        None, description="native currency code, e.g. JPY, USD, EUR, KRW"
+    )
+    price_market: Optional[str] = Field(
+        None, description="market the price came from: 'JP' or the origin code"
+    )
+    months_supply: Optional[float] = Field(
+        None, description="estimated months one unit lasts for a daily user"
+    )
+    price_source: Optional[str] = Field(
+        None, description="URL the price was sourced from"
     )
 
 
@@ -174,6 +221,13 @@ class AgentState(TypedDict):
     # final output
     coach_advice: str
     routine_recommendations: List[str]
+    # Structured English coach card (timing / application_notes / warnings) used
+    # to persist per-product routine metadata when a scan is saved to the shelf.
+    coach_card: Optional[dict]
+    # 0–5 "leaf" recommendability score for THIS user (goals / concerns / budget)
+    # plus a one-sentence English rationale. None for anonymous scans.
+    recommendation_score: Optional[int]
+    recommendation_rationale: Optional[str]
 
     # system flags
     is_ready_for_logic: bool

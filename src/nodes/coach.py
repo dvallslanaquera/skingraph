@@ -108,6 +108,49 @@ Connect the user's goals to ingredients PRESENT in this product. Never promise o
 If the product contains nothing relevant to a stated goal, say so honestly rather
 than inventing a benefit.
 
+━━ DEVICES / AT-HOME TREATMENTS (only if the profile opts in) ━━
+ONLY when the user profile says they are open to devices / at-home treatments,
+you MAY add at most one short, optional suggestion for a device or at-home tool
+that genuinely complements THIS product (e.g. an LED mask after a soothing
+serum, a gua sha with a facial oil for a slip medium, an at-home microneedle
+stamp paired with a hydrating serum, an at-home IPL on body areas). Keep it
+薬機法-safe (整える / なめらかな印象, never 治療 / medical claims), frame it as
+optional ("〜と組み合わせるのもおすすめです" / "you could also pair this with..."),
+and never imply the device is required. If the profile does NOT opt in, never
+mention devices at all.
+
+━━ ASIAN-TYPE SKIN (only if the profile indicates it) ━━
+ONLY when the user profile says the user may have Asian-type skin, weave in
+Asian-skin-aware guidance where genuinely relevant, kept 薬機法-safe:
+• Asian skin is often more prone to post-inflammatory darkening (くすみ・色むら
+  の跡が残りやすい印象) after irritation — favour gentle introduction of strong
+  actives (retinoids, exfoliating acids) and emphasise diligent daily sun care
+  to help keep an even-looking tone.
+• Prefer 明るい印象 / なめらかに整える phrasings; never claim to treat
+  pigmentation or "whiten" the skin.
+If the profile does NOT indicate Asian-type skin, do not mention it at all.
+
+━━ HOW-TO-APPLY NOTES (application_notes) ━━
+Fill application_notes with short, practical cautions about HOW to apply THIS
+product — distinct from the risk-focused 'warnings'. Each note is one line, e.g.:
+• application surface: "apply to completely dry skin" (e.g. for retinoids/some
+  vitamin C) or "apply to slightly damp skin" (humectant layers).
+• sequencing / wait times: "wait ~1 minute before the next layer", "let it
+  absorb before sunscreen".
+• combination cautions: "avoid on the same night as a PM retinoid / strong acid
+  if your skin feels irritated".
+Keep them 薬機法-safe and specific to this product's type and ingredients. Leave
+the list empty if there is nothing special about how to apply it.
+
+━━ TEXTURE & NIGHTTIME FEEL ━━
+Some products feel tacky or sticky on the skin — humectant-rich serums/essences
+(high glycerin, honey/Mel, large amounts of Sodium Hyaluronate), film-formers,
+and heavy occlusive balms. If this product is likely to feel sticky AND you are
+recommending PM use, add ONE friendly heads-up warning (not a deterrent): note
+that it can feel tacky before bed and suggest letting it absorb for a few
+minutes or applying a thinner layer / sealing with a light moisturiser. This is
+a comfort tip, NOT a reason to avoid the product — never discourage its use.
+
 ━━ TIMING (AM / PM / AM & PM) ━━
 Decide when this product is best used, from its type and ingredients:
 • PM-leaning: Retinol/retinoids, AHA (Glycolic/Lactic Acid), BHA (Salicylic
@@ -142,17 +185,48 @@ cards completely empty.
 Both routine cards follow the same bilingual rule: 'routine_japanese' entirely
 in Japanese, 'routine_english' entirely in English, conveying the same content.
 
+━━ RECOMMENDABILITY SCORE (0–5 leaves) ━━
+Score how well THIS product suits THIS user as an integer 0–5, weighing three
+things together:
+• goals    — does it contain ingredients that genuinely serve the user's goals?
+• concerns / skin type — is it appropriate (or risky/irritating) for their skin
+             type and conditions?
+• budget   — does its likely price band fit the user's monthly budget?
+5 = an excellent fit across all three; 3 ≈ a reasonable but imperfect fit; 0 =
+poorly suited or risky for this user. Put the integer in 'recommendation_score'
+(set ONCE — it is language-independent). In EACH card's
+'recommendation_rationale', write ONE short sentence (in that card's language)
+explaining the score, naming the main driver (a goal it serves, a concern it
+raises, or budget fit). If no user profile is provided, base the score on
+general suitability and keep the rationale generic.
+
+━━ ROUTINE INTEGRATION (routine_integration) ━━
+Say how the user could actually fit THIS product into their routine: where in
+the sequence it goes, which existing products to pair it with or alternate
+against, and its AM/PM placement relative to what they already use. When a
+"Routine Context" block is provided, name the actual existing products from it;
+otherwise describe where it slots into a typical routine. Keep it 薬機法-safe and
+never promise outcomes. Fill it in both the Japanese and English cards.
+
 ━━ OUTPUT CONTRACT ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
 • Produce a single recommendation card with exactly these fields:
     product   — "Brand — Product Name" as given in the context.
+    recommendation_rationale — ONE sentence justifying the recommendation_score.
     purpose   — ONE sentence on what this product is for.
     warnings  — user-tailored cautions; one concern per item. MUST call out if
                 the product can make skin more prone to dehydration or to sun
-                damage (raised sun sensitivity). [] if genuinely none.
+                damage (raised sun sensitivity). Include the sticky/tacky
+                nighttime heads-up here when it applies (as a comfort tip, never
+                a deterrent). [] if genuinely none.
     timing    — "AM", "PM", or "AM & PM" per the rules above.
     frequency — e.g. "Daily" or "2–3 times per week".
+    application_notes — short how-to-apply / sequencing cautions per the
+                "HOW-TO-APPLY NOTES" rules above; [] if nothing special.
+    routine_integration — how to slot it into the user's routine per the
+                "ROUTINE INTEGRATION" rules above.
+• Set 'recommendation_score' once at the top level (0–5), per the score rules.
 • TWO COMPLETE VERSIONS — fill the card twice:
     'japanese': every field written ONLY in Japanese (敬体, 薬機法-compliant).
     'english':  the SAME card written ONLY in English.
@@ -189,6 +263,34 @@ class Recommendation(BaseModel):
         default="",
         description="How often to use, e.g. 'Daily' or '2–3 times per week'.",
     )
+    application_notes: List[str] = Field(
+        default_factory=list,
+        description=(
+            "Short how-to-apply / sequencing cautions, one per item, e.g. "
+            "'apply to completely dry skin', 'wait ~1 minute before the next "
+            "layer', 'avoid if skin is irritated from a PM retinoid'. Empty if "
+            "there is nothing special about how to apply it."
+        ),
+    )
+    recommendation_rationale: str = Field(
+        default="",
+        description=(
+            "ONE short sentence explaining the recommendation_score: why this "
+            "product does (or does not) suit this user, citing the main driver "
+            "— a goal it serves, a concern/skin-type it raises, or budget fit."
+        ),
+    )
+    routine_integration: str = Field(
+        default="",
+        description=(
+            "One or two sentences on how to slot THIS product into the user's "
+            "CURRENT routine: where in the sequence it goes, which existing "
+            "products to pair it with or alternate against, and its AM/PM "
+            "placement relative to what they already use. Name the actual "
+            "existing products when a Routine Context block is provided; "
+            "otherwise describe where it fits in a typical routine."
+        ),
+    )
 
 
 class RoutineFitCard(BaseModel):
@@ -215,6 +317,18 @@ class RoutineFitCard(BaseModel):
 
 
 class CoachResponse(BaseModel):
+    recommendation_score: int = Field(
+        default=0,
+        ge=0,
+        le=5,
+        description=(
+            "0–5 leaves: how well THIS product suits THIS user, weighing their "
+            "goals (does it contain ingredients that serve them), concerns / "
+            "skin type (appropriate or risky), and budget (does its price band "
+            "fit). 5 = excellent fit on all three; 0 = poorly suited or risky. "
+            "Set once; it is language-independent."
+        ),
+    )
     japanese: Recommendation = Field(
         description="The card written ONLY in Japanese (敬体, 薬機法-compliant)."
     )
@@ -281,6 +395,22 @@ def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
         lines.append(f"  Age: {profile.age}")
     if profile.gender:
         lines.append(f"  Gender: {profile.gender}")
+    if profile.fitzpatrick is not None:
+        roman = ["", "I", "II", "III", "IV", "V", "VI"][profile.fitzpatrick]
+        undertone = {"asian": "Asian", "non_asian": "non-Asian"}.get(
+            profile.skin_undertone or "", ""
+        )
+        tone = f" ({undertone} undertone)" if undertone else ""
+        lines.append(
+            f"  Fitzpatrick phototype: {roman}{tone} — lower types (I–III) burn "
+            "more easily and are more prone to sun damage"
+        )
+    if profile.skin_undertone == "asian":
+        lines.append(
+            "  May have ASIAN-TYPE skin (picked an Asian-undertone swatch) — apply "
+            "the Asian-skin guidance: introduce strong actives gently and "
+            "emphasise sun care to help keep an even-looking tone"
+        )
     if profile.goals:
         lines.append(f"  Goals: {', '.join(profile.goals)}")
     if profile.is_pregnant:
@@ -293,8 +423,15 @@ def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
         lines.append(f"  Sun damage history: {profile.sun_damage_history}")
     if profile.routine_time:
         lines.append(f"  Routine time available: {profile.routine_time}")
-    if profile.budget:
-        lines.append(f"  Budget: {profile.budget}")
+    if profile.consider_devices:
+        lines.append(
+            "  Open to devices / at-home treatments (LED masks, at-home IPL, "
+            "microneedle stamps, gua sha, etc.) — may suggest these to enrich "
+            "the routine where genuinely complementary"
+        )
+    if profile.budget is not None:
+        amount = "$250+/month" if profile.budget >= 250 else f"${profile.budget}/month"
+        lines.append(f"  Monthly budget: {amount} (factor product selection to fit)")
 
     return "\n".join(lines)
 
@@ -394,8 +531,8 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
 # Field labels + "none" placeholder per language, hoisted so the renderers don't
 # rebuild these tables on every call.
 _REC_LABELS = {
-    "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度"),
-    "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency"),
+    "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度", "ルーティンへの取り入れ方"),
+    "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency", "Fitting it into your routine"),
 }
 _FIT_LABELS = {
     "ja": ("リスク", "重複", "追加価値"),
@@ -407,8 +544,8 @@ _NONE_TEXT = {"ja": "特になし", "en": "None"}
 def _render_recommendation(
     card: Recommendation, lang: str, extra_warnings: List[str]
 ) -> str:
-    """Render one single-language Recommendation as the 5-point card."""
-    prod_l, purp_l, warn_l, time_l, freq_l = _REC_LABELS[lang]
+    """Render one single-language Recommendation as the recommendation card."""
+    prod_l, purp_l, warn_l, time_l, freq_l, fit_l = _REC_LABELS[lang]
     warnings = extra_warnings + card.warnings
 
     none_text = _NONE_TEXT[lang]
@@ -423,6 +560,8 @@ def _render_recommendation(
         lines.append(f"3. {warn_l}: {none_text}")
     lines.append(f"4. {time_l}: {card.timing}")
     lines.append(f"5. {freq_l}: {card.frequency}")
+    if card.routine_integration:
+        lines.append(f"6. {fit_l}: {card.routine_integration}")
     return "\n".join(lines)
 
 
@@ -470,11 +609,13 @@ def coach_node(state: AgentState) -> dict:
         f"## Product Analysis\n{_product_context(state)}\n\n"
         f"## {_user_context(profile, user_name)}\n\n"
         "Fill the recommendation card for this product and user: the product "
-        "name (brand + product name), its purpose in one sentence, "
-        "user-tailored warnings (including dehydration or sun-sensitivity risk "
-        "where relevant), the best timing (AM / PM / AM & PM), and the use "
-        "frequency. Produce the WHOLE card twice: once entirely in Japanese "
-        "('japanese'), once entirely in English ('english')."
+        "name (brand + product name), a 0–5 recommendability score with a "
+        "one-sentence rationale, its purpose in one sentence, user-tailored "
+        "warnings (including dehydration or sun-sensitivity risk where "
+        "relevant), the best timing (AM / PM / AM & PM), the use frequency, and "
+        "how to fit it into the user's routine. Produce the WHOLE card twice: "
+        "once entirely in Japanese ('japanese'), once entirely in English "
+        "('english'), and set 'recommendation_score' once."
     )
     if routine_context:
         human_prompt += (
@@ -513,14 +654,25 @@ def coach_node(state: AgentState) -> dict:
             "[English]\n" + rf_en
         )
 
+    # Recommendability score (0–5) only makes sense against a user's goals /
+    # concerns / budget, so it is suppressed for anonymous scans.
+    if profile is not None:
+        reco_score: Optional[int] = max(0, min(5, response.recommendation_score))
+        reco_rationale: Optional[str] = en.recommendation_rationale or None
+    else:
+        reco_score = None
+        reco_rationale = None
+
     # Machine-readable card keeps the English fields for downstream consumers.
     all_warnings_en = extra_en + en.warnings
     recommendations: List[str] = (
         [f"[PRODUCT] {en.product}"]
+        + ([f"[SCORE] {reco_score}/5"] if reco_score is not None else [])
         + [f"[PURPOSE] {en.purpose}"]
         + [f"[WARNING] {w}" for w in all_warnings_en]
         + [f"[TIMING] {en.timing}"]
         + [f"[FREQUENCY] {en.frequency}"]
+        + ([f"[ROUTINE-INTEGRATION] {en.routine_integration}"] if en.routine_integration else [])
     )
 
     # Deterministic routine findings, always emitted regardless of LLM phrasing,
@@ -543,7 +695,18 @@ def coach_node(state: AgentState) -> dict:
         len(all_warnings_en),
     )
 
+    # Structured English card persisted onto the shelf row when the scan is saved
+    # to the routine (timing + how-to-apply notes + risk warnings).
+    coach_card = {
+        "timing": en.timing,
+        "application_notes": list(en.application_notes),
+        "warnings": all_warnings_en,
+    }
+
     return {
         "coach_advice": coach_advice,
         "routine_recommendations": recommendations,
+        "coach_card": coach_card,
+        "recommendation_score": reco_score,
+        "recommendation_rationale": reco_rationale,
     }
