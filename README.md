@@ -273,7 +273,7 @@ curl -F "image=@data/golden_set/prod_001.jpg" http://127.0.0.1:8000/scan
 主なエンドポイント: `POST /scan`（スキャン）、`/users`・`/users/{id}`（プロファイルCRUD）、
 `/users/{id}/routine`・`/routine/{id}`（ルーティン棚の追加・削除）、`GET /health`。
 
-**ルーティング:** まず軽量な分類器が、写真が**表面**（ブランド情報のみ → 製品を特定し**成分をオンライン検索**）か**裏面**（成分表示 → ラベルから読み取り）かを判定します。両経路は単一のバイリンガル**レコメンドカード**に集約されます：製品名、用途（1文）、ユーザー個別の注意事項（乾燥・紫外線敏感性のリスクを含む）、使用タイミング（AM / PM / 両方）、使用頻度。
+**ルーティング:** すべてのアップロードは、抽出が走る前にまず2つの安価な入力ゲートを通過します — 決定論的ピクセル事前チェック（VLM呼び出しなしでほぼ真っ黒・白飛び・空白のフレームを弾く）と、分類器の内容チェック（製品なし・複数製品の写真を弾く）。有効な単一製品の写真の場合、その同じ軽量分類器が、写真が**表面**（ブランド情報のみ → 製品を特定し**成分をオンライン検索**）か**裏面**（成分表示 → ラベルから読み取り）かを判定します。両経路は単一のバイリンガル**レコメンドカード**に集約されます：製品名、用途（1文）、ユーザー個別の注意事項（乾燥・紫外線敏感性のリスクを含む）、使用タイミング（AM / PM / 両方）、使用頻度。
 
 > **OCRについて:** `scripts/run_ocr.py` はYomiToku日本語OCRエンジンをゴールデンセット画像に対して実行し、プレーンテキストを `data/ocr_out/` に出力します。**Phase 0ベンチマーク**として、OCRとVLMの精度差を定量化するためだけに存在します。プロダクショングラフ（`src/graph.py`）には組み込まれておらず、グラフはGemini VLM推論のみを使用します。
 
@@ -788,7 +788,7 @@ curl -F "image=@data/golden_set/prod_001.jpg" -F "user_id=<id>" -F "add_to_routi
 | `GET` / `POST` | `/users/{id}/routine` | List / add products to the routine shelf |
 | `DELETE` | `/routine/{id}` | Remove a routine product |
 
-**How it routes:** a lightweight classifier first decides whether the photo shows the **front** (branding only → identify the product and **search its ingredients online**) or the **back** (ingredient list → read it off the label). Both paths converge on a single bilingual **recommendation card**: product name, one-line purpose, user-tailored warnings (including dehydration / sun-sensitivity risk), best timing (AM / PM / both), and use frequency.
+**How it routes:** every upload first clears two cheap input gates — a deterministic pixel pre-check (bounces near-black / blown-out / blank frames with no VLM call) and the classifier's content check (bounces non-product or multi-product photos) — before any extraction runs. For a valid single-product photo, that same lightweight classifier decides whether it shows the **front** (branding only → identify the product and **search its ingredients online**) or the **back** (ingredient list → read it off the label). Both paths converge on a single bilingual **recommendation card**: product name, one-line purpose, user-tailored warnings (including dehydration / sun-sensitivity risk), best timing (AM / PM / both), and use frequency.
 
 > **Note on OCR:** `scripts/run_ocr.py` runs a local YomiToku Japanese OCR engine on the golden-set images and writes plain-text output to `data/ocr_out/`. It exists purely as a **Phase 0 benchmark baseline** to quantify the OCR-vs-VLM accuracy gap — intentionally excluded from the production graph (`src/graph.py`). The graph uses Gemini VLM inference exclusively.
 
