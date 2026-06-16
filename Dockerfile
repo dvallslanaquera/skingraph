@@ -64,8 +64,15 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Pre-download the sentence-transformers model into the image layer.
 # Without this, cold starts hit HuggingFace at first request (~30-60 s delay).
+# Retried: HuggingFace intermittently rate-limits / drops the connection in CI,
+# which would otherwise fail the whole image build (and the README CI badge).
 # Placed before COPY src/ so Docker cache survives source-only changes.
-RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
+RUN for attempt in 1 2 3 4 5; do \
+        echo "Pre-baking embedding model (attempt $attempt/5)..."; \
+        python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')" && exit 0; \
+        sleep 15; \
+    done; \
+    echo "Model pre-bake failed after 5 attempts" >&2; exit 1
 
 # The index builder (scripts/build_index.py) only imports src/vectorstore.py and
 # src/config.py. Copy just those two files before the build step so that changes
