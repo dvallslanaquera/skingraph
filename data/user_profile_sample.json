@@ -2,10 +2,13 @@
   "skin_type": "combination",
   "age": 32,
   "gender": "female",
-  "goals": ["brightening", "anti_aging", "hydration"],
+  "fitzpatrick": 3,
+  "skin_undertone": "asian",
+  "goals": ["dullness", "fine lines", "hyperpigmentation"],
   "is_pregnant": false,
   "skin_conditions": [],
   "sun_damage_history": "mild",
   "routine_time": "moderate",
-  "budget": "mid-range"
+  "consider_devices": true,
+  "budget": 75
 }

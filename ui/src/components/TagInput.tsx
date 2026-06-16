@@ -7,6 +7,8 @@ interface TagInputProps {
   onChange: (next: string[]) => void;
   placeholder?: string;
   suggestions?: string[];
+  // Maps a stored value to its display label (values stay canonical on save).
+  formatLabel?: (value: string) => string;
 }
 
 export function TagInput({
@@ -14,6 +16,7 @@ export function TagInput({
   onChange,
   placeholder = "Type and press Enter",
   suggestions = [],
+  formatLabel = (v) => v,
 }: TagInputProps) {
   const [draft, setDraft] = useState("");
 
@@ -35,11 +38,11 @@ export function TagInput({
       <div className="tag-list">
         {values.map((v) => (
           <span key={v} className="tag">
-            {v}
+            {formatLabel(v)}
             <button
               type="button"
               className="tag-remove"
-              aria-label={`Remove ${v}`}
+              aria-label={`Remove ${formatLabel(v)}`}
               onClick={() => remove(v)}
             >
               ×
@@ -71,7 +74,7 @@ export function TagInput({
               className="chip-suggestion"
               onClick={() => add(s)}
             >
-              + {s}
+              + {formatLabel(s)}
             </button>
           ))}
         </div>

@@ -60,6 +60,15 @@ class ScanResponse(BaseModel):
     coach_advice: Optional[str] = Field(
         None, description="Bilingual recommendation card, or a graceful-exit message."
     )
+    recommendation_score: Optional[int] = Field(
+        None,
+        ge=0,
+        le=5,
+        description="0–5 'leaf' recommendability for this user; None if anonymous.",
+    )
+    recommendation_rationale: Optional[str] = Field(
+        None, description="One-sentence rationale for recommendation_score."
+    )
     routine_recommendations: List[str] = Field(default_factory=list)
     web_sources: List[str] = Field(default_factory=list)
 
@@ -109,3 +118,54 @@ class RoutineProductRequest(BaseModel):
 
 class RoutineProductResponse(BaseModel):
     product_id: str
+
+
+# --- routine dashboard ------------------------------------------------------
+
+
+class RoutineDashboardCard(BaseModel):
+    """One product on the routine dashboard: the saved row plus derived fields."""
+
+    product_id: str
+    brand: str
+    product_name: str
+    ingredients: List[str] = Field(default_factory=list)
+    is_quasi_drug: Optional[bool] = None
+    timing: str = Field(description="Resolved 'AM' | 'PM' | 'AM & PM'.")
+    application_notes: List[str] = Field(default_factory=list)
+    price_usd: Optional[float] = None
+    price_native: Optional[float] = None
+    price_currency: Optional[str] = None
+    price_market: Optional[str] = None
+    months_supply: Optional[float] = None
+    price_source: Optional[str] = None
+    monthly_cost_usd: Optional[float] = Field(
+        None, description="Amortized monthly USD cost (price ÷ months of supply)."
+    )
+
+
+class GoalCoverage(BaseModel):
+    """Whether the routine addresses one stated goal, and via which categories."""
+
+    goal: str
+    covered: Optional[bool] = Field(
+        None, description="True/False, or None when the goal can't be assessed."
+    )
+    addressed_by: List[str] = Field(
+        default_factory=list,
+        description="Function categories present in the routine that serve this goal.",
+    )
+
+
+class RoutineDashboard(BaseModel):
+    """Aggregated 'My Routine' view: products, monthly cost, and goal coverage."""
+
+    products: List[RoutineDashboardCard] = Field(default_factory=list)
+    monthly_cost_usd: Optional[float] = Field(
+        None, description="Amortized total monthly cost in USD; None if unpriced."
+    )
+    currency: str = "USD"
+    goals: List[GoalCoverage] = Field(default_factory=list)
+    leaf_score: int = Field(
+        0, ge=0, le=5, description="0–5 leaves: how well the routine covers the goals."
+    )

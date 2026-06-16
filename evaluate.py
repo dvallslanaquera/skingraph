@@ -3,6 +3,13 @@
 #   poetry run python evaluate.py --model pro      # use the pro scanner
 #   poetry run python evaluate.py --model both     # compare flash vs pro
 #   poetry run python evaluate.py --save results.json
+#
+# Ingredients are scored in canonical English-INCI space so the metric is
+# language-independent: a Korean or English label can score against the same
+# ground truth as a Japanese one. Each extracted ingredient is run through the
+# translation-normalization layer (the VLM's own `name_standardized` INCI, with
+# the normalizer ledger as a fallback) and compared against the `ingredient_inci`
+# translations stored alongside each product in ground_truth.json.
 import argparse
 import json
 import logging
@@ -14,8 +21,9 @@ from typing import Optional
 from dotenv import load_dotenv
 from rapidfuzz import fuzz, process
 
+from src.nodes.normalizer import _load_index, _resolve
 from src.nodes.scanner import flash_scanner_node, pro_scanner_node
-from src.state import ProductExtraction
+from src.state import Ingredient, ProductExtraction
 
 GROUND_TRUTH_PATH = "data/ground_truth.json"
 GOLDEN_SET_DIR = "data/golden_set"
@@ -31,6 +39,30 @@ SCANNERS = {"flash": flash_scanner_node, "pro": pro_scanner_node}
 def normalize(text: str) -> str:
     """NFKC folds full-width kana/digits to half-width so ２Ｋ == 2K."""
     return unicodedata.normalize("NFKC", text).strip().lower()
+
+
+# Ledger index for the translation-normalization layer, loaded once.
+_NORM_INDEX: Optional[dict] = None
+
+
+def canonical_inci(ingredient: Ingredient) -> str:
+    """Resolve an extracted ingredient to a canonical English-INCI name.
+
+    The VLM already standardizes any source language into an English INCI in
+    `name_standardized` (e.g. 히드로퀴논 -> 'Hydroquinone'), so we try it first;
+    both it and the raw name are run through the normalizer ledger so the
+    extraction and the ground truth land on the *same* canonical key. Falls back
+    to the best available raw string when nothing resolves.
+    """
+    global _NORM_INDEX
+    if _NORM_INDEX is None:
+        _NORM_INDEX = _load_index()
+    for candidate in (ingredient.name_standardized, ingredient.name_raw):
+        if candidate:
+            inci, _ = _resolve(candidate, _NORM_INDEX)
+            if inci:
+                return inci
+    return ingredient.name_standardized or ingredient.name_raw or ""
 
 
 def score_text_field(extracted: str, truth: str) -> float:
@@ -114,8 +146,10 @@ def evaluate_one(model: str, entry: dict, threshold: int) -> Optional[dict]:
     product_score = score_text_field(extracted.product_name, gt["product_name"])
     quasi_correct = extracted.is_quasi_drug == gt["is_medicated_quasi_drug"]
 
-    raw_ingredients = [ing.name_raw for ing in extracted.ingredients]
-    ing = score_ingredients(raw_ingredients, gt["full_ingredient_list"], threshold)
+    # Score in canonical INCI space so the comparison is language-independent.
+    extracted_inci = [canonical_inci(ing) for ing in extracted.ingredients]
+    truth_inci = gt.get("ingredient_inci") or gt["full_ingredient_list"]
+    ing = score_ingredients(extracted_inci, truth_inci, threshold)
 
     return {
         "id": entry["id"],

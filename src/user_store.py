@@ -28,32 +28,82 @@ CREATE TABLE IF NOT EXISTS users (
     skin_type          TEXT,
     age                INTEGER,
     gender             TEXT,
+    fitzpatrick        INTEGER,
+    skin_undertone     TEXT,
     goals              TEXT,
     is_pregnant        INTEGER NOT NULL DEFAULT 0,
     skin_conditions    TEXT,
     sun_damage_history TEXT,
     routine_time       TEXT,
+    consider_devices   INTEGER NOT NULL DEFAULT 0,
     budget             TEXT,
     created_at         TEXT NOT NULL,
     updated_at         TEXT NOT NULL
 );
 """
 
+# Columns added after the initial release. Applied with ALTER TABLE on connect so
+# databases created by an earlier version pick up the new profile fields without a
+# manual migration. SQLite ignores the rest of the row when adding a column.
+_USER_COLUMNS_ADDED = {
+    "fitzpatrick": "INTEGER",
+    "skin_undertone": "TEXT",
+    "consider_devices": "INTEGER NOT NULL DEFAULT 0",
+}
+
+
+def _migrate_users(conn: sqlite3.Connection) -> None:
+    """Add any profile columns missing from an older ``users`` table."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(users)")}
+    for column, ddl in _USER_COLUMNS_ADDED.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {column} {ddl}")
+
 # Per-user "shelf" of products the user currently uses. ingredients is stored as
 # a JSON list of canonical INCI names so a saved product can be re-audited
 # against a new scan without re-running OCR.
 _ROUTINE_SCHEMA = """
 CREATE TABLE IF NOT EXISTS routine_products (
-    product_id    TEXT PRIMARY KEY,
-    user_id       TEXT NOT NULL,
-    brand         TEXT,
-    product_name  TEXT,
-    ingredients   TEXT,
-    is_quasi_drug INTEGER,
-    added_at      TEXT NOT NULL,
+    product_id        TEXT PRIMARY KEY,
+    user_id           TEXT NOT NULL,
+    brand             TEXT,
+    product_name      TEXT,
+    ingredients       TEXT,
+    is_quasi_drug     INTEGER,
+    timing            TEXT,
+    application_notes TEXT,
+    price_usd         REAL,
+    price_native      REAL,
+    price_currency    TEXT,
+    price_market      TEXT,
+    months_supply     REAL,
+    price_source      TEXT,
+    added_at          TEXT NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id)
 );
 """
+
+# Routine columns added after the initial release (per-product timing, application
+# notes, and price metadata). Applied with ALTER TABLE on connect, mirroring
+# _USER_COLUMNS_ADDED, so older databases pick them up without a manual migration.
+_ROUTINE_COLUMNS_ADDED = {
+    "timing": "TEXT",
+    "application_notes": "TEXT",
+    "price_usd": "REAL",
+    "price_native": "REAL",
+    "price_currency": "TEXT",
+    "price_market": "TEXT",
+    "months_supply": "REAL",
+    "price_source": "TEXT",
+}
+
+
+def _migrate_routine(conn: sqlite3.Connection) -> None:
+    """Add any columns missing from an older ``routine_products`` table."""
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(routine_products)")}
+    for column, ddl in _ROUTINE_COLUMNS_ADDED.items():
+        if column not in existing:
+            conn.execute(f"ALTER TABLE routine_products ADD COLUMN {column} {ddl}")
 
 
 def _now() -> str:
@@ -64,8 +114,27 @@ def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(USER_DB_PATH)
     conn.row_factory = sqlite3.Row
     conn.execute(_SCHEMA)
+    _migrate_users(conn)
     conn.execute(_ROUTINE_SCHEMA)
+    _migrate_routine(conn)
     return conn
+
+
+# Legacy categorical budgets, mapped to a representative monthly USD figure so a
+# profile saved before the slider still loads as a number.
+_LEGACY_BUDGET_USD = {"budget": 25, "mid-range": 75, "premium": 200}
+
+
+def _coerce_budget(value) -> Optional[int]:
+    """Read a budget column (int, numeric str, or legacy category) as USD int."""
+    if value is None or value == "":
+        return None
+    if isinstance(value, int):
+        return value
+    text = str(value).strip()
+    if text.isdigit():
+        return int(text)
+    return _LEGACY_BUDGET_USD.get(text.lower())
 
 
 def init_db() -> None:
@@ -79,6 +148,8 @@ def _row_to_profile(row: sqlite3.Row) -> UserProfile:
         skin_type=row["skin_type"],
         age=row["age"],
         gender=row["gender"],
+        fitzpatrick=row["fitzpatrick"],
+        skin_undertone=row["skin_undertone"],
         goals=json.loads(row["goals"]) if row["goals"] else [],
         is_pregnant=bool(row["is_pregnant"]),
         skin_conditions=(
@@ -86,7 +157,8 @@ def _row_to_profile(row: sqlite3.Row) -> UserProfile:
         ),
         sun_damage_history=row["sun_damage_history"],
         routine_time=row["routine_time"],
-        budget=row["budget"],
+        consider_devices=bool(row["consider_devices"]),
+        budget=_coerce_budget(row["budget"]),
     )
 
 
@@ -115,10 +187,11 @@ def save_user(
         conn.execute(
             """
             INSERT OR REPLACE INTO users (
-                user_id, name, skin_type, age, gender, goals, is_pregnant,
-                skin_conditions, sun_damage_history, routine_time, budget,
+                user_id, name, skin_type, age, gender, fitzpatrick,
+                skin_undertone, goals, is_pregnant, skin_conditions,
+                sun_damage_history, routine_time, consider_devices, budget,
                 created_at, updated_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 user_id,
@@ -126,12 +199,15 @@ def save_user(
                 profile.skin_type,
                 profile.age,
                 profile.gender,
+                profile.fitzpatrick,
+                profile.skin_undertone,
                 json.dumps(profile.goals),
                 int(profile.is_pregnant),
                 json.dumps(profile.skin_conditions),
                 profile.sun_damage_history,
                 profile.routine_time,
-                profile.budget,
+                int(profile.consider_devices),
+                None if profile.budget is None else str(profile.budget),
                 created_at,
                 now,
             ),
@@ -187,7 +263,18 @@ def delete_user(user_id: str) -> bool:
 # --- Routine ("shelf") of products a user currently uses --------------------
 
 
+def _row_keys(row: sqlite3.Row) -> set:
+    """Column names present on a row (new price/timing columns may be absent)."""
+    return set(row.keys())
+
+
 def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
+    keys = _row_keys(row)
+
+    def opt(name):
+        return row[name] if name in keys else None
+
+    notes_raw = opt("application_notes")
     return RoutineProduct(
         product_id=row["product_id"],
         brand=row["brand"] or "",
@@ -196,6 +283,14 @@ def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
         is_quasi_drug=(
             bool(row["is_quasi_drug"]) if row["is_quasi_drug"] is not None else None
         ),
+        timing=opt("timing"),
+        application_notes=json.loads(notes_raw) if notes_raw else [],
+        price_usd=opt("price_usd"),
+        price_native=opt("price_native"),
+        price_currency=opt("price_currency"),
+        price_market=opt("price_market"),
+        months_supply=opt("months_supply"),
+        price_source=opt("price_source"),
     )
 
 
@@ -205,11 +300,22 @@ def add_routine_product(
     product_name: str,
     ingredients: List[str],
     is_quasi_drug: Optional[bool] = None,
+    *,
+    timing: Optional[str] = None,
+    application_notes: Optional[List[str]] = None,
+    price_usd: Optional[float] = None,
+    price_native: Optional[float] = None,
+    price_currency: Optional[str] = None,
+    price_market: Optional[str] = None,
+    months_supply: Optional[float] = None,
+    price_source: Optional[str] = None,
 ) -> str:
     """Save a product into the user's routine. Returns its product_id.
 
     Dedupes on (user_id, lower(brand), lower(product_name)) — re-adding the same
     product refreshes its ingredient list instead of creating a duplicate row.
+    The timing / application_notes / price_* fields are optional metadata set when
+    a product is added via a scan; manual adds leave them as their defaults.
     """
     with _connect() as conn:
         existing = conn.execute(
@@ -225,8 +331,9 @@ def add_routine_product(
             """
             INSERT OR REPLACE INTO routine_products (
                 product_id, user_id, brand, product_name, ingredients,
-                is_quasi_drug, added_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                is_quasi_drug, timing, application_notes, price_usd, price_native,
+                price_currency, price_market, months_supply, price_source, added_at
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 product_id,
@@ -235,6 +342,14 @@ def add_routine_product(
                 product_name,
                 json.dumps(ingredients),
                 None if is_quasi_drug is None else int(is_quasi_drug),
+                timing,
+                json.dumps(application_notes or []),
+                price_usd,
+                price_native,
+                price_currency,
+                price_market,
+                months_supply,
+                price_source,
                 _now(),
             ),
         )
@@ -284,11 +399,52 @@ def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
 
     Returns None (saves nothing) when the scan didn't yield a usable product, so
     the CLI's --add-to-routine and the API's add_to_routine behave identically.
+
+    Carries the coach's per-product timing + application notes onto the shelf row,
+    and does a best-effort web price lookup so the routine dashboard can show an
+    amortized monthly cost. A failed price lookup never blocks the save.
     """
     data = final_state.get("extracted_data")
     if not final_state.get("is_ready_for_logic") or data is None:
         return None
     inci = inci_names(final_state.get("standardized_ingredients"))
+
+    card = final_state.get("coach_card") or {}
+    timing = card.get("timing") or None
+    application_notes = card.get("application_notes") or []
+
+    price = _lookup_price_safe(data.brand, data.product_name)
+
     return add_routine_product(
-        user_id, data.brand, data.product_name, inci, data.is_quasi_drug
+        user_id,
+        data.brand,
+        data.product_name,
+        inci,
+        data.is_quasi_drug,
+        timing=timing,
+        application_notes=application_notes,
+        price_usd=price.price_usd if price else None,
+        price_native=price.price_native if price else None,
+        price_currency=price.currency if price else None,
+        price_market=price.market if price else None,
+        months_supply=price.months_supply if price else None,
+        price_source=price.source if price else None,
     )
+
+
+def _lookup_price_safe(brand: str, product_name: str):
+    """Best-effort web price lookup; returns a PriceInfo or None on any failure.
+
+    Imported lazily so the heavy LLM/grounding stack is only loaded when a scan
+    is actually being saved (and so a missing API key degrades to no price rather
+    than an import error).
+    """
+    try:
+        from src.pricing import lookup_price
+
+        return lookup_price(brand, product_name)
+    except Exception:  # pragma: no cover - network/LLM failures are non-fatal
+        import logging
+
+        logging.warning("Price lookup failed for %s — %s", brand, product_name)
+        return None
