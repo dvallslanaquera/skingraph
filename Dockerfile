@@ -67,9 +67,10 @@ COPY --from=builder /opt/venv /opt/venv
 # Placed before COPY src/ so Docker cache survives source-only changes.
 RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')"
 
-COPY src/ ./src/
-# Utility scripts (build_index.py, manage_users.py) are useful inside the
-# container; run_ocr.py is harmless here — its deps are not installed.
+# The index builder (scripts/build_index.py) only imports src/vectorstore.py and
+# src/config.py. Copy just those two files before the build step so that changes
+# to the rest of src/ don't bust the index cache and trigger the ~8 min re-embed.
+COPY src/vectorstore.py src/config.py ./src/
 COPY scripts/ ./scripts/
 # Static JSON reference data is baked into /app/seed, NOT /app/data: Railway
 # mounts a persistent volume at /app/data that would otherwise shadow these
@@ -86,11 +87,16 @@ RUN sed -i 's/\r//' entrypoint.sh && chmod +x entrypoint.sh
 # makes first boot a fast file-copy instead. build_index.py reads data/*.json
 # and writes data/qdrant, so stage the JSON into data/ for the build, move the
 # result into seed/, then drop the temp data/ (the volume provides it at runtime).
+# Cache key: scripts/build_index.py + src/vectorstore.py + data/*.json.
 RUN mkdir -p data \
  && cp seed/*.json data/ \
  && python scripts/build_index.py \
  && mv data/qdrant seed/qdrant \
  && rm -rf data
+
+# src/ comes last: source-only changes invalidate only this layer and below,
+# leaving the slow model-download and index-build layers fully cached.
+COPY src/ ./src/
 
 
 # ────────────────────────────────────────────────────────────
