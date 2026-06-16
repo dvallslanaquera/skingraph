@@ -51,7 +51,11 @@ def _fake_final_state() -> dict:
 def client(tmp_path, monkeypatch):
     """TestClient with an isolated DB and a stubbed graph."""
     monkeypatch.setattr(user_store, "USER_DB_PATH", str(tmp_path / "api_users.db"))
-    monkeypatch.setattr(service.graph_app, "invoke", lambda inputs: _fake_final_state())
+    monkeypatch.setattr(
+        service.graph_app,
+        "invoke",
+        lambda inputs, config=None: _fake_final_state(),
+    )
     with TestClient(app) as c:  # triggers lifespan → init_db()
         yield c
 

@@ -17,6 +17,27 @@ from tests.helpers import make_extraction
 
 
 # --------------------------------------------------------------------------- #
+# quality_router (Tier 1)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "issue, expected",
+    [
+        (None, "ok"),
+        ("too_dark", "reject"),
+        ("too_bright", "reject"),
+        ("blank", "reject"),
+        ("unreadable", "reject"),
+    ],
+)
+def test_quality_router(issue, expected):
+    assert graph.quality_router({"image_quality_issue": issue}) == expected
+
+
+def test_quality_router_missing_key_is_ok():
+    assert graph.quality_router({}) == "ok"
+
+
+# --------------------------------------------------------------------------- #
 # side_router
 # --------------------------------------------------------------------------- #
 @pytest.mark.parametrize(
@@ -33,6 +54,24 @@ def test_side_router(image_type, expected):
 
 def test_side_router_missing_key_defaults_to_back():
     assert graph.side_router({}) == "back"
+
+
+# --------------------------------------------------------------------------- #
+# classify_router (Tier 2)
+# --------------------------------------------------------------------------- #
+@pytest.mark.parametrize(
+    "content, image_type, expected",
+    [
+        ("product", "front", "front"),
+        ("product", "back", "back"),
+        (None, "back", "back"),  # no verdict (override path) → treat as product
+        ("not_a_product", "back", "reject"),
+        ("multiple_products", "front", "reject"),
+    ],
+)
+def test_classify_router(content, image_type, expected):
+    state = {"image_content": content, "image_type": image_type}
+    assert graph.classify_router(state) == expected
 
 
 # --------------------------------------------------------------------------- #
@@ -194,7 +233,26 @@ def test_retake_node_flags_and_message():
     result = graph.retake_node({})
     assert result["retake_requested"] is True
     assert result["is_ready_for_logic"] is False
-    assert result["coach_advice"]  # non-empty user-facing prompt
+    # No reason in state (pro-fail path) → the default "couldn't read" message.
+    assert result["coach_advice"] == graph._DEFAULT_RETAKE_MESSAGE
+
+
+def test_retake_node_uses_tier1_pixel_reason():
+    result = graph.retake_node({"image_quality_issue": "too_dark"})
+    assert result["retake_requested"] is True
+    assert "dark" in result["coach_advice"].lower()
+
+
+def test_retake_node_uses_tier2_content_reason():
+    result = graph.retake_node({"image_content": "multiple_products"})
+    assert "one product" in result["coach_advice"].lower()
+
+
+def test_retake_node_ignores_valid_product_content():
+    # A single-product frame that fell through to retake (both scanners failed)
+    # must NOT be mistaken for an OOD rejection — it gets the default message.
+    result = graph.retake_node({"image_content": "product"})
+    assert result["coach_advice"] == graph._DEFAULT_RETAKE_MESSAGE
 
 
 def test_tag_language_node_normalises_case_and_whitespace():

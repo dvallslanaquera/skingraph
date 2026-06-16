@@ -11,11 +11,24 @@ from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
 from src.nodes.routine_advisor import routine_advisor_node
-from src.nodes.scanner import (classify_side_node, flash_scanner_node,
-                               pro_scanner_node)
+from src.nodes.scanner import (assess_image_quality, classify_side_node,
+                               flash_scanner_node, pro_scanner_node)
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
                                  verify_identity_node, web_search_node)
 from src.state import AgentState
+
+
+def quality_gate_node(state: AgentState) -> dict:
+    """Tier-1 entry node: reject degenerate images on raw pixels (no VLM call)."""
+    issue = assess_image_quality(state["image_path"])
+    if issue:
+        logging.warning("Image failed Tier-1 pixel pre-check: %s", issue)
+    return {"image_quality_issue": issue}
+
+
+def quality_router(state: AgentState) -> str:
+    """Send pixel-degenerate frames straight to retake; otherwise classify them."""
+    return "reject" if state.get("image_quality_issue") else "ok"
 
 
 def side_router(state: AgentState) -> str:
@@ -26,6 +39,19 @@ def side_router(state: AgentState) -> str:
     ingredient list, so we scan it off the label.
     """
     return "front" if state.get("image_type") == "front" else "back"
+
+
+def classify_router(state: AgentState) -> str:
+    """Route after the Tier-2 content + side classification.
+
+    A non-product or multi-product frame is rejected before any extraction runs
+    (the structured-output scanner cannot say "no product" — it would fabricate
+    one). Anything that is a single product falls through to the normal
+    front/back side routing.
+    """
+    if state.get("image_content") in ("not_a_product", "multiple_products"):
+        return "reject"
+    return side_router(state)
 
 
 def inference_router(state: AgentState) -> str:
@@ -62,15 +88,59 @@ def correction_node(state: AgentState) -> dict:
     }
 
 
+# Graceful-exit messages for inputs we bounce back to the user. The default is
+# the VLM-confidence retake (label unreadable after both scanners); the rest are
+# keyed by the Tier-1 pixel verdict (image_quality_issue) or the Tier-2 content
+# verdict (image_content), so each rejection tells the user exactly what to fix.
+_DEFAULT_RETAKE_MESSAGE = (
+    "I couldn't read the label clearly. "
+    "Could you please retake the photo with less glare and flatter alignment?"
+)
+_REJECTION_MESSAGES = {
+    "too_dark": (
+        "This photo looks almost completely dark. Please retake it in good "
+        "lighting with the product label clearly visible."
+    ),
+    "too_bright": (
+        "This photo looks overexposed — the label is washed out. Please retake "
+        "it with less glare or direct light."
+    ),
+    "blank": (
+        "I couldn't find a product in this photo — it looks blank or badly out "
+        "of focus. Please retake it with the product label filling the frame."
+    ),
+    "unreadable": (
+        "I couldn't open this image. Please upload a standard photo (JPEG or "
+        "PNG) of the product label."
+    ),
+    "not_a_product": (
+        "I couldn't find a skincare product in this photo. Please take a clear "
+        "photo of a single product's label."
+    ),
+    "multiple_products": (
+        "I can see more than one product in this photo. Please photograph one "
+        "product at a time so I can analyse its label accurately."
+    ),
+}
+
+
 def retake_node(state: AgentState) -> dict:
-    logging.warning("Extraction failed on both models — triggering retake prompt.")
+    """Graceful exit for any unusable input: pixel-degenerate (Tier 1),
+    non/multi-product (Tier 2), or unreadable after both scanners (confidence)."""
+    reason = state.get("image_quality_issue")
+    if not reason and state.get("image_content") in (
+        "not_a_product",
+        "multiple_products",
+    ):
+        reason = state.get("image_content")
+    logging.warning(
+        "Bouncing input back to user (reason: %s).", reason or "low_confidence"
+    )
+    message = _REJECTION_MESSAGES.get(reason or "", _DEFAULT_RETAKE_MESSAGE)
     return {
         "retake_requested": True,
         "is_ready_for_logic": False,
-        "coach_advice": (
-            "I couldn't read the label clearly. "
-            "Could you please retake the photo with less glare and flatter alignment?"
-        ),
+        "coach_advice": message,
     }
 
 
@@ -111,6 +181,7 @@ def web_result_router(state: AgentState) -> str:
 
 workflow = StateGraph(state_schema=AgentState)
 
+workflow.add_node("image_quality_gate", quality_gate_node)
 workflow.add_node("classify_side", classify_side_node)
 workflow.add_node("flash_scanner", flash_scanner_node)
 workflow.add_node("early_registry_check", early_registry_check_node)
@@ -128,14 +199,28 @@ workflow.add_node("confirm_identity", confirm_identity_node)
 workflow.add_node("search_failed", search_failed_node)
 workflow.add_node("retake_request", retake_node)
 
-workflow.set_entry_point("classify_side")
+workflow.set_entry_point("image_quality_gate")
 
+# Tier 1: deterministic pixel gate runs first, even on the CLI/API override path
+# (which skips the Tier-2 classifier). Degenerate frames never reach the VLM.
+workflow.add_conditional_edges(
+    "image_quality_gate",
+    quality_router,
+    {
+        "ok": "classify_side",
+        "reject": "retake_request",
+    },
+)
+
+# Tier 2: the classifier's content verdict rejects non-product / multi-product
+# frames before extraction; single-product frames route on front/back as before.
 workflow.add_conditional_edges(
     "classify_side",
-    side_router,
+    classify_router,
     {
         "front": "verify_identity",
         "back": "flash_scanner",
+        "reject": "retake_request",
     },
 )
 

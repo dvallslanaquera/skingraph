@@ -23,8 +23,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
+from prometheus_fastapi_instrumentator import Instrumentator
+
 from src.api import schemas
 from src.api.service import UserNotFoundError, run_scan
+from src.observability import log_tracing_status
 from src.state import RoutineProduct
 from src.user_store import (add_routine_product, delete_user, get_routine,
                             get_user, get_user_name, init_db, list_users,
@@ -41,6 +44,7 @@ MAX_UPLOAD_BYTES = 15 * 1024 * 1024
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()  # create the users / routine_products tables if absent
+    log_tracing_status()  # report whether LangSmith tracing is live
     yield
 
 
@@ -64,6 +68,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+Instrumentator().instrument(app).expose(app)
 
 
 @app.get("/health", tags=["system"])

@@ -6,6 +6,7 @@
 from unittest.mock import MagicMock
 
 import pytest
+from PIL import Image
 
 from src.nodes import scanner
 from src.nodes.scanner import ImageSide
@@ -59,8 +60,53 @@ def test_classify_side_honours_caller_override(mock_gemini):
 def test_classify_side_auto_detects_when_no_override(mock_gemini):
     handles = mock_gemini(ImageSide(side="front", confidence=0.92))
     result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
-    assert result == {"image_type": "front"}
+    # content defaults to "product" when the model doesn't flag an OOD frame.
+    assert result == {"image_type": "front", "image_content": "product"}
     handles["cls"].assert_called_once()
+
+
+def test_classify_side_surfaces_content_verdict(mock_gemini):
+    # Tier 2: the classifier flags a non-product frame in the same VLM call.
+    mock_gemini(ImageSide(content="not_a_product", side="back", confidence=0.3))
+    result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
+    assert result == {"image_type": "back", "image_content": "not_a_product"}
+
+
+# --------------------------------------------------------------------------- #
+# assess_image_quality (Tier-1 pixel pre-flight — no VLM)
+# --------------------------------------------------------------------------- #
+def _save(img, tmp_path, name="img.png") -> str:
+    path = tmp_path / name
+    img.save(path)
+    return str(path)
+
+
+def test_quality_flags_near_black_frame(tmp_path):
+    path = _save(Image.new("RGB", (64, 64), (2, 2, 2)), tmp_path)
+    assert scanner.assess_image_quality(path) == "too_dark"
+
+
+def test_quality_flags_blown_out_frame(tmp_path):
+    path = _save(Image.new("RGB", (64, 64), (255, 255, 255)), tmp_path)
+    assert scanner.assess_image_quality(path) == "too_bright"
+
+
+def test_quality_flags_uniform_blank_frame(tmp_path):
+    # Mid-grey: luminance is fine but there's zero contrast → no product.
+    path = _save(Image.new("RGB", (64, 64), (128, 128, 128)), tmp_path)
+    assert scanner.assess_image_quality(path) == "blank"
+
+
+def test_quality_passes_a_normal_contrasty_image(tmp_path):
+    # A gradient has plenty of spread and mid-range mean → worth a VLM call.
+    path = _save(Image.linear_gradient("L").convert("RGB"), tmp_path)
+    assert scanner.assess_image_quality(path) is None
+
+
+def test_quality_reports_unreadable_bytes(tmp_path):
+    path = tmp_path / "broken.jpg"
+    path.write_bytes(b"not really an image")
+    assert scanner.assess_image_quality(str(path)) == "unreadable"
 
 
 # --------------------------------------------------------------------------- #

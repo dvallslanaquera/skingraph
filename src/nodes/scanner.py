@@ -2,14 +2,15 @@
 import base64
 import io
 import logging
-from typing import Dict, Any, Literal, cast
+from typing import Dict, Any, Literal, Optional, cast
 from uuid import uuid4
-from PIL import Image
+from PIL import Image, ImageStat
 from pydantic import BaseModel, Field
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage
 from src.state import AgentState, ProductExtraction
-from src.config import FLASH_MODEL, PRO_MODEL
+from src.config import (FLASH_MODEL, PRO_MODEL, MIN_MEAN_LUMINANCE,
+                       MAX_MEAN_LUMINANCE, MIN_LUMINANCE_STDDEV)
 
 
 
@@ -54,28 +55,45 @@ Your task is to extract and standardize skincare product information with high a
 
 
 CLASSIFY_PROMPT = """
-Look at this single product photo and decide which side of the package it shows.
+Look at this photo and report what it shows, then which side of the product it is.
 
-- "front": the marketing/branding side — brand, product name, hero copy. The full
-  ingredient list (全成分 / "Ingredients:") is NOT legibly visible.
-- "back": the information side where the full ingredient list is printed and
-  readable (paragraph of ingredient names, often headed 全成分 or "Ingredients").
+1) content — what is actually in the frame:
+   - "product": exactly ONE skincare product (bottle, tube, jar, pump, sachet,
+     or its box) is the subject.
+   - "not_a_product": there is NO skincare product to analyse — e.g. a person,
+     a pet, scenery, food, a screenshot, a random object, or a blank/illegible
+     frame.
+   - "multiple_products": TWO OR MORE distinct skincare products are in frame.
 
-Rule of thumb: if you can read an actual ingredient LIST, it's "back". If you only
-see branding and no readable ingredient list, it's "front".
+2) side — only meaningful when content is "product" (give your best guess
+   otherwise):
+   - "front": the marketing/branding side — brand, product name, hero copy. The full
+     ingredient list (全成分 / "Ingredients:") is NOT legibly visible.
+   - "back": the information side where the full ingredient list is printed and
+     readable (paragraph of ingredient names, often headed 全成分 or "Ingredients").
+   Rule of thumb: if you can read an actual ingredient LIST, it's "back". If you
+   only see branding and no readable ingredient list, it's "front".
 
 Return:
+- content: "product" | "not_a_product" | "multiple_products"
 - side: "front" or "back"
-- confidence: 0.0-1.0 — how certain you are.
+- confidence: 0.0-1.0 — how certain you are overall.
 """.strip()
 
 
 class ImageSide(BaseModel):
+    content: Literal["product", "not_a_product", "multiple_products"] = Field(
+        default="product",
+        description=(
+            "What the photo shows: one analysable product, no product at all, "
+            "or several distinct products sharing one frame."
+        ),
+    )
     side: Literal["front", "back"] = Field(
         description="Which side of the product the photo shows."
     )
     confidence: float = Field(
-        description="0.0-1.0 confidence in the front/back classification."
+        description="0.0-1.0 overall confidence in the content + side classification."
     )
 
 
@@ -101,22 +119,29 @@ def image_message(text: str, image_path: str) -> HumanMessage:
 
 
 def classify_side_node(state: AgentState) -> Dict[str, Any]:
-    """Auto-detect whether the photo is the front (branding) or back (ingredients).
+    """Classify the photo's content (Tier 2) and which side it shows.
 
-    An explicitly passed ``image_type`` (CLI override) wins and skips the call.
+    In one VLM call this both decides front vs back AND flags out-of-distribution
+    frames — ``not_a_product`` / ``multiple_products`` — so the graph can reject
+    them before the structured-output scanner is forced to fabricate a product.
+    An explicitly passed ``image_type`` (CLI override) wins and skips the call;
+    the Tier-1 pixel gate still guards that path.
     """
     override = state.get("image_type")
     if override in ("front", "back"):
         logging.info("Image side overridden by caller: %s", override)
         return {"image_type": override}
 
-    logging.info("Classifying image side (front vs back)...")
+    logging.info("Classifying image content + side...")
     llm = build_vlm(FLASH_MODEL, ImageSide)
     result = cast(ImageSide, llm.invoke([image_message(CLASSIFY_PROMPT, state["image_path"])]))
     logging.info(
-        "Image side: %s (confidence %.2f)", result.side, result.confidence
+        "Image classified: content=%s side=%s (confidence %.2f)",
+        result.content,
+        result.side,
+        result.confidence,
     )
-    return {"image_type": result.side}
+    return {"image_type": result.side, "image_content": result.content}
 
 
 def downscale_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
@@ -134,6 +159,45 @@ def encode_image(image_path: str) -> str:
     with open(image_path, "rb") as img_file:
         image_bytes = downscale_image(img_file.read())
     return base64.b64encode(image_bytes).decode(encoding="utf-8")
+
+
+def assess_image_quality(image_path: str) -> Optional[str]:
+    """Tier-1 deterministic pre-flight on raw pixels — costs no VLM call.
+
+    Returns ``None`` when the frame is worth sending to Gemini, or a short reason
+    code when it is degenerate and should be bounced straight back to the user:
+
+      - ``"too_dark"``   near-black frame (lens cap, no light)
+      - ``"too_bright"`` blown-out / washed-out frame
+      - ``"blank"``      near-uniform frame (blank wall, severe defocus, no product)
+      - ``"unreadable"`` the bytes could not be decoded as an image
+
+    This is the cheapest out-of-distribution filter in the pipeline: it spends no
+    Gemini call and, crucially, intercepts the inputs the structured-output
+    scanner would otherwise be *forced* to hallucinate a product from (its
+    ``brand`` / ``ingredients`` fields are required, so it cannot answer "nothing
+    here"). Thresholds live in config and are tuned to fire only on truly
+    degenerate frames, not on merely dark or low-contrast labels.
+    """
+    try:
+        with Image.open(image_path) as img:
+            stat = ImageStat.Stat(img.convert("L"))
+    except Exception:
+        logging.warning("Tier-1 pixel pre-check: could not open %s", image_path)
+        return "unreadable"
+
+    mean = stat.mean[0]
+    stddev = stat.stddev[0]
+    logging.info(
+        "Tier-1 pixel pre-check: mean luminance %.1f, stddev %.1f", mean, stddev
+    )
+    if mean < MIN_MEAN_LUMINANCE:
+        return "too_dark"
+    if mean > MAX_MEAN_LUMINANCE:
+        return "too_bright"
+    if stddev < MIN_LUMINANCE_STDDEV:
+        return "blank"
+    return None
 
 
 # Both scanners share everything but the model, prompt, and the model tag they

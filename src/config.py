@@ -4,6 +4,16 @@ MAX_CORRECTIONS = 2
 FLASH_MODEL = "gemini-3.1-flash-lite"
 PRO_MODEL = "gemini-3.1-pro-preview"
 
+# --- Tier-1 image pre-flight (deterministic, no VLM) ------------------------
+# A cheap pixel-level gate that runs BEFORE any Gemini call. It bounces back
+# obviously unusable photos (near-black, blown-out, or near-uniform/blank) so we
+# neither pay for a VLM call nor let the structured-output scanner hallucinate a
+# product from an image that has none. Thresholds are deliberately permissive —
+# they only fire on degenerate frames, not on merely dark or low-contrast labels.
+MIN_MEAN_LUMINANCE = 18.0    # mean grey < this ⇒ near-black frame
+MAX_MEAN_LUMINANCE = 240.0   # mean grey > this ⇒ blown-out / blank-white frame
+MIN_LUMINANCE_STDDEV = 6.0   # contrast spread < this ⇒ near-uniform (no product)
+
 # Qdrant vector retrieval (embedded/local mode) — replaces the rapidfuzz scans
 # for both product registry lookup and ingredient normalization. The store is
 # an on-disk path (no server); embeddings come from a local multilingual model,
