@@ -635,33 +635,34 @@ def coach_node(state: AgentState) -> dict:
 
     ja, en = response.japanese, response.english
 
-    # Japanese version in full, then a separator, then the English version.
-    ja_text = _render_recommendation(ja, "ja", extra_ja)
-    en_text = _render_recommendation(en, "en", extra_en)
-    coach_advice = (
-        "【日本語】\n" + ja_text + "\n\n" + "=" * 60 + "\n\n"
-        "【English】\n" + en_text
-    )
+    # Single-language cards, each shown on its own depending on the UI language.
+    coach_advice_ja = _render_recommendation(ja, "ja", extra_ja)
+    coach_advice_en = _render_recommendation(en, "en", extra_en)
 
-    # Routine Fit section (only when there is a routine to compare against).
+    # Routine Fit section (only when there is a routine to compare against),
+    # appended to each language's card so the split stays self-contained.
     if routine_context:
         rf_ja = _render_routine_fit(response.routine_japanese, "ja")
         rf_en = _render_routine_fit(response.routine_english, "en")
-        coach_advice += (
-            "\n\n" + "=" * 60 + "\n\n"
-            "【ルーティン適合 / Routine Fit】\n\n"
-            "[日本語]\n" + rf_ja + "\n\n"
-            "[English]\n" + rf_en
-        )
+        coach_advice_ja += "\n\n" + "─" * 40 + "\n【ルーティン適合】\n" + rf_ja
+        coach_advice_en += "\n\n" + "─" * 40 + "\n【Routine Fit】\n" + rf_en
+
+    # Combined bilingual blob, kept for back-compat / non-localised consumers.
+    coach_advice = (
+        "【日本語】\n" + coach_advice_ja + "\n\n" + "=" * 60 + "\n\n"
+        "【English】\n" + coach_advice_en
+    )
 
     # Recommendability score (0–5) only makes sense against a user's goals /
     # concerns / budget, so it is suppressed for anonymous scans.
     if profile is not None:
         reco_score: Optional[int] = max(0, min(5, response.recommendation_score))
-        reco_rationale: Optional[str] = en.recommendation_rationale or None
+        reco_rationale_ja: Optional[str] = ja.recommendation_rationale or None
+        reco_rationale_en: Optional[str] = en.recommendation_rationale or None
     else:
         reco_score = None
-        reco_rationale = None
+        reco_rationale_ja = None
+        reco_rationale_en = None
 
     # Machine-readable card keeps the English fields for downstream consumers.
     all_warnings_en = extra_en + en.warnings
@@ -705,8 +706,11 @@ def coach_node(state: AgentState) -> dict:
 
     return {
         "coach_advice": coach_advice,
+        "coach_advice_ja": coach_advice_ja,
+        "coach_advice_en": coach_advice_en,
         "routine_recommendations": recommendations,
         "coach_card": coach_card,
         "recommendation_score": reco_score,
-        "recommendation_rationale": reco_rationale,
+        "recommendation_rationale_ja": reco_rationale_ja,
+        "recommendation_rationale_en": reco_rationale_en,
     }

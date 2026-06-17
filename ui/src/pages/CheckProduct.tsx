@@ -8,18 +8,24 @@ import type { ScanResponse } from "../api/types";
 import { PipelineSteps } from "../components/PipelineSteps";
 import { ScanResult } from "../components/ScanResult";
 import { useUsers } from "../context/UserContext";
+import { useI18n } from "../i18n";
 
 export function CheckProduct() {
+  const { t } = useI18n();
   const { currentUserId, currentUser } = useUsers();
 
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
-  const [addToRoutine, setAddToRoutine] = useState(false);
   const [dragging, setDragging] = useState(false);
 
   const [scanning, setScanning] = useState(false);
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Post-scan "save to my routine" (manual-add path), shown once a scan lands.
+  const [saving, setSaving] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Two inputs: a plain file picker (drag/drop + gallery) and a camera input
   // (capture="environment") so phone users can shoot the label directly.
@@ -34,6 +40,8 @@ export function CheckProduct() {
     }
     setError(null);
     setResult(null);
+    setSavedId(null);
+    setSaveError(null);
     setFile(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -45,6 +53,8 @@ export function CheckProduct() {
     setFile(null);
     setResult(null);
     setError(null);
+    setSavedId(null);
+    setSaveError(null);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -58,11 +68,12 @@ export function CheckProduct() {
     setScanning(true);
     setError(null);
     setResult(null);
+    setSavedId(null);
+    setSaveError(null);
     try {
       const res = await api.scan({
         image: file,
         userId: currentUserId ?? undefined,
-        addToRoutine: addToRoutine && !!currentUserId,
       });
       setResult(res);
     } catch (e) {
@@ -74,15 +85,45 @@ export function CheckProduct() {
     }
   }
 
+  async function saveToRoutine() {
+    if (!currentUserId || !result?.product) return;
+    // Prefer canonical INCI names from the normalizer; fall back to the raw
+    // extracted names so the saved product is never left without ingredients.
+    const inci = result.standardized_ingredients
+      .map((i) => i.name_standardized)
+      .filter((n): n is string => !!n);
+    const ingredients = inci.length
+      ? inci
+      : result.product.ingredients.map((i) => i.name_standardized || i.name_raw);
+
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await api.addRoutineProduct(currentUserId, {
+        brand: result.product.brand,
+        product_name: result.product.product_name,
+        ingredients,
+        is_quasi_drug: result.product.is_quasi_drug ?? undefined,
+      });
+      setSavedId(res.product_id);
+    } catch (e) {
+      setSaveError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>Check Product</h1>
+          <h1>{t("check.title")}</h1>
           <p className="page-sub">
             {currentUser
-              ? `Personalised for ${currentUser.name || currentUser.user_id}.`
-              : "Scanning anonymously — pick a user for personalised advice."}
+              ? t("check.sub.personalised", {
+                  name: currentUser.name || currentUser.user_id,
+                })
+              : t("check.sub.anon")}
           </p>
         </div>
       </header>
@@ -91,18 +132,22 @@ export function CheckProduct() {
         <div
           className={`dropzone${dragging ? " dragging" : ""}${
             preview ? " has-image" : ""
-          }`}
+          }${scanning ? " scanning" : ""}`}
           onDragOver={(e) => {
+            if (scanning) return;
             e.preventDefault();
             setDragging(true);
           }}
           onDragLeave={() => setDragging(false)}
           onDrop={(e) => {
+            if (scanning) return;
             e.preventDefault();
             setDragging(false);
             chooseFile(e.dataTransfer.files?.[0] ?? null);
           }}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => {
+            if (!scanning) inputRef.current?.click();
+          }}
         >
           {preview ? (
             <img src={preview} alt="Label preview" className="preview-img" />
@@ -110,9 +155,15 @@ export function CheckProduct() {
             <div className="dropzone-prompt">
               <div className="empty-emoji">📷</div>
               <p>
-                <strong>Drop a label photo here</strong> or click to browse
+                <strong>{t("dropzone.drop")}</strong>
+                {t("dropzone.browse")}
               </p>
-              <p className="muted">Front or back of the product. Max 15 MB.</p>
+              <p className="muted">{t("dropzone.hint")}</p>
+            </div>
+          )}
+          {scanning && (
+            <div className="scan-overlay" aria-label="Processing image">
+              <span className="spinner" />
             </div>
           )}
           <input
@@ -129,11 +180,12 @@ export function CheckProduct() {
             type="button"
             className="btn btn-ghost btn-sm"
             onClick={() => cameraInputRef.current?.click()}
+            disabled={scanning}
           >
-            📷 Take a photo
+            {t("check.takePhoto")}
           </button>
           <span className="muted upload-actions-hint">
-            Use your phone camera, or drop / browse for an existing photo above.
+            {t("check.uploadHint")}
           </span>
           <input
             ref={cameraInputRef}
@@ -147,35 +199,20 @@ export function CheckProduct() {
 
         {file && (
           <div className="scan-controls">
-            <label
-              className={`checkbox-row${!currentUserId ? " disabled" : ""}`}
-            >
-              <input
-                type="checkbox"
-                checked={addToRoutine && !!currentUserId}
-                disabled={!currentUserId}
-                onChange={(e) => setAddToRoutine(e.target.checked)}
-              />
-              <span>
-                Save to my routine
-                {!currentUserId && " (select a user first)"}
-              </span>
-            </label>
-
             <div className="scan-controls-actions">
               <button
                 className="btn btn-ghost"
                 onClick={reset}
                 disabled={scanning}
               >
-                Clear
+                {t("common.clear")}
               </button>
               <button
                 className="btn btn-primary"
                 onClick={() => void handleScan()}
                 disabled={scanning}
               >
-                {scanning ? "Scanning…" : "Scan product"}
+                {scanning ? t("check.scanning") : t("check.scan")}
               </button>
             </div>
           </div>
@@ -188,7 +225,37 @@ export function CheckProduct() {
         <PipelineSteps userName={currentUser?.name ?? undefined} />
       )}
 
-      {result && !scanning && <ScanResult result={result} />}
+      {result && !scanning && (
+        <>
+          <ScanResult result={result} />
+
+          {result.product && (
+            <section className="card save-routine-card">
+              {savedId ? (
+                <div className="banner banner-ok">{t("check.save.saved")}</div>
+              ) : currentUserId ? (
+                <>
+                  {saveError && (
+                    <div className="banner banner-error">{saveError}</div>
+                  )}
+                  <div className="save-routine-row">
+                    <span>{t("check.save.prompt")}</span>
+                    <button
+                      className="btn btn-primary"
+                      onClick={() => void saveToRoutine()}
+                      disabled={saving}
+                    >
+                      {saving ? t("common.saving") : t("check.save.button")}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="muted">{t("check.save.selectUser")}</p>
+              )}
+            </section>
+          )}
+        </>
+      )}
     </div>
   );
 }

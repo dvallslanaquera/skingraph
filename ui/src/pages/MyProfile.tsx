@@ -8,6 +8,8 @@ import type { Gender, SkinUndertone, UserProfile } from "../api/types";
 import { NoUser } from "../components/NoUser";
 import { TagInput } from "../components/TagInput";
 import { useUsers } from "../context/UserContext";
+import { useI18n } from "../i18n";
+import { formatBudget } from "../i18n/strings";
 import {
   BUDGET_MAX,
   BUDGET_STEP,
@@ -20,11 +22,10 @@ import {
   ROUTINE_OPTIONS,
   SKIN_TYPES,
   SUN_DAMAGE,
-  formatBudget,
-  prettify,
 } from "../lib/profile";
 
 export function MyProfile() {
+  const { t, term, lang } = useI18n();
   const { currentUserId, currentUser, refreshUsers } = useUsers();
 
   const [name, setName] = useState("");
@@ -54,7 +55,7 @@ export function MyProfile() {
     else setProfile(null);
   }, [currentUserId, load]);
 
-  if (!currentUserId) return <NoUser action="view and edit a profile" />;
+  if (!currentUserId) return <NoUser action={t("noUser.action.profile")} />;
 
   function set<K extends keyof UserProfile>(key: K, value: UserProfile[K]) {
     setProfile((p) => (p ? { ...p, [key]: value } : p));
@@ -116,8 +117,7 @@ export function MyProfile() {
 
   async function handleDelete() {
     if (!currentUserId) return;
-    if (!confirm("Delete this user and their routine? This cannot be undone."))
-      return;
+    if (!confirm(t("profile.deleteConfirm"))) return;
     setDeleting(true);
     setError(null);
     try {
@@ -133,10 +133,8 @@ export function MyProfile() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>My Profile</h1>
-          <p className="page-sub">
-            This data personalises every scan's safety check and coaching.
-          </p>
+          <h1>{t("profile.title")}</h1>
+          <p className="page-sub">{t("profile.sub")}</p>
         </div>
         <code className="user-id-badge">{currentUserId}</code>
       </header>
@@ -144,13 +142,13 @@ export function MyProfile() {
       {error && <div className="banner banner-error">{error}</div>}
 
       {loading || !profile ? (
-        <div className="card">Loading profile…</div>
+        <div className="card">{t("profile.loading")}</div>
       ) : (
         <>
           <section className="card">
-            <h2 className="card-title">Identity</h2>
+            <h2 className="card-title">{t("profile.section.identity")}</h2>
             <div className="form-grid">
-              <Field label="Display name">
+              <Field label={t("profile.displayName")}>
                 <input
                   className="text-input"
                   value={name}
@@ -158,10 +156,10 @@ export function MyProfile() {
                     setName(e.target.value);
                     setSaved(false);
                   }}
-                  placeholder={currentUser?.name ?? "e.g. Hana"}
+                  placeholder={currentUser?.name ?? t("profile.displayName.placeholder")}
                 />
               </Field>
-              <Field label="Age">
+              <Field label={t("profile.age")}>
                 <input
                   className="text-input"
                   type="number"
@@ -176,8 +174,8 @@ export function MyProfile() {
               </Field>
             </div>
 
-            <FieldBlock label="Gender">
-              <div className="segmented" role="group" aria-label="Gender">
+            <FieldBlock label={t("profile.gender")}>
+              <div className="segmented" role="group" aria-label={t("profile.gender")}>
                 {GENDER_OPTIONS.map((g) => (
                   <button
                     key={g.value}
@@ -188,7 +186,7 @@ export function MyProfile() {
                     aria-pressed={profile.gender === g.value}
                     onClick={() => setGender(g.value)}
                   >
-                    {g.label}
+                    {t(`gender.${g.value}`)}
                   </button>
                 ))}
               </div>
@@ -201,25 +199,19 @@ export function MyProfile() {
                   checked={profile.is_pregnant}
                   onChange={(e) => set("is_pregnant", e.target.checked)}
                 />
-                <span>
-                  🤰 I'm pregnant — flag pregnancy-unsafe ingredients (e.g.
-                  retinoids)
-                </span>
+                <span>{t("profile.pregnancy")}</span>
               </label>
             )}
           </section>
 
           <section className="card">
-            <h2 className="card-title">Skin</h2>
+            <h2 className="card-title">{t("profile.section.skin")}</h2>
 
-            <FieldBlock label="Fitzpatrick skin type">
-              <p className="field-help">
-                Pick the swatch closest to your skin. Use the row that matches
-                your undertone — at the same level, Asian and other skins differ.
-              </p>
+            <FieldBlock label={t("profile.fitz")}>
+              <p className="field-help">{t("profile.fitz.help")}</p>
               <div className="fitz-scale">
                 <FitzRow
-                  label="Asian undertones"
+                  label={t("profile.fitz.asian")}
                   undertone="asian"
                   colors={FITZPATRICK_ASIAN}
                   selectedLevel={profile.fitzpatrick ?? null}
@@ -227,7 +219,7 @@ export function MyProfile() {
                   onPick={setFitzpatrick}
                 />
                 <FitzRow
-                  label="Other undertones"
+                  label={t("profile.fitz.other")}
                   undertone="non_asian"
                   colors={FITZPATRICK_NON_ASIAN}
                   selectedLevel={profile.fitzpatrick ?? null}
@@ -246,21 +238,21 @@ export function MyProfile() {
             </FieldBlock>
 
             <div className="form-grid">
-              <Field label="Skin type">
+              <Field label={t("profile.skinType")}>
                 <Select
                   value={profile.skin_type ?? ""}
                   options={SKIN_TYPES}
-                  format={prettify}
+                  format={term}
                   onChange={(v) =>
                     set("skin_type", (v || null) as UserProfile["skin_type"])
                   }
                 />
               </Field>
-              <Field label="Sun damage history">
+              <Field label={t("profile.sunDamage")}>
                 <Select
                   value={profile.sun_damage_history ?? ""}
                   options={SUN_DAMAGE}
-                  format={prettify}
+                  format={term}
                   onChange={(v) =>
                     set(
                       "sun_damage_history",
@@ -271,35 +263,35 @@ export function MyProfile() {
               </Field>
             </div>
 
-            <Field label="Goals">
+            <Field label={t("profile.goals")}>
               <TagInput
                 values={profile.goals}
                 onChange={(v) => set("goals", v)}
                 suggestions={GOAL_SUGGESTIONS}
-                formatLabel={prettify}
-                placeholder="e.g. fine lines"
+                formatLabel={term}
+                placeholder={t("profile.goals.placeholder")}
               />
             </Field>
 
-            <Field label="Skin conditions">
+            <Field label={t("profile.conditions")}>
               <TagInput
                 values={profile.skin_conditions}
                 onChange={(v) => set("skin_conditions", v)}
                 suggestions={CONDITION_SUGGESTIONS}
-                formatLabel={prettify}
-                placeholder="e.g. rosacea"
+                formatLabel={term}
+                placeholder={t("profile.conditions.placeholder")}
               />
             </Field>
           </section>
 
           <section className="card">
-            <h2 className="card-title">Preferences</h2>
+            <h2 className="card-title">{t("profile.section.prefs")}</h2>
 
-            <FieldBlock label="Routine time">
+            <FieldBlock label={t("profile.routineTime")}>
               <div
                 className="routine-options"
                 role="group"
-                aria-label="Routine time"
+                aria-label={t("profile.routineTime")}
               >
                 {ROUTINE_OPTIONS.map((opt) => (
                   <button
@@ -317,8 +309,12 @@ export function MyProfile() {
                     }
                   >
                     <RoutineCat kind={opt.value} />
-                    <span className="routine-option-title">{opt.title}</span>
-                    <span className="routine-option-detail">{opt.detail}</span>
+                    <span className="routine-option-title">
+                      {t(`routineTime.${opt.value}.title`)}
+                    </span>
+                    <span className="routine-option-detail">
+                      {t(`routineTime.${opt.value}.detail`)}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -330,37 +326,30 @@ export function MyProfile() {
                 checked={profile.consider_devices}
                 onChange={(e) => set("consider_devices", e.target.checked)}
               />
-              <span>
-                Also consider devices / at-home treatments. When on, the coach
-                may suggest tools like LED masks, at-home IPL, microneedle
-                stamps or gua sha to enrich your routine.
-              </span>
+              <span>{t("profile.devices")}</span>
             </label>
 
-            <FieldBlock label="Monthly budget">
-              <p className="field-help">
-                Your approximate monthly skincare spend. This affects which
-                products the coach recommends.
-              </p>
+            <FieldBlock label={t("profile.budget")}>
+              <p className="field-help">{t("profile.budget.help")}</p>
               <div className="budget-slider">
                 <input
                   type="range"
                   min={0}
                   max={BUDGET_MAX}
                   step={BUDGET_STEP}
-                  aria-label="Monthly budget in USD"
+                  aria-label={t("profile.budget")}
                   value={profile.budget ?? 0}
                   onChange={(e) => set("budget", Number(e.target.value))}
                 />
                 <span className="budget-value">
                   {profile.budget == null
-                    ? "Not set"
-                    : `${formatBudget(profile.budget)}/mo`}
+                    ? t("profile.budget.notSet")
+                    : `${formatBudget(lang, profile.budget, BUDGET_MAX)}${t("common.perMonthShort")}`}
                 </span>
               </div>
               <div className="budget-scale" aria-hidden="true">
-                <span>$0</span>
-                <span>${BUDGET_MAX}+</span>
+                <span>{formatBudget(lang, 0, BUDGET_MAX)}</span>
+                <span>{formatBudget(lang, BUDGET_MAX, BUDGET_MAX)}</span>
               </div>
             </FieldBlock>
           </section>
@@ -371,16 +360,16 @@ export function MyProfile() {
               onClick={() => void handleDelete()}
               disabled={deleting || saving}
             >
-              {deleting ? "Deleting…" : "Delete user"}
+              {deleting ? t("profile.deleting") : t("profile.delete")}
             </button>
             <div className="page-actions-right">
-              {saved && <span className="saved-flag">✓ Saved</span>}
+              {saved && <span className="saved-flag">{t("profile.saved")}</span>}
               <button
                 className="btn btn-primary"
                 onClick={() => void handleSave()}
                 disabled={saving}
               >
-                {saving ? "Saving…" : "Save changes"}
+                {saving ? t("common.saving") : t("profile.save")}
               </button>
             </div>
           </div>
