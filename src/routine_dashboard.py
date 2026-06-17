@@ -51,14 +51,28 @@ def _step_rank(categories: Set[str]) -> float:
     return min(ranks) if ranks else _DEFAULT_STEP
 
 
+def _amortized_months(product: RoutineProduct) -> float:
+    """Months one unit is assumed to last, guarding against zero/None."""
+    months = product.months_supply or DEFAULT_MONTHS_SUPPLY
+    return months if months > 0 else DEFAULT_MONTHS_SUPPLY
+
+
 def _monthly_cost(product: RoutineProduct) -> Optional[float]:
     """Amortized monthly USD cost for one product, or None when unpriced."""
     if product.price_usd is None:
         return None
-    months = product.months_supply or DEFAULT_MONTHS_SUPPLY
-    if months <= 0:
-        months = DEFAULT_MONTHS_SUPPLY
-    return round(product.price_usd / months, 2)
+    return round(product.price_usd / _amortized_months(product), 2)
+
+
+def _monthly_cost_native(product: RoutineProduct) -> Optional[float]:
+    """Amortized monthly cost in the product's native currency, or None.
+
+    Used to show yen prices in the Japanese view: the price lookup targets the
+    Japanese market, so native prices are typically JPY.
+    """
+    if product.price_native is None:
+        return None
+    return round(product.price_native / _amortized_months(product), 2)
 
 
 def _product_card(product: RoutineProduct) -> dict:
@@ -79,6 +93,7 @@ def _product_card(product: RoutineProduct) -> dict:
         "months_supply": product.months_supply,
         "price_source": product.price_source,
         "monthly_cost_usd": _monthly_cost(product),
+        "monthly_cost_native": _monthly_cost_native(product),
         "_step": _step_rank(categories),
     }
 
@@ -130,6 +145,15 @@ def build_dashboard(user_id: str) -> Optional[dict]:
     monthly = [c["monthly_cost_usd"] for c in cards if c["monthly_cost_usd"] is not None]
     monthly_cost_usd = round(sum(monthly), 2) if monthly else None
 
+    # Yen total for the Japanese view: sum only the JPY-priced products, so we
+    # never add up a mix of currencies.
+    monthly_jpy = [
+        c["monthly_cost_native"]
+        for c in cards
+        if c["monthly_cost_native"] is not None and c["price_currency"] == "JPY"
+    ]
+    monthly_cost_jpy = round(sum(monthly_jpy)) if monthly_jpy else None
+
     goal_coverage = _goal_coverage(profile.goals, routine_categories)
 
     for card in cards:  # internal sort key, not part of the response contract
@@ -138,6 +162,7 @@ def build_dashboard(user_id: str) -> Optional[dict]:
     return {
         "products": cards,
         "monthly_cost_usd": monthly_cost_usd,
+        "monthly_cost_jpy": monthly_cost_jpy,
         "currency": "USD",
         "goals": goal_coverage,
         "leaf_score": _leaf_score(goal_coverage),

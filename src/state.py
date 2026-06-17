@@ -220,14 +220,19 @@ class AgentState(TypedDict):
 
     # final output
     coach_advice: str
+    # Single-language renderings of the coach card (the UI shows one per its
+    # selected language); coach_advice keeps the combined bilingual blob.
+    coach_advice_ja: Optional[str]
+    coach_advice_en: Optional[str]
     routine_recommendations: List[str]
     # Structured English coach card (timing / application_notes / warnings) used
     # to persist per-product routine metadata when a scan is saved to the shelf.
     coach_card: Optional[dict]
     # 0–5 "leaf" recommendability score for THIS user (goals / concerns / budget)
-    # plus a one-sentence English rationale. None for anonymous scans.
+    # plus a one-sentence rationale in each language. None for anonymous scans.
     recommendation_score: Optional[int]
-    recommendation_rationale: Optional[str]
+    recommendation_rationale_ja: Optional[str]
+    recommendation_rationale_en: Optional[str]
 
     # system flags
     is_ready_for_logic: bool

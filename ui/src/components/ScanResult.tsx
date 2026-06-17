@@ -1,32 +1,14 @@
 // Renders a completed ScanResponse: status, coach advice, product details,
 // ingredients, safety findings, and routine fit.
 import type { ScanResponse, ScanStatus } from "../api/types";
+import { useI18n } from "../i18n";
 import { LeafScore } from "./LeafScore";
 
-const STATUS_META: Record<
-  ScanStatus,
-  { label: string; tone: string; blurb: string }
-> = {
-  complete: {
-    label: "Complete",
-    tone: "ok",
-    blurb: "A full recommendation was produced.",
-  },
-  retake_required: {
-    label: "Retake needed",
-    tone: "warn",
-    blurb: "The label couldn't be read — try a sharper, well-lit photo.",
-  },
-  action_needed: {
-    label: "Action needed",
-    tone: "warn",
-    blurb: "The product identity or ingredients need confirmation.",
-  },
-  incomplete: {
-    label: "Incomplete",
-    tone: "danger",
-    blurb: "The pipeline exited without advice.",
-  },
+const STATUS_TONE: Record<ScanStatus, string> = {
+  complete: "ok",
+  retake_required: "warn",
+  action_needed: "warn",
+  incomplete: "danger",
 };
 
 function scorePct(score: number): string {
@@ -40,42 +22,44 @@ function safetyTone(score: number): string {
 }
 
 export function ScanResult({ result }: { result: ScanResponse }) {
-  const meta = STATUS_META[result.status];
+  const { t, lang } = useI18n();
+  const tone = STATUS_TONE[result.status];
   const safety = result.safety_report;
   const fit = result.routine_fit;
 
+  const advice =
+    (lang === "ja" ? result.coach_advice_ja : result.coach_advice_en) ??
+    result.coach_advice;
+  const rationale =
+    lang === "ja"
+      ? result.recommendation_rationale_ja
+      : result.recommendation_rationale_en;
+
   return (
     <div className="scan-result">
-      <div className={`banner banner-${meta.tone}`}>
-        <strong>{meta.label}.</strong> {meta.blurb}
+      <div className={`banner banner-${tone}`}>
+        <strong>{t(`scan.status.${result.status}.label`)}.</strong>{" "}
+        {t(`scan.status.${result.status}.blurb`)}
       </div>
 
-      {result.coach_advice && (
+      {advice && (
         <section className="card coach-card">
-          <h2 className="card-title">Your coach says</h2>
+          <h2 className="card-title">{t("scan.coachTitle")}</h2>
           {result.recommendation_score != null && (
             <div className="reco-score-banner">
               <div className="reco-score-head">
-                <span className="reco-score-label">
-                  How recommendable for you
-                </span>
+                <span className="reco-score-label">{t("scan.recoLabel")}</span>
                 <LeafScore score={result.recommendation_score} />
               </div>
-              {result.recommendation_rationale && (
-                <p className="reco-score-why">
-                  {result.recommendation_rationale}
-                </p>
-              )}
+              {rationale && <p className="reco-score-why">{rationale}</p>}
             </div>
           )}
-          <div className="coach-advice">{result.coach_advice}</div>
+          <div className="coach-advice">{advice}</div>
         </section>
       )}
 
       {result.added_product_id && (
-        <div className="banner banner-ok">
-          ✓ Saved to your routine.
-        </div>
+        <div className="banner banner-ok">{t("check.save.saved")}</div>
       )}
 
       {result.product && (
@@ -94,17 +78,23 @@ export function ScanResult({ result }: { result: ScanResponse }) {
 
           <div className="meta-row">
             {result.model_used && (
-              <Meta label="Source" value={result.model_used} />
+              <Meta label={t("scan.meta.source")} value={result.model_used} />
             )}
             {result.ingredient_source && (
-              <Meta label="Ingredients via" value={result.ingredient_source} />
+              <Meta
+                label={t("scan.meta.ingredientsVia")}
+                value={result.ingredient_source}
+              />
             )}
             {result.detected_language && (
-              <Meta label="Language" value={result.detected_language} />
+              <Meta
+                label={t("scan.meta.language")}
+                value={result.detected_language}
+              />
             )}
             {result.inference_confidence != null && (
               <Meta
-                label="Confidence"
+                label={t("scan.meta.confidence")}
                 value={scorePct(result.inference_confidence)}
               />
             )}
@@ -115,9 +105,9 @@ export function ScanResult({ result }: { result: ScanResponse }) {
       {safety && (
         <section className="card">
           <div className="card-title-row">
-            <h2 className="card-title">Safety</h2>
+            <h2 className="card-title">{t("scan.safety")}</h2>
             <span className={`score-pill score-${safetyTone(safety.safety_score)}`}>
-              {scorePct(safety.safety_score)} safe
+              {t("scan.safety.safe", { pct: scorePct(safety.safety_score) })}
             </span>
           </div>
 
@@ -133,14 +123,14 @@ export function ScanResult({ result }: { result: ScanResponse }) {
 
           {safety.ingredient_conflicts.length > 0 && (
             <Findings
-              title="Conflicts"
+              title={t("scan.safety.conflicts")}
               items={safety.ingredient_conflicts}
               tone="danger"
             />
           )}
           {safety.risk_ingredients.length > 0 && (
             <Findings
-              title="Flagged ingredients"
+              title={t("scan.safety.flagged")}
               items={safety.risk_ingredients}
               tone="warn"
             />
@@ -149,7 +139,7 @@ export function ScanResult({ result }: { result: ScanResponse }) {
           {safety.warnings.length === 0 &&
             safety.ingredient_conflicts.length === 0 &&
             safety.risk_ingredients.length === 0 && (
-              <p className="muted">No safety flags. 👍</p>
+              <p className="muted">{t("scan.safety.none")}</p>
             )}
         </section>
       )}
@@ -159,16 +149,19 @@ export function ScanResult({ result }: { result: ScanResponse }) {
           fit.redundancy.length > 0 ||
           fit.value_add.length > 0) && (
           <section className="card">
-            <h2 className="card-title">Fit with your routine</h2>
+            <h2 className="card-title">{t("scan.fitTitle")}</h2>
 
             {fit.conflicts.length > 0 && (
               <div className="fit-block">
-                <h3 className="fit-heading danger">Conflicts</h3>
+                <h3 className="fit-heading danger">{t("scan.fit.conflicts")}</h3>
                 <ul className="finding-list">
                   {fit.conflicts.map((c, i) => (
                     <li key={i} className="finding danger">
-                      <strong>vs {c.with_product}</strong> ({c.severity}):{" "}
-                      {c.reason}
+                      <ConflictLine
+                        product={c.with_product}
+                        severity={c.severity}
+                        reason={c.reason}
+                      />
                     </li>
                   ))}
                 </ul>
@@ -176,14 +169,14 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             )}
             {fit.redundancy.length > 0 && (
               <Findings
-                title="Possibly redundant"
+                title={t("scan.fit.redundant")}
                 items={fit.redundancy}
                 tone="warn"
               />
             )}
             {fit.value_add.length > 0 && (
               <Findings
-                title="Adds value for"
+                title={t("scan.fit.valueAdd")}
                 items={fit.value_add}
                 tone="ok"
               />
@@ -194,7 +187,9 @@ export function ScanResult({ result }: { result: ScanResponse }) {
       {result.standardized_ingredients.length > 0 && (
         <section className="card">
           <h2 className="card-title">
-            Ingredients ({result.standardized_ingredients.length})
+            {t("scan.ingredients", {
+              count: result.standardized_ingredients.length,
+            })}
           </h2>
           <div className="ingredient-chips">
             {result.standardized_ingredients.map((ing, i) => (
@@ -209,7 +204,9 @@ export function ScanResult({ result }: { result: ScanResponse }) {
           </div>
           {result.unmatched_ingredients.length > 0 && (
             <p className="muted unmatched">
-              Unmatched: {result.unmatched_ingredients.join(", ")}
+              {t("scan.unmatched", {
+                list: result.unmatched_ingredients.join(", "),
+              })}
             </p>
           )}
         </section>
@@ -217,7 +214,7 @@ export function ScanResult({ result }: { result: ScanResponse }) {
 
       {result.web_sources.length > 0 && (
         <section className="card">
-          <h2 className="card-title">Sources</h2>
+          <h2 className="card-title">{t("scan.sources")}</h2>
           <ul className="source-list">
             {result.web_sources.map((s, i) => (
               <li key={i}>
@@ -230,6 +227,28 @@ export function ScanResult({ result }: { result: ScanResponse }) {
         </section>
       )}
     </div>
+  );
+}
+
+function ConflictLine({
+  product,
+  severity,
+  reason,
+}: {
+  product: string;
+  severity: string;
+  reason: string;
+}) {
+  const { lang, term } = useI18n();
+  const sev = term(severity);
+  return lang === "ja" ? (
+    <>
+      <strong>{product}</strong>（{sev}）：{reason}
+    </>
+  ) : (
+    <>
+      <strong>vs {product}</strong> ({sev}): {reason}
+    </>
   );
 }
 

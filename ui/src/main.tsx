@@ -2,12 +2,15 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import { UserProvider } from "./context/UserContext";
+import { LanguageProvider } from "./i18n";
 import "./index.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <UserProvider>
-      <App />
-    </UserProvider>
+    <LanguageProvider>
+      <UserProvider>
+        <App />
+      </UserProvider>
+    </LanguageProvider>
   </StrictMode>,
 );

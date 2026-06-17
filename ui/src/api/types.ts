@@ -102,6 +102,7 @@ export interface RoutineDashboardCard {
   months_supply?: number | null;
   price_source?: string | null;
   monthly_cost_usd?: number | null;
+  monthly_cost_native?: number | null;
 }
 
 export interface GoalCoverage {
@@ -113,6 +114,7 @@ export interface GoalCoverage {
 export interface RoutineDashboard {
   products: RoutineDashboardCard[];
   monthly_cost_usd?: number | null;
+  monthly_cost_jpy?: number | null;
   currency: string;
   goals: GoalCoverage[];
   leaf_score: number;
@@ -186,9 +188,13 @@ export interface ScanResponse {
   safety_report?: SafetyAudit | null;
   routine_fit?: RoutineFit | null;
   coach_advice?: string | null;
+  // Single-language coach cards (shown per the active UI language).
+  coach_advice_ja?: string | null;
+  coach_advice_en?: string | null;
   // 0–5 "leaf" recommendability for the current user; null for anonymous scans.
   recommendation_score?: number | null;
-  recommendation_rationale?: string | null;
+  recommendation_rationale_ja?: string | null;
+  recommendation_rationale_en?: string | null;
   routine_recommendations: string[];
   web_sources: string[];
   added_product_id?: string | null;

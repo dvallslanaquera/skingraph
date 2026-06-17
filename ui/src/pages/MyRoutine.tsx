@@ -18,9 +18,11 @@ import { PipelineSteps } from "../components/PipelineSteps";
 import { ScanResult } from "../components/ScanResult";
 import { TagInput } from "../components/TagInput";
 import { useUsers } from "../context/UserContext";
-import { prettify } from "../lib/profile";
+import { useI18n } from "../i18n";
+import { formatMonthlyTotal, formatProductPrice } from "../i18n/strings";
 
 export function MyRoutine() {
+  const { t } = useI18n();
   const { currentUserId } = useUsers();
 
   const [dashboard, setDashboard] = useState<RoutineDashboard | null>(null);
@@ -45,7 +47,7 @@ export function MyRoutine() {
     else setDashboard(null);
   }, [currentUserId, load]);
 
-  if (!currentUserId) return <NoUser action="manage a routine" />;
+  if (!currentUserId) return <NoUser action={t("noUser.action.routine")} />;
 
   async function handleRemove(productId: string) {
     if (!currentUserId) return;
@@ -64,15 +66,12 @@ export function MyRoutine() {
     <div className="page">
       <header className="page-header">
         <div>
-          <h1>My Routine</h1>
-          <p className="page-sub">
-            Scan a product to add it. New scans are also checked against your
-            shelf for conflicts and redundancy.
-          </p>
+          <h1>{t("routine.title")}</h1>
+          <p className="page-sub">{t("routine.sub")}</p>
         </div>
         {!adding && (
           <button className="btn btn-primary" onClick={() => setAdding(true)}>
-            + Add product
+            {t("routine.addProduct")}
           </button>
         )}
       </header>
@@ -88,13 +87,13 @@ export function MyRoutine() {
       )}
 
       {loading ? (
-        <div className="card">Loading routine…</div>
+        <div className="card">{t("routine.loading")}</div>
       ) : products.length === 0 ? (
         !adding && (
           <div className="empty-state">
             <div className="empty-emoji">🧴</div>
-            <h2>Your shelf is empty</h2>
-            <p>Scan a product with “+ Add product” to build your routine.</p>
+            <h2>{t("routine.empty.title")}</h2>
+            <p>{t("routine.empty.body")}</p>
           </div>
         )
       ) : (
@@ -115,16 +114,20 @@ function Dashboard({
   dashboard: RoutineDashboard;
   onRemove: (productId: string) => void;
 }) {
-  const { products, monthly_cost_usd, goals, leaf_score } = dashboard;
+  const { t, lang } = useI18n();
+  const { products, goals, leaf_score } = dashboard;
   const am = products.filter((p) => p.timing === "AM" || p.timing === "AM & PM");
   const pm = products.filter((p) => p.timing === "PM" || p.timing === "AM & PM");
+  const total = formatMonthlyTotal(lang, dashboard);
 
   return (
     <>
       {/* Product list + monthly cost */}
       <section className="dash-overview">
         <div className="card product-strip-card">
-          <h2 className="card-title">Products ({products.length})</h2>
+          <h2 className="card-title">
+            {t("routine.products", { count: products.length })}
+          </h2>
           <ul className="product-strip">
             {products.map((p) => (
               <li key={p.product_id} className="product-strip-row">
@@ -132,13 +135,15 @@ function Dashboard({
                   <span className="product-brand">{p.brand}</span>
                   <span className="product-name">{p.product_name}</span>
                 </div>
-                <span className="product-strip-price">{priceLabel(p)}</span>
+                <span className="product-strip-price">
+                  {formatProductPrice(lang, p)}
+                </span>
                 <button
                   className="btn btn-ghost btn-sm"
                   onClick={() => onRemove(p.product_id)}
-                  aria-label={`Remove ${p.product_name}`}
+                  aria-label={`${t("routine.remove")} ${p.product_name}`}
                 >
-                  Remove
+                  {t("routine.remove")}
                 </button>
               </li>
             ))}
@@ -146,28 +151,23 @@ function Dashboard({
         </div>
 
         <div className="card cost-card">
-          <h2 className="card-title">Monthly cost</h2>
-          {monthly_cost_usd != null ? (
+          <h2 className="card-title">{t("routine.monthlyCost")}</h2>
+          {total != null ? (
             <>
-              <div className="cost-value">≈ ${monthly_cost_usd.toFixed(2)}</div>
-              <div className="cost-unit">/ month</div>
-              <p className="muted cost-note">
-                Amortized across your routine (price ÷ months a unit lasts), in
-                USD. Looked up for the Japanese market where available.
-              </p>
+              <div className="cost-value">≈ {total}</div>
+              <div className="cost-unit">{t("routine.monthlyCost.unit")}</div>
+              <p className="muted cost-note">{t("routine.monthlyCost.note")}</p>
             </>
           ) : (
-            <p className="muted">
-              No prices yet — scan a product and we'll look up its cost.
-            </p>
+            <p className="muted">{t("routine.monthlyCost.empty")}</p>
           )}
         </div>
       </section>
 
       {/* AM / PM columns */}
       <section className="routine-columns">
-        <RoutineColumn title="AM routine" icon={<SunIcon />} products={am} />
-        <RoutineColumn title="PM routine" icon={<MoonIcon />} products={pm} />
+        <RoutineColumn title={t("routine.am")} icon={<SunIcon />} products={am} />
+        <RoutineColumn title={t("routine.pm")} icon={<MoonIcon />} products={pm} />
       </section>
 
       {/* Goals + leaf score */}
@@ -185,6 +185,7 @@ function RoutineColumn({
   icon: React.ReactNode;
   products: RoutineDashboardCard[];
 }) {
+  const { t } = useI18n();
   return (
     <div className="card routine-column">
       <div className="routine-column-head">
@@ -192,7 +193,7 @@ function RoutineColumn({
         <h2 className="card-title">{title}</h2>
       </div>
       {products.length === 0 ? (
-        <p className="muted">No products for this time of day yet.</p>
+        <p className="muted">{t("routine.noProductsTime")}</p>
       ) : (
         <ol className="routine-steps">
           {products.map((p) => (
@@ -211,7 +212,7 @@ function RoutineColumn({
                 </ul>
               ) : (
                 <p className="muted application-note-empty">
-                  No special application notes.
+                  {t("routine.noNotes")}
                 </p>
               )}
             </li>
@@ -229,16 +230,15 @@ function GoalsCard({
   goals: RoutineDashboard["goals"];
   leafScore: number;
 }) {
+  const { t, term } = useI18n();
   return (
     <section className="card goals-card">
       <div className="card-title-row">
-        <h2 className="card-title">Goals &amp; routine score</h2>
+        <h2 className="card-title">{t("routine.goalsTitle")}</h2>
         <LeafScore score={leafScore} />
       </div>
       {goals.length === 0 ? (
-        <p className="muted">
-          Add goals on My Profile to see how well your routine covers them.
-        </p>
+        <p className="muted">{t("routine.goals.empty")}</p>
       ) : (
         <ul className="goal-list">
           {goals.map((g) => (
@@ -246,13 +246,13 @@ function GoalsCard({
               <span className="goal-mark" aria-hidden="true">
                 {g.covered === true ? "✓" : g.covered === false ? "○" : "—"}
               </span>
-              <span className="goal-name">{prettify(g.goal)}</span>
+              <span className="goal-name">{term(g.goal)}</span>
               <span className="goal-addressed">
                 {g.addressed_by.length > 0
                   ? g.addressed_by.join(", ")
                   : g.covered === null
-                    ? "not assessed"
-                    : "not yet covered"}
+                    ? t("routine.goal.notAssessed")
+                    : t("routine.goal.notCovered")}
               </span>
             </li>
           ))}
@@ -282,6 +282,7 @@ function AddProductPanel({
   const [showManual, setShowManual] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useUsers();
+  const { t } = useI18n();
 
   function chooseFile(f: File | null) {
     if (!f) return;
@@ -328,9 +329,9 @@ function AddProductPanel({
   return (
     <section className="card add-panel">
       <div className="card-title-row">
-        <h2 className="card-title">Add a product</h2>
+        <h2 className="card-title">{t("routine.addPanel.title")}</h2>
         <button className="btn btn-ghost btn-sm" onClick={onClose}>
-          Close
+          {t("common.close")}
         </button>
       </div>
 
@@ -358,9 +359,10 @@ function AddProductPanel({
               <div className="dropzone-prompt">
                 <div className="empty-emoji">📷</div>
                 <p>
-                  <strong>Drop a label photo here</strong> or click to browse
+                  <strong>{t("dropzone.drop")}</strong>
+                  {t("dropzone.browse")}
                 </p>
-                <p className="muted">Front or back of the product. Max 15 MB.</p>
+                <p className="muted">{t("dropzone.hint")}</p>
               </div>
             )}
             <input
@@ -378,10 +380,10 @@ function AddProductPanel({
           {file && !scanning && !result && (
             <div className="scan-controls-actions">
               <button className="btn btn-ghost" onClick={resetScan}>
-                Clear
+                {t("common.clear")}
               </button>
               <button className="btn btn-primary" onClick={() => void handleScan()}>
-                Scan &amp; add
+                {t("routine.scanAndAdd")}
               </button>
             </div>
           )}
@@ -393,10 +395,10 @@ function AddProductPanel({
               <ScanResult result={result} />
               <div className="scan-controls-actions">
                 <button className="btn btn-ghost" onClick={resetScan}>
-                  Scan another
+                  {t("routine.scanAnother")}
                 </button>
                 <button className="btn btn-primary" onClick={onClose}>
-                  Done
+                  {t("common.done")}
                 </button>
               </div>
             </>
@@ -406,7 +408,7 @@ function AddProductPanel({
             className="link-button manual-link"
             onClick={() => setShowManual(true)}
           >
-            Can't scan it? Enter manually
+            {t("routine.manualLink")}
           </button>
         </>
       ) : (
@@ -438,6 +440,7 @@ function ManualAddForm({
   const [isQuasiDrug, setIsQuasiDrug] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
 
   async function handleAdd() {
     if (!brand.trim() || !productName.trim()) return;
@@ -464,32 +467,32 @@ function ManualAddForm({
       {error && <div className="banner banner-error">{error}</div>}
       <div className="form-grid">
         <label className="field">
-          <span className="field-label">Brand</span>
+          <span className="field-label">{t("routine.manual.brand")}</span>
           <input
             className="text-input"
             value={brand}
             autoFocus
             onChange={(e) => setBrand(e.target.value)}
-            placeholder="e.g. Hada Labo"
+            placeholder={t("routine.manual.brand.placeholder")}
           />
         </label>
         <label className="field">
-          <span className="field-label">Product name</span>
+          <span className="field-label">{t("routine.manual.product")}</span>
           <input
             className="text-input"
             value={productName}
             onChange={(e) => setProductName(e.target.value)}
-            placeholder="e.g. Gokujyun Lotion"
+            placeholder={t("routine.manual.product.placeholder")}
           />
         </label>
       </div>
 
       <label className="field">
-        <span className="field-label">Ingredients (canonical INCI names)</span>
+        <span className="field-label">{t("routine.manual.ingredients")}</span>
         <TagInput
           values={ingredients}
           onChange={setIngredients}
-          placeholder="e.g. Sodium Hyaluronate"
+          placeholder={t("routine.manual.ingredients.placeholder")}
         />
       </label>
 
@@ -499,19 +502,19 @@ function ManualAddForm({
           checked={isQuasiDrug}
           onChange={(e) => setIsQuasiDrug(e.target.checked)}
         />
-        <span>Quasi-drug (医薬部外品)</span>
+        <span>{t("routine.manual.quasiDrug")}</span>
       </label>
 
       <div className="page-actions-right">
         <button className="btn btn-ghost" onClick={onBack}>
-          ← Back to scan
+          {t("routine.manual.back")}
         </button>
         <button
           className="btn btn-primary"
           onClick={() => void handleAdd()}
           disabled={saving || !brand.trim() || !productName.trim()}
         >
-          {saving ? "Adding…" : "Add to routine"}
+          {saving ? t("routine.manual.adding") : t("routine.manual.add")}
         </button>
       </div>
     </>
@@ -519,12 +522,6 @@ function ManualAddForm({
 }
 
 // --- helpers + icons --------------------------------------------------------
-
-function priceLabel(p: RoutineDashboardCard): string {
-  if (p.monthly_cost_usd != null) return `≈ $${p.monthly_cost_usd.toFixed(2)}/mo`;
-  if (p.price_usd != null) return `$${p.price_usd.toFixed(2)}`;
-  return "—";
-}
 
 function coverageClass(covered: boolean | null): string {
   if (covered === true) return "covered";

@@ -2,9 +2,11 @@
 import { useState } from "react";
 import { api } from "../api/client";
 import { useUsers } from "../context/UserContext";
+import { useI18n } from "../i18n";
 import { emptyProfile } from "../lib/profile";
 
 export function UserPicker() {
+  const { t } = useI18n();
   const { users, currentUserId, selectUser, refreshUsers, loading, error } =
     useUsers();
   const [creating, setCreating] = useState(false);
@@ -35,11 +37,11 @@ export function UserPicker() {
 
   return (
     <div className="user-picker">
-      <label className="user-picker-label">Active user</label>
+      <label className="user-picker-label">{t("userPicker.activeUser")}</label>
 
       {error ? (
         <div className="user-picker-error" title={error}>
-          API unreachable
+          {t("userPicker.unreachable")}
         </div>
       ) : (
         <select
@@ -49,7 +51,7 @@ export function UserPicker() {
           onChange={(e) => selectUser(e.target.value || null)}
         >
           <option value="">
-            {loading ? "Loading…" : "— select a user —"}
+            {loading ? t("userPicker.loading") : t("userPicker.select")}
           </option>
           {users.map((u) => (
             <option key={u.user_id} value={u.user_id}>
@@ -63,7 +65,7 @@ export function UserPicker() {
         <div className="user-create">
           <input
             className="text-input"
-            placeholder="New user name"
+            placeholder={t("userPicker.newName")}
             value={newName}
             autoFocus
             onChange={(e) => setNewName(e.target.value)}
@@ -78,7 +80,7 @@ export function UserPicker() {
               disabled={busy || !newName.trim()}
               onClick={() => void handleCreate()}
             >
-              {busy ? "…" : "Create"}
+              {busy ? "…" : t("common.create")}
             </button>
             <button
               className="btn btn-ghost btn-sm"
@@ -88,7 +90,7 @@ export function UserPicker() {
                 setCreateError(null);
               }}
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
           {createError && <div className="field-error">{createError}</div>}
@@ -99,7 +101,7 @@ export function UserPicker() {
           disabled={!!error}
           onClick={() => setCreating(true)}
         >
-          + New user
+          {t("userPicker.newUser")}
         </button>
       )}
     </div>

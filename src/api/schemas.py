@@ -58,7 +58,13 @@ class ScanResponse(BaseModel):
     )
 
     coach_advice: Optional[str] = Field(
-        None, description="Bilingual recommendation card, or a graceful-exit message."
+        None, description="Combined bilingual card, or a graceful-exit message."
+    )
+    coach_advice_ja: Optional[str] = Field(
+        None, description="Japanese-only recommendation card (for the JA UI)."
+    )
+    coach_advice_en: Optional[str] = Field(
+        None, description="English-only recommendation card (for the EN UI)."
     )
     recommendation_score: Optional[int] = Field(
         None,
@@ -66,8 +72,11 @@ class ScanResponse(BaseModel):
         le=5,
         description="0–5 'leaf' recommendability for this user; None if anonymous.",
     )
-    recommendation_rationale: Optional[str] = Field(
-        None, description="One-sentence rationale for recommendation_score."
+    recommendation_rationale_ja: Optional[str] = Field(
+        None, description="Japanese one-sentence rationale for the score."
+    )
+    recommendation_rationale_en: Optional[str] = Field(
+        None, description="English one-sentence rationale for the score."
     )
     routine_recommendations: List[str] = Field(default_factory=list)
     web_sources: List[str] = Field(default_factory=list)
@@ -142,6 +151,9 @@ class RoutineDashboardCard(BaseModel):
     monthly_cost_usd: Optional[float] = Field(
         None, description="Amortized monthly USD cost (price ÷ months of supply)."
     )
+    monthly_cost_native: Optional[float] = Field(
+        None, description="Amortized monthly cost in the product's native currency."
+    )
 
 
 class GoalCoverage(BaseModel):
@@ -163,6 +175,9 @@ class RoutineDashboard(BaseModel):
     products: List[RoutineDashboardCard] = Field(default_factory=list)
     monthly_cost_usd: Optional[float] = Field(
         None, description="Amortized total monthly cost in USD; None if unpriced."
+    )
+    monthly_cost_jpy: Optional[float] = Field(
+        None, description="Amortized total monthly cost in JPY (JPY-priced items only)."
     )
     currency: str = "USD"
     goals: List[GoalCoverage] = Field(default_factory=list)
