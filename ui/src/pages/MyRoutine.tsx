@@ -280,9 +280,12 @@ function AddProductPanel({
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showManual, setShowManual] = useState(false);
+  // Streaming state: real pipeline step (1..5) and the coach card as it types in.
+  const [pipelineStep, setPipelineStep] = useState(1);
+  const [coachText, setCoachText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useUsers();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
 
   function chooseFile(f: File | null) {
     if (!f) return;
@@ -292,6 +295,8 @@ function AddProductPanel({
     }
     setError(null);
     setResult(null);
+    setPipelineStep(1);
+    setCoachText("");
     setFile(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -303,6 +308,8 @@ function AddProductPanel({
     setFile(null);
     setResult(null);
     setError(null);
+    setPipelineStep(1);
+    setCoachText("");
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -315,8 +322,16 @@ function AddProductPanel({
     setScanning(true);
     setError(null);
     setResult(null);
+    setPipelineStep(1);
+    setCoachText("");
     try {
-      const res = await api.scan({ image: file, userId, addToRoutine: true });
+      const res = await api.scanStream(
+        { image: file, userId, addToRoutine: true, lang },
+        {
+          onStage: (step) => setPipelineStep((prev) => Math.max(prev, step)),
+          onCoachDelta: (text) => setCoachText((prev) => prev + text),
+        },
+      );
       setResult(res);
       if (res.added_product_id) onChanged();
     } catch (e) {
@@ -388,7 +403,23 @@ function AddProductPanel({
             </div>
           )}
 
-          {scanning && <PipelineSteps userName={currentUser?.name ?? undefined} />}
+          {scanning && (
+            <>
+              <PipelineSteps
+                userName={currentUser?.name ?? undefined}
+                activeStep={pipelineStep}
+              />
+              {coachText && (
+                <section className="card coach-card">
+                  <h2 className="card-title">{t("scan.coachTitle")}</h2>
+                  <div className="coach-advice">
+                    {coachText}
+                    <span className="coach-caret">▍</span>
+                  </div>
+                </section>
+              )}
+            </>
+          )}
 
           {result && !scanning && (
             <>

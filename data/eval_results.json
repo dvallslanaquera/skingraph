@@ -3,7 +3,7 @@
     "id": "prod_001",
     "model": "flash",
     "difficulty": 8,
-    "confidence": 0.9,
+    "confidence": 0.95,
     "system_status": "SUCCESS",
     "brand_score": 100.0,
     "product_score": 100.0,
@@ -22,21 +22,20 @@
     "id": "prod_002",
     "model": "flash",
     "difficulty": 7,
-    "confidence": 1.0,
+    "confidence": 0.9,
     "system_status": "SUCCESS",
     "brand_score": 100.0,
     "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
-      "precision": 0.983,
-      "recall": 0.949,
-      "f1": 0.966,
+      "precision": 0.984,
+      "recall": 0.966,
+      "f1": 0.975,
       "truth_count": 59,
-      "extracted_count": 60,
+      "extracted_count": 62,
       "missed": [
         "Tetrahexyldecyl Ascorbate",
-        "Saxifraga Sarmentosa Extract",
-        "Carbomer"
+        "Rosa Roxburghii Fruit Extract"
       ],
       "hallucinated": [
         "Isopropyl Myristate"
@@ -54,22 +53,31 @@
     "quasi_drug_correct": true,
     "ingredients": {
       "precision": 1.0,
-      "recall": 0.831,
-      "f1": 0.908,
+      "recall": 0.704,
+      "f1": 0.826,
       "truth_count": 71,
-      "extracted_count": 62,
+      "extracted_count": 51,
       "missed": [
         "Althaea Officinalis Root Extract",
         "Carbomer",
+        "Cucumis Sativus (Cucumber) Fruit Extract",
+        "Citric Acid",
+        "Glycosyl Trehalose",
         "Butyrospermum Parkii (Shea) Butter",
+        "Dimethicone",
         "Hypericum Perforatum Flower/Leaf/Stem Extract",
+        "Ceramide EOP",
+        "Camellia Sinensis Leaf Extract",
+        "Centella Asiatica Extract",
         "Tetrahexyldecyl Ascorbate",
         "Calendula Officinalis Flower Extract",
-        "Rosa Multiflora Fruit Extract",
         "Geranium Robertianum Extract",
+        "Behenyl Alcohol",
         "Pentylene Glycol",
+        "Saxifraga Sarmentosa Extract",
         "Lavandula Angustifolia (Lavender) Flower Extract",
         "Anthemis Nobilis Flower Extract",
+        "Hydrolyzed Hydrogenated Starch",
         "Sodium Hydroxide"
       ],
       "hallucinated": []
@@ -81,20 +89,18 @@
     "difficulty": 6,
     "confidence": 0.9,
     "system_status": "SUCCESS",
-    "brand_score": 100.0,
-    "product_score": 100.0,
+    "brand_score": 90.0,
+    "product_score": 90.9,
     "quasi_drug_correct": false,
     "ingredients": {
       "precision": 1.0,
-      "recall": 0.789,
-      "f1": 0.882,
+      "recall": 0.895,
+      "f1": 0.944,
       "truth_count": 19,
-      "extracted_count": 16,
+      "extracted_count": 18,
       "missed": [
-        "Methylgluceth-10",
         "Mono/Diglycerides",
-        "Stearic Acid",
-        "Mineral Oil"
+        "Stearic Acid"
       ],
       "hallucinated": []
     }
@@ -141,7 +147,7 @@
     "system_status": "INCOMPLETE",
     "brand_score": 76.0,
     "product_score": 90.0,
-    "quasi_drug_correct": false,
+    "quasi_drug_correct": true,
     "ingredients": {
       "precision": 0.0,
       "recall": 0.0,
@@ -194,7 +200,7 @@
     "model": "flash",
     "difficulty": 6,
     "confidence": 0.9,
-    "system_status": "SUCCESS",
+    "system_status": "INCOMPLETE",
     "brand_score": 90.0,
     "product_score": 85.5,
     "quasi_drug_correct": true,
@@ -240,19 +246,21 @@
     "id": "prod_007b",
     "model": "flash",
     "difficulty": 6,
-    "confidence": 0.7,
+    "confidence": 0.4,
     "system_status": "INCOMPLETE",
-    "brand_score": 100.0,
+    "brand_score": 96.0,
     "product_score": 97.8,
     "quasi_drug_correct": true,
     "ingredients": {
-      "precision": 1.0,
-      "recall": 0.125,
-      "f1": 0.222,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
       "truth_count": 16,
-      "extracted_count": 2,
+      "extracted_count": 0,
       "missed": [
+        "Centella Asiatica Extract",
         "Cyclopentasiloxane",
+        "Panthenol",
         "PEG-32",
         "Glycerin",
         "Cyclohexasiloxane",
@@ -277,7 +285,7 @@
     "confidence": 0.7,
     "system_status": "INCOMPLETE",
     "brand_score": 100.0,
-    "product_score": 97.7,
+    "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
       "precision": 0.0,
@@ -358,7 +366,7 @@
         "Bis-Ethylhexyloxyphenol Methoxyphenyl Triazine"
       ],
       "hallucinated": [
-        "Soy Milk Ferment Filtrate"
+        "Soymilk Ferment Filtrate"
       ]
     }
   },
@@ -419,13 +427,12 @@
     "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
-      "precision": 0.5,
-      "recall": 0.026,
-      "f1": 0.049,
+      "precision": 1.0,
+      "recall": 0.051,
+      "f1": 0.098,
       "truth_count": 39,
       "extracted_count": 2,
       "missed": [
-        "Centella Asiatica Extract",
         "Water",
         "Glycerin",
         "Butylene Glycol",
@@ -464,9 +471,7 @@
         "Dimethicone",
         "Disodium EDTA"
       ],
-      "hallucinated": [
-        "Super Cica 7™"
-      ]
+      "hallucinated": []
     }
   },
   {
@@ -633,16 +638,17 @@
     "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
-      "precision": 0.984,
+      "precision": 0.968,
       "recall": 0.983,
-      "f1": 0.983,
+      "f1": 0.975,
       "truth_count": 59,
       "extracted_count": 62,
       "missed": [
-        "Tetrahexyldecyl Ascorbate"
+        "Ascorbyl Palmitate"
       ],
       "hallucinated": [
-        "Isopropyl Myristate"
+        "ラウロイルサルコシンイソプロピル",
+        "Ethylhexylglycerin"
       ]
     }
   },
@@ -650,18 +656,19 @@
     "id": "prod_003",
     "model": "pro",
     "difficulty": 7,
-    "confidence": 0.9,
+    "confidence": 0.98,
     "system_status": "SUCCESS",
     "brand_score": 100.0,
-    "product_score": 70.3,
+    "product_score": 75.0,
     "quasi_drug_correct": true,
     "ingredients": {
       "precision": 1.0,
-      "recall": 0.986,
-      "f1": 0.993,
+      "recall": 0.972,
+      "f1": 0.986,
       "truth_count": 71,
-      "extracted_count": 71,
+      "extracted_count": 70,
       "missed": [
+        "Carbomer",
         "Tetrahexyldecyl Ascorbate"
       ],
       "hallucinated": []
@@ -671,10 +678,10 @@
     "id": "prod_004",
     "model": "pro",
     "difficulty": 6,
-    "confidence": 0.95,
+    "confidence": 0.9,
     "system_status": "SUCCESS",
     "brand_score": 90.0,
-    "product_score": 100.0,
+    "product_score": 90.0,
     "quasi_drug_correct": false,
     "ingredients": {
       "precision": 0.947,
@@ -695,7 +702,7 @@
     "model": "pro",
     "difficulty": 5,
     "confidence": 0.8,
-    "system_status": "INCOMPLETE",
+    "system_status": "SUCCESS",
     "brand_score": 100.0,
     "product_score": 95.7,
     "quasi_drug_correct": true,
@@ -730,7 +737,7 @@
     "id": "prod_006",
     "model": "pro",
     "difficulty": 4,
-    "confidence": 0.4,
+    "confidence": 0.8,
     "system_status": "INCOMPLETE",
     "brand_score": 90.0,
     "product_score": 85.5,
@@ -786,8 +793,8 @@
     "id": "prod_007a",
     "model": "pro",
     "difficulty": 6,
-    "confidence": 0.4,
-    "system_status": "INCOMPLETE",
+    "confidence": 0.9,
+    "system_status": "SUCCESS",
     "brand_score": 90.0,
     "product_score": 85.5,
     "quasi_drug_correct": true,
@@ -831,10 +838,10 @@
     "id": "prod_007b",
     "model": "pro",
     "difficulty": 6,
-    "confidence": 0.8,
+    "confidence": 0.4,
     "system_status": "INCOMPLETE",
-    "brand_score": 96.0,
-    "product_score": 95.7,
+    "brand_score": 100.0,
+    "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
       "precision": 0.0,
@@ -867,17 +874,17 @@
     "id": "prod_007c",
     "model": "pro",
     "difficulty": 5,
-    "confidence": 0.8,
+    "confidence": 0.5,
     "system_status": "INCOMPLETE",
     "brand_score": 100.0,
-    "product_score": 95.0,
+    "product_score": 100.0,
     "quasi_drug_correct": true,
     "ingredients": {
-      "precision": 0.5,
-      "recall": 0.04,
-      "f1": 0.074,
+      "precision": 0.0,
+      "recall": 0.0,
+      "f1": 0.0,
       "truth_count": 25,
-      "extracted_count": 2,
+      "extracted_count": 0,
       "missed": [
         "Water",
         "プロパンジオール",
@@ -902,11 +909,10 @@
         "Ceramide NG",
         "Ceramide AP",
         "Ceramide AP",
-        "Ceramide EOP"
+        "Ceramide EOP",
+        "Retinol"
       ],
-      "hallucinated": [
-        "Caffeine"
-      ]
+      "hallucinated": []
     }
   },
   {
@@ -958,10 +964,10 @@
     "id": "prod_009",
     "model": "pro",
     "difficulty": 5,
-    "confidence": 0.8,
-    "system_status": "INCOMPLETE",
+    "confidence": 0.0,
+    "system_status": "RETAKE_REQUIRED",
     "brand_score": 90.0,
-    "product_score": 85.5,
+    "product_score": 92.1,
     "quasi_drug_correct": true,
     "ingredients": {
       "precision": 0.0,
@@ -1064,8 +1070,8 @@
     "id": "prod_011",
     "model": "pro",
     "difficulty": 4,
-    "confidence": 0.8,
-    "system_status": "INCOMPLETE",
+    "confidence": 0.0,
+    "system_status": "RETAKE_REQUIRED",
     "brand_score": 100.0,
     "product_score": 42.2,
     "quasi_drug_correct": false,
@@ -1155,8 +1161,8 @@
     "id": "prod_012",
     "model": "pro",
     "difficulty": 4,
-    "confidence": 0.8,
-    "system_status": "INCOMPLETE",
+    "confidence": 0.9,
+    "system_status": "SUCCESS",
     "brand_score": 100.0,
     "product_score": 100.0,
     "quasi_drug_correct": false,

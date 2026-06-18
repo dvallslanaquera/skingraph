@@ -3,6 +3,8 @@
 # Fully offline like the rest of the suite: the graph is replaced with a stub so
 # /scan needs no VLM call or API key, and the user store is pointed at a
 # throwaway database so nothing touches data/users.db.
+import json
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -47,6 +49,13 @@ def _fake_final_state() -> dict:
     }
 
 
+def _fake_stream():
+    """Mimic graph_app.stream(stream_mode=["updates","values"]): yield
+    (mode, chunk) tuples, ending with the full final state on a "values" frame."""
+    yield ("updates", {"flash_scanner": {}})
+    yield ("values", _fake_final_state())
+
+
 @pytest.fixture
 def client(tmp_path, monkeypatch):
     """TestClient with an isolated DB and a stubbed graph."""
@@ -55,6 +64,12 @@ def client(tmp_path, monkeypatch):
         service.graph_app,
         "invoke",
         lambda inputs, config=None: _fake_final_state(),
+    )
+    # The streaming endpoint drives graph_app.stream(...) instead of .invoke.
+    monkeypatch.setattr(
+        service.graph_app,
+        "stream",
+        lambda inputs, config=None, stream_mode=None: _fake_stream(),
     )
     with TestClient(app) as c:  # triggers lifespan → init_db()
         yield c
@@ -159,4 +174,80 @@ def test_scan_validation_errors(client):
     )
     assert (
         client.post("/scan", files={"image": ("e.jpg", b"", "image/jpeg")}).status_code == 400
+    )
+
+
+# --- /scan/stream (SSE) ------------------------------------------------------
+
+
+def _sse_events(resp) -> list[dict]:
+    """Parse the SSE body into a list of decoded event payloads."""
+    events = []
+    for line in resp.text.splitlines():
+        if line.startswith("data: "):
+            events.append(json.loads(line[len("data: "):]))
+    return events
+
+
+def test_scan_stream_emits_stage_partial_coach_then_complete(client):
+    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
+    assert resp.status_code == 200
+    assert resp.headers["content-type"].startswith("text/event-stream")
+
+    events = _sse_events(resp)
+    kinds = [e["event"] for e in events]
+    assert "stage" in kinds           # real per-node progress
+    assert "partial" in kinds         # partial ScanResponse as nodes finish
+    assert "coach_delta" in kinds      # typewriter reveal of the coach card
+    assert kinds[-1] == "complete"     # final full ScanResponse last
+
+    complete = events[-1]["data"]
+    assert complete["status"] == "complete"
+    assert complete["product"]["brand"] == "Hada"
+
+
+def test_scan_stream_coach_deltas_reconstruct_the_card(client):
+    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
+    events = _sse_events(resp)
+    streamed = "".join(e["text"] for e in events if e["event"] == "coach_delta")
+    # lang=en with no coach_advice_en falls back to the combined coach_advice blob.
+    assert streamed == _fake_final_state()["coach_advice"]
+
+
+def test_scan_stream_adds_to_routine(client):
+    uid = _make_user(client)
+    resp = client.post(
+        "/scan/stream",
+        files={"image": IMAGE},
+        data={"user_id": uid, "add_to_routine": "true", "lang": "ja"},
+    )
+    assert resp.status_code == 200
+    events = _sse_events(resp)
+    complete = events[-1]["data"]
+    assert complete["added_product_id"] is not None
+    assert client.get(f"/users/{uid}/routine").json()[0]["product_name"] == "Lotion"
+
+
+def test_scan_stream_without_user_does_not_save(client):
+    resp = client.post("/scan/stream", files={"image": IMAGE})
+    events = _sse_events(resp)
+    assert events[-1]["data"]["added_product_id"] is None
+
+
+def test_scan_stream_validation_errors(client):
+    assert (
+        client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "fr"}).status_code
+        == 422
+    )
+    assert (
+        client.post("/scan/stream", files={"image": IMAGE}, data={"image_type": "side"}).status_code
+        == 422
+    )
+    assert (
+        client.post("/scan/stream", files={"image": IMAGE}, data={"add_to_routine": "true"}).status_code
+        == 422
+    )
+    assert (
+        client.post("/scan/stream", files={"image": ("e.jpg", b"", "image/jpeg")}).status_code
+        == 400
     )

@@ -625,7 +625,14 @@ def coach_node(state: AgentState) -> dict:
             "in those findings."
         )
 
-    model = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2)
+    # Parity with the scanner/websearch nodes: bound the Gemini call so a hung
+    # request can never keep the pipeline (and thus the HTTP request) open
+    # indefinitely. The coach's structured-output call is the slowest step, so an
+    # unbounded call here is what tipped the old single-shot /scan past the
+    # platform's request ceiling.
+    model = ChatGoogleGenerativeAI(
+        model=FLASH_MODEL, temperature=0.2, timeout=120, max_retries=3
+    )
     response: CoachResponse = cast(
         CoachResponse,
         model.with_structured_output(CoachResponse).invoke(
