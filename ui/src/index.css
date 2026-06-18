@@ -1060,6 +1060,21 @@ body {
   font-size: 15px;
 }
 
+/* Blinking caret shown while the coach card streams in (typewriter reveal). */
+.coach-caret {
+  display: inline-block;
+  width: 0.6ch;
+  margin-left: 1px;
+  color: var(--accent, #3a7d6f);
+  animation: coach-blink 1s steps(1) infinite;
+}
+
+@keyframes coach-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
 /* recommendability score, between the coach title and the card body */
 .reco-score-banner {
   margin: 4px 0 14px;

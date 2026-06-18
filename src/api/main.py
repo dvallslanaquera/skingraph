@@ -21,13 +21,13 @@ from typing import List, Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api import schemas
-from src.api.service import UserNotFoundError, run_scan
+from src.api.service import UserNotFoundError, run_scan, run_scan_stream
 from src.observability import log_tracing_status
 from src.routine_dashboard import build_dashboard
 from src.state import RoutineProduct
@@ -125,6 +125,80 @@ async def scan(
         raise HTTPException(404, str(exc))
     finally:
         os.unlink(tmp.name)
+
+
+# --- scan (streaming) --------------------------------------------------------
+
+
+@app.post("/scan/stream", tags=["scan"])
+async def scan_stream(
+    image: UploadFile = File(..., description="Product label photo (front or back)."),
+    image_type: Optional[str] = Form(
+        None, description="Override side detection: 'front' or 'back'. Omit to auto-detect."
+    ),
+    user_id: Optional[str] = Form(
+        None, description="Saved user id; loads their profile + routine for personalisation."
+    ),
+    add_to_routine: bool = Form(
+        False, description="Save the scanned product to the user's routine (requires user_id)."
+    ),
+    lang: Optional[str] = Form(
+        None, description="UI language for the streamed coach card: 'ja' or 'en'."
+    ),
+) -> StreamingResponse:
+    """Stream the pipeline as Server-Sent Events (see src.api.service.run_scan_stream).
+
+    Same inputs/outputs as /scan, but emits stage / partial / coach_delta frames
+    as each node finishes and a final `complete` frame. Keeps the connection
+    alive so the long pipeline can't exceed the platform's request ceiling.
+    """
+    if image_type not in (None, "", "front", "back"):
+        raise HTTPException(422, "image_type must be 'front' or 'back'.")
+    if add_to_routine and not user_id:
+        raise HTTPException(422, "add_to_routine requires a user_id.")
+    if lang not in (None, "", "ja", "en"):
+        raise HTTPException(422, "lang must be 'ja' or 'en'.")
+
+    contents = await image.read()
+    if not contents:
+        raise HTTPException(400, "Uploaded image is empty.")
+    if len(contents) > MAX_UPLOAD_BYTES:
+        raise HTTPException(413, "Image exceeds the 15 MB upload limit.")
+
+    suffix = os.path.splitext(image.filename or "")[1] or ".jpg"
+    tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
+    tmp.write(contents)
+    tmp.close()
+
+    # StreamingResponse iterates the generator AFTER this handler returns, so the
+    # temp file must live until the stream ends — clean it up in the generator's
+    # own finally, not the handler's.
+    async def body():
+        try:
+            async for frame in run_scan_stream(
+                image_path=tmp.name,
+                image_type=(image_type or None),
+                user_id=user_id,
+                add_to_routine=add_to_routine,
+                lang=(lang or None),
+            ):
+                yield frame
+        finally:
+            try:
+                os.unlink(tmp.name)
+            except OSError:
+                pass
+
+    return StreamingResponse(
+        body(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            # Hint proxies (Railway's nginx) not to buffer the stream, so frames
+            # flush to the client as each node finishes instead of being held.
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 # --- users ------------------------------------------------------------------

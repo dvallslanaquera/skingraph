@@ -1,12 +1,17 @@
 // Decorative pipeline indicator shown while a scan runs.
 //
-// The backend is a single blocking /scan call, so we can't stream true per-node
-// progress; instead we advance through the known stages on a timer to give the
-// user a sense of what's happening during the wait.
-import { useEffect, useState } from "react";
+// `activeStep` (1-based, from the /scan/stream `stage` events) drives which
+// stages are revealed, so the UI reflects real pipeline progress instead of a
+// fake timer. The streaming endpoint maps each graph node to one of these steps.
 import { useI18n } from "../i18n";
 
-export function PipelineSteps({ userName }: { userName?: string }) {
+export function PipelineSteps({
+  userName,
+  activeStep = 1,
+}: {
+  userName?: string;
+  activeStep?: number;
+}) {
   const { t } = useI18n();
   const who = userName?.trim() || t("pipeline.you");
   const stages = [
@@ -16,22 +21,14 @@ export function PipelineSteps({ userName }: { userName?: string }) {
     t("pipeline.step4"),
     t("pipeline.step5", { name: who }),
   ];
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    // Advance roughly every few seconds; stop on the last stage and let the
-    // real response replace this component when it lands.
-    const id = setInterval(() => {
-      setActive((i) => Math.min(i + 1, stages.length - 1));
-    }, 2500);
-    return () => clearInterval(id);
-  }, [stages.length]);
+  // activeStep is 1-based; clamp to the stage range and convert to a 0-based index.
+  const active = Math.max(0, Math.min(activeStep - 1, stages.length - 1));
 
   return (
     <div className="card pipeline">
       <h2 className="card-title">{t("pipeline.title")}</h2>
       <ol className="pipeline-steps">
-        {/* Reveal the steps one at a time; each new <li> fades in on mount. */}
+        {/* Reveal the steps up to the active one; each new <li> fades in on mount. */}
         {stages.map((label, i) =>
           i <= active ? (
             <li

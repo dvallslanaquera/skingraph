@@ -144,4 +144,126 @@ export const api = {
     form.append("add_to_routine", String(Boolean(opts.addToRoutine)));
     return request("/scan", { method: "POST", body: form });
   },
+
+  // Streaming variant of scan(): POSTs the photo to /scan/stream and consumes the
+  // Server-Sent Events stream, invoking callbacks as each pipeline node finishes
+  // and resolving with the final ScanResponse. Avoids the single-shot /scan
+  // timing out on the long pipeline, and lets the UI show real progress.
+  scanStream(
+    opts: {
+      image: File;
+      imageType?: "front" | "back";
+      userId?: string;
+      addToRoutine?: boolean;
+      lang?: "ja" | "en";
+      signal?: AbortSignal;
+    },
+    cb: {
+      onStage?: (step: number, node: string) => void;
+      onPartial?: (partial: ScanResponse) => void;
+      onCoachDelta?: (text: string) => void;
+    } = {},
+  ): Promise<ScanResponse> {
+    const form = new FormData();
+    form.append("image", opts.image);
+    if (opts.imageType) form.append("image_type", opts.imageType);
+    if (opts.userId) form.append("user_id", opts.userId);
+    if (opts.lang) form.append("lang", opts.lang);
+    form.append("add_to_routine", String(Boolean(opts.addToRoutine)));
+
+    return readScanStream(
+      `${BASE_URL}/scan/stream`,
+      { method: "POST", body: form, signal: opts.signal },
+      cb,
+    );
+  },
 };
+
+// Reads an SSE response, parsing `data:` frames into typed events. Frames are
+// separated by a blank line (\n\n); a trailing partial frame is kept in the
+// buffer for the next chunk. Keepalive comment frames (`: ping`) carry no
+// `data:` line and are ignored.
+async function readScanStream(
+  url: string,
+  init: RequestInit,
+  cb: {
+    onStage?: (step: number, node: string) => void;
+    onPartial?: (partial: ScanResponse) => void;
+    onCoachDelta?: (text: string) => void;
+  },
+): Promise<ScanResponse> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch {
+    throw new ApiError(
+      0,
+      `Could not reach the API at ${BASE_URL}. Is the backend running?`,
+    );
+  }
+
+  if (!res.ok || !res.body) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      const body = await res.json();
+      if (body?.detail) {
+        detail =
+          typeof body.detail === "string"
+            ? body.detail
+            : JSON.stringify(body.detail);
+      }
+    } catch {
+      // non-JSON error body; keep the status text
+    }
+    throw new ApiError(res.status, detail);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let result: ScanResponse | undefined;
+  let streamError: string | undefined;
+
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    let sep: number;
+    while ((sep = buffer.indexOf("\n\n")) !== -1) {
+      const frame = buffer.slice(0, sep);
+      buffer = buffer.slice(sep + 2);
+      const dataLines = frame
+        .split("\n")
+        .filter((l) => l.startsWith("data:"))
+        .map((l) => l.slice(5).trimStart());
+      if (dataLines.length === 0) continue; // keepalive comment
+      let evt: { event: string; [k: string]: unknown };
+      try {
+        evt = JSON.parse(dataLines.join("\n"));
+      } catch {
+        continue;
+      }
+      switch (evt.event) {
+        case "stage":
+          cb.onStage?.(evt.step as number, evt.node as string);
+          break;
+        case "partial":
+          cb.onPartial?.(evt.data as ScanResponse);
+          break;
+        case "coach_delta":
+          cb.onCoachDelta?.(evt.text as string);
+          break;
+        case "complete":
+          result = evt.data as ScanResponse;
+          break;
+        case "error":
+          streamError = (evt.message as string) ?? "Scan failed";
+          break;
+      }
+    }
+  }
+
+  if (streamError) throw new ApiError(500, streamError);
+  if (!result) throw new ApiError(0, "Stream ended without a result.");
+  return result;
+}
