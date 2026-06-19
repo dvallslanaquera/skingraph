@@ -6,7 +6,7 @@
 # ONNX Runtime (fastembed), which keeps both the image and the
 # worker's memory footprint small.
 # ────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS builder
+FROM python:3.14-slim AS builder
 
 WORKDIR /build
 
@@ -42,7 +42,7 @@ RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
 # the pre-baked embedding model, source, scripts, and seed data.
 # No EXPOSE / CMD here so the two leaf stages set their own.
 # ────────────────────────────────────────────────────────────
-FROM python:3.12-slim AS base
+FROM python:3.14-slim AS base
 
 WORKDIR /app
 
