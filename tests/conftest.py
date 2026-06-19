@@ -1,7 +1,7 @@
 # Shared fixtures for the test suite.
 #
 # The suite is fully offline and deterministic: every Gemini call is mocked and
-# every vector-store call (Qdrant + sentence-transformers) is patched out, so no
+# every vector-store call (Qdrant + the ONNX embedding model) is patched out, so no
 # network, API key, model download, or on-disk index is ever touched.
 import pytest
 

@@ -23,7 +23,7 @@ variable "image_tag" {
 }
 
 variable "task_cpu" {
-  description = "Fargate CPU units (1024 = 1 vCPU). Minimum for sentence-transformers + torch."
+  description = "Fargate CPU units (1024 = 1 vCPU). Sized for the ONNX embedding model + API."
   type        = number
   default     = 1024
 }

@@ -2,8 +2,8 @@
 #
 # Replaces the in-memory rapidfuzz scans with semantic ANN search. Qdrant runs
 # in embedded/local mode (an on-disk path, no server) and text is embedded with
-# a local multilingual sentence-transformers model, so the whole retrieval layer
-# works offline once the model has been downloaded once.
+# a local multilingual e5 model on ONNX Runtime (via fastembed, no torch), so the
+# whole retrieval layer works offline once the model has been downloaded once.
 #
 # Collections (built by scripts/build_index.py):
 #   products    — one point per registry product; the payload carries the curated
@@ -20,7 +20,8 @@ from typing import Any, List, Optional, Tuple
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from src.config import (EMBEDDING_DIM, EMBEDDING_MODEL, INGREDIENT_COLLECTION,
+from src.config import (EMBEDDING_CACHE_DIR, EMBEDDING_DIM, EMBEDDING_MODEL,
+                        EMBEDDING_ONNX_FILE, INGREDIENT_COLLECTION,
                         PRODUCT_COLLECTION, QDRANT_PATH)
 
 _client: Optional[QdrantClient] = None
@@ -40,36 +41,60 @@ def get_client() -> QdrantClient:
     return _client
 
 
+def _register_model() -> None:
+    """Register e5-small as a custom fastembed model (idempotent).
+
+    fastembed's built-in catalog ships e5-large but not e5-small, so we point it
+    at the ONNX export in e5-small's own HF repo. MEAN pooling + L2 normalization
+    match how sentence-transformers served this model, so the vectors — and the
+    cosine thresholds tuned against them — carry over.
+    """
+    from fastembed import TextEmbedding
+    from fastembed.common.model_description import ModelSource, PoolingType
+
+    known = {m["model"] for m in TextEmbedding.list_supported_models()}
+    if EMBEDDING_MODEL not in known:
+        TextEmbedding.add_custom_model(
+            model=EMBEDDING_MODEL,
+            pooling=PoolingType.MEAN,
+            normalization=True,
+            sources=ModelSource(hf=EMBEDDING_MODEL),
+            dim=EMBEDDING_DIM,
+            model_file=EMBEDDING_ONNX_FILE,
+        )
+
+
 def get_model():
-    """Lazily load the sentence-transformers model (heavy import + weights)."""
+    """Lazily load the embedding model on ONNX Runtime (via fastembed, no torch).
+
+    threads=1 because the deploy runs one worker on a single shared vCPU: extra
+    intra-op threads only add memory and contention without speeding up the few
+    short encodings per scan.
+    """
     global _model
     if _model is None:
         with _model_lock:
             if _model is None:
-                import torch
-                from sentence_transformers import SentenceTransformer
+                from fastembed import TextEmbedding
 
-                # The deploy runs one worker on a single shared vCPU. Extra torch
-                # intra-op threads add per-thread memory and contention without
-                # speeding up encoding there, so cap to 1 to keep peak RSS down
-                # (the model load is the worker's memory high-water mark).
-                torch.set_num_threads(1)
-                logging.info("Loading embedding model: %s", EMBEDDING_MODEL)
-                _model = SentenceTransformer(EMBEDDING_MODEL)
+                _register_model()
+                logging.info("Loading embedding model (ONNX): %s", EMBEDDING_MODEL)
+                _model = TextEmbedding(
+                    EMBEDDING_MODEL, cache_dir=EMBEDDING_CACHE_DIR, threads=1
+                )
     return _model
 
 
 # multilingual-e5 is trained with asymmetric "query:" / "passage:" prefixes;
-# using them improves retrieval quality noticeably.
+# using them improves retrieval quality noticeably. (Custom fastembed models
+# don't auto-prefix, so we add them here — the same convention indexing uses.)
 def embed_query(text: str) -> List[float]:
-    vec = get_model().encode(f"query: {text}", normalize_embeddings=True)
+    vec = next(iter(get_model().embed([f"query: {text}"])))
     return vec.tolist()
 
 
 def embed_passages(texts: List[str]) -> List[List[float]]:
-    vecs = get_model().encode(
-        [f"passage: {t}" for t in texts], normalize_embeddings=True
-    )
+    vecs = get_model().embed([f"passage: {t}" for t in texts])
     return [v.tolist() for v in vecs]
 
 

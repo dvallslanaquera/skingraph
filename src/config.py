@@ -1,3 +1,5 @@
+import os
+
 FLASH_ACCEPT_THRESHOLD = 0.85
 FLASH_ESCALATE_THRESHOLD = 0.5
 MAX_CORRECTIONS = 2
@@ -21,6 +23,17 @@ MIN_LUMINANCE_STDDEV = 6.0   # contrast spread < this ⇒ near-uniform (no produ
 QDRANT_PATH = "data/qdrant"
 EMBEDDING_MODEL = "intfloat/multilingual-e5-small"  # 384-dim, CPU-friendly, multilingual
 EMBEDDING_DIM = 384
+# The model is run on ONNX Runtime (via fastembed), not torch, so the API worker
+# never loads torch and fits in a ~1 GB container. fastembed's built-in catalog
+# ships e5-large but not e5-small, so we register e5-small as a custom model
+# pointing at the ONNX export in its HF repo. Swap to the int8 file
+# ("onnx/model_qint8_avx512_vnni.onnx") to roughly halve RSS again, at a small
+# accuracy cost — re-check the thresholds below against the eval harness if you do.
+EMBEDDING_ONNX_FILE = "onnx/model.onnx"
+# Where fastembed caches the downloaded ONNX weights. Pinned via env so the
+# Docker image's build-time download is reused at runtime (no first-scan refetch);
+# unset locally, where fastembed falls back to its default temp cache.
+EMBEDDING_CACHE_DIR = os.getenv("FASTEMBED_CACHE_DIR") or None
 PRODUCT_COLLECTION = "products"
 INGREDIENT_COLLECTION = "ingredients"
 # Cosine-similarity gates (0..1) for vector hits. Tune against the eval harness.
