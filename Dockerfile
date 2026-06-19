@@ -61,12 +61,14 @@ COPY --from=builder /opt/venv /opt/venv
 
 # Pre-download the embedding model's ONNX weights into the image (under
 # FASTEMBED_CACHE_DIR) so the first scan never hits HuggingFace (~30-60 s) and the
-# app runs offline. Kept self-contained (no src/ import) and placed before COPY
-# src/ so the ~470 MB download layer survives source-only changes — it mirrors
+# app runs offline. The int8 file (~120 MB) keeps the loaded model's RSS to fit
+# Railway's default 512 MB container — must match EMBEDDING_ONNX_FILE in
+# src/config.py. Kept self-contained (no src/ import) and placed before COPY
+# src/ so this download layer survives source-only changes — it mirrors
 # src/vectorstore.py:_register_model. Retried: HuggingFace rate-limits in CI.
 RUN for attempt in 1 2 3 4 5; do \
         echo "Pre-baking embedding model (attempt $attempt/5)..."; \
-        python -c "import os; from fastembed import TextEmbedding; from fastembed.common.model_description import ModelSource, PoolingType; M='intfloat/multilingual-e5-small'; TextEmbedding.add_custom_model(model=M, pooling=PoolingType.MEAN, normalization=True, sources=ModelSource(hf=M), dim=384, model_file='onnx/model.onnx'); TextEmbedding(M, cache_dir=os.environ['FASTEMBED_CACHE_DIR'])" && exit 0; \
+        python -c "import os; from fastembed import TextEmbedding; from fastembed.common.model_description import ModelSource, PoolingType; M='intfloat/multilingual-e5-small'; TextEmbedding.add_custom_model(model=M, pooling=PoolingType.MEAN, normalization=True, sources=ModelSource(hf=M), dim=384, model_file='onnx/model_qint8_avx512_vnni.onnx'); TextEmbedding(M, cache_dir=os.environ['FASTEMBED_CACHE_DIR'])" && exit 0; \
         sleep 15; \
     done; \
     echo "Model pre-bake failed after 5 attempts" >&2; exit 1
