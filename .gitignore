@@ -10,6 +10,9 @@ data/qdrant/
 .DS_Store
 .TODO.md
 
+# Claude Code local state (plan files, harness scratch)
+.claude/
+
 # Terraform — contains secrets (google_api_key)
 terraform/terraform.tfvars
 terraform/.terraform/
