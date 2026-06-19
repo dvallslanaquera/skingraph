@@ -3,8 +3,8 @@
     poetry run python scripts/build_index.py
 
 Reads data/registry.json and data/ingredient_master.json, embeds them with the
-local sentence-transformers model, and (re)builds the embedded Qdrant store at
-data/qdrant/. Re-run whenever the seed JSON changes.
+local e5 model on ONNX Runtime (fastembed), and (re)builds the embedded Qdrant
+store at data/qdrant/. Re-run whenever the seed JSON changes.
 
 The JSON files become *seed data*: the runtime retrieval mechanism is Qdrant,
 not a per-call JSON scan. The embedded store is single-writer, so don't run this

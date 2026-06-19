@@ -2,9 +2,9 @@
 # Stage 1 – builder
 #
 # Resolves all production deps via Poetry and installs them
-# into /opt/venv.  CPU-only torch is installed first so pip
-# never fetches a CUDA wheel; sentence-transformers picks it
-# up and the final image stays ~1 GB lighter.
+# into /opt/venv. No torch in the graph: embeddings run on
+# ONNX Runtime (fastembed), which keeps both the image and the
+# worker's memory footprint small.
 # ────────────────────────────────────────────────────────────
 FROM python:3.12-slim AS builder
 
@@ -29,13 +29,9 @@ RUN poetry export --without dev --without-hashes \
 
 RUN python -m venv /opt/venv
 
-# Install torch CPU wheel before the rest of the requirements.
-# pip treats the installed +cpu local tag as satisfying the
-# bare version constraint in requirements.txt and skips re-downloading.
+# No torch: embeddings run on ONNX Runtime (fastembed), so a plain install of the
+# exported requirements is all the venv needs.
 RUN /opt/venv/bin/pip install --no-cache-dir --upgrade pip \
- && /opt/venv/bin/pip install --no-cache-dir \
-        torch \
-        --index-url https://download.pytorch.org/whl/cpu \
  && /opt/venv/bin/pip install --no-cache-dir -r requirements.txt
 
 
@@ -52,9 +48,10 @@ WORKDIR /app
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PATH="/opt/venv/bin:$PATH"
+    PATH="/opt/venv/bin:$PATH" \
+    FASTEMBED_CACHE_DIR=/app/.fastembed_cache
 
-# libgomp1 = OpenMP runtime required by torch even in CPU mode
+# libgomp1 = OpenMP runtime used by ONNX Runtime's CPU execution provider
 RUN apt-get update \
  && apt-get upgrade -y \
  && apt-get install -y --no-install-recommends libgomp1 \
@@ -62,14 +59,14 @@ RUN apt-get update \
 
 COPY --from=builder /opt/venv /opt/venv
 
-# Pre-download the sentence-transformers model into the image layer.
-# Without this, cold starts hit HuggingFace at first request (~30-60 s delay).
-# Retried: HuggingFace intermittently rate-limits / drops the connection in CI,
-# which would otherwise fail the whole image build (and the README CI badge).
-# Placed before COPY src/ so Docker cache survives source-only changes.
+# Pre-download the embedding model's ONNX weights into the image (under
+# FASTEMBED_CACHE_DIR) so the first scan never hits HuggingFace (~30-60 s) and the
+# app runs offline. Kept self-contained (no src/ import) and placed before COPY
+# src/ so the ~470 MB download layer survives source-only changes — it mirrors
+# src/vectorstore.py:_register_model. Retried: HuggingFace rate-limits in CI.
 RUN for attempt in 1 2 3 4 5; do \
         echo "Pre-baking embedding model (attempt $attempt/5)..."; \
-        python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('intfloat/multilingual-e5-small')" && exit 0; \
+        python -c "import os; from fastembed import TextEmbedding; from fastembed.common.model_description import ModelSource, PoolingType; M='intfloat/multilingual-e5-small'; TextEmbedding.add_custom_model(model=M, pooling=PoolingType.MEAN, normalization=True, sources=ModelSource(hf=M), dim=384, model_file='onnx/model.onnx'); TextEmbedding(M, cache_dir=os.environ['FASTEMBED_CACHE_DIR'])" && exit 0; \
         sleep 15; \
     done; \
     echo "Model pre-bake failed after 5 attempts" >&2; exit 1

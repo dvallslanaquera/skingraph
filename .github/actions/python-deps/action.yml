@@ -1,9 +1,9 @@
-name: "Install Python dependencies (CPU-only)"
+name: "Install Python dependencies"
 description: >
-  Export the Poetry lock to a pinned requirements file, install the CPU-only
-  torch wheel first (so sentence-transformers never pulls the multi-GB CUDA
-  build), then the rest of the runtime deps plus pytest. Mirrors the Dockerfile
-  builder stage so CI tests the exact dependency set that ships.
+  Export the Poetry lock to a pinned requirements file, then install the runtime
+  deps plus pytest. Mirrors the Dockerfile builder stage — no torch, since
+  embeddings run on ONNX Runtime (fastembed) — so CI tests the exact dependency
+  set that ships.
 
 inputs:
   python-version:
@@ -28,12 +28,8 @@ runs:
         pip install "poetry==2.4.0" poetry-plugin-export
         poetry export --without dev --without-hashes -f requirements.txt -o requirements.txt
 
-    - name: Install dependencies (CPU torch first)
+    - name: Install dependencies
       shell: bash
       run: |
-        # pip treats the installed +cpu local tag as satisfying the bare torch
-        # constraint in requirements.txt and skips the default CUDA wheel.
-        # No --no-cache-dir here: the ~190 MB wheel is worth caching across runs.
-        pip install torch --index-url https://download.pytorch.org/whl/cpu
         pip install -r requirements.txt
         pip install "pytest>=9.1.0,<10.0.0"

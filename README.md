@@ -409,7 +409,7 @@ poetry run pytest
 poetry run pytest -v
 ```
 
-テストはすべてオフライン・決定論的: Geminiコールはモック、Qdrant/sentence-transformersもパッチアウトされる。ネットワーク接続・APIキー・モデルダウンロードは不要。
+テストはすべてオフライン・決定論的: Geminiコールはモック、Qdrant/ONNX埋め込みモデルもパッチアウトされる。ネットワーク接続・APIキー・モデルダウンロードは不要。
 
 | テストファイル | カバレッジ |
 |---|---|
@@ -472,7 +472,7 @@ poetry run pytest -v
 ```
 Orchestration     LangGraph (StateGraph + conditional routing)
 VLM Inference     Google Gemini Flash / Pro via langchain-google-genai
-Vector Retrieval  Qdrant (embedded/local) · sentence-transformers (multilingual-e5-small)
+Vector Retrieval  Qdrant (embedded/local) · fastembed/ONNX Runtime (multilingual-e5-small)
                   — レジストリ照合とINCI正規化の両方を駆動
 Eval Scoring      rapidfuzz (WRatio) — 抽出精度評価ハーネス専用 (evaluate.py)
 Data Contracts    Pydantic v2
@@ -906,8 +906,8 @@ The Dockerfile uses a **three-stage build** to keep the production API image fre
 
 | Stage | Target | Contents |
 |---|---|---|
-| `builder` | (internal) | Poetry dep resolution + `/opt/venv`; CPU-only torch installed first to avoid CUDA wheels |
-| `api` | `--target api` | FastAPI + LangGraph + sentence-transformers + pre-baked `multilingual-e5-small` model |
+| `builder` | (internal) | Poetry dep resolution + `/opt/venv` (no torch — embeddings run on ONNX Runtime) |
+| `api` | `--target api` | FastAPI + LangGraph + fastembed/ONNX Runtime + pre-baked `multilingual-e5-small` ONNX model |
 | `ocr-worker` | `--target ocr-worker` | `api` layer + `opencv-python-headless` + `yomitoku` |
 
 ### Local development
@@ -1077,7 +1077,7 @@ poetry run pytest
 poetry run pytest -v
 ```
 
-All tests are fully offline and deterministic: every Gemini call is mocked and every vector-store call (Qdrant + sentence-transformers) is patched out, so no network connection, API key, model download, or on-disk index is ever touched.
+All tests are fully offline and deterministic: every Gemini call is mocked and every vector-store call (Qdrant + the ONNX embedding model) is patched out, so no network connection, API key, model download, or on-disk index is ever touched.
 
 | Test file | Coverage |
 |---|---|
@@ -1140,7 +1140,7 @@ Accuracy measured with `evaluate.py` against hand-annotated ground truth (`data/
 ```
 Orchestration     LangGraph (StateGraph + conditional routing)
 VLM Inference     Google Gemini Flash / Pro via langchain-google-genai
-Vector Retrieval  Qdrant (embedded/local) · sentence-transformers (multilingual-e5-small, 384-dim)
+Vector Retrieval  Qdrant (embedded/local) · fastembed/ONNX Runtime (multilingual-e5-small, 384-dim)
                   — powers both registry product lookup and INCI normalization
 Eval Scoring      rapidfuzz (WRatio) — extraction eval harness only (evaluate.py)
 Data Contracts    Pydantic v2
@@ -1173,7 +1173,7 @@ skincare-coach/
 │   │                         #   └─ routine_products table / add · get · remove
 │   ├── pricing.py            # Grounded web price lookup for shelved products (JP market → USD)
 │   ├── routine_dashboard.py  # Routine dashboard: monthly cost · goal coverage · 5-leaf score
-│   ├── vectorstore.py        # Qdrant client + sentence-transformers embedding helpers
+│   ├── vectorstore.py        # Qdrant client + fastembed/ONNX embedding helpers
 │   └── nodes/
 │       ├── scanner.py        # Flash & Pro VLM nodes + image optimisation
 │       ├── registry.py       # Fuzzy registry match (early check + full lookup)
