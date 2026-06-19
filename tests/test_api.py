@@ -189,7 +189,7 @@ def _sse_events(resp) -> list[dict]:
     return events
 
 
-def test_scan_stream_emits_stage_partial_coach_then_complete(client):
+def test_scan_stream_emits_stage_coach_then_complete(client):
     resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/event-stream")
@@ -197,7 +197,6 @@ def test_scan_stream_emits_stage_partial_coach_then_complete(client):
     events = _sse_events(resp)
     kinds = [e["event"] for e in events]
     assert "stage" in kinds           # real per-node progress
-    assert "partial" in kinds         # partial ScanResponse as nodes finish
     assert "coach_delta" in kinds      # typewriter reveal of the coach card
     assert kinds[-1] == "complete"     # final full ScanResponse last
 
@@ -232,6 +231,22 @@ def test_scan_stream_without_user_does_not_save(client):
     resp = client.post("/scan/stream", files={"image": IMAGE})
     events = _sse_events(resp)
     assert events[-1]["data"]["added_product_id"] is None
+
+
+def test_scan_stream_surfaces_failures_as_error_not_silent_eof(client, monkeypatch):
+    # A failure in the graph must reach the client as an `error` frame, never a
+    # silent stream end (which the UI reports as "Stream ended without a result").
+    def _boom(inputs, config=None, stream_mode=None):
+        raise RuntimeError("worker exploded")
+
+    monkeypatch.setattr(service.graph_app, "stream", _boom)
+    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
+    assert resp.status_code == 200
+    events = _sse_events(resp)
+    kinds = [e["event"] for e in events]
+    assert "error" in kinds
+    assert "complete" not in kinds
+    assert "worker exploded" in events[-1]["message"]
 
 
 def test_scan_stream_validation_errors(client):

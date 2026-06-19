@@ -152,11 +152,10 @@ async def run_scan_stream(
     """Run the pipeline, yielding SSE frames as each node completes.
 
     Frames (one ``data:`` line each, JSON with an ``event`` field):
-      stage       — {node, step}                 per node (drives real progress)
-      partial     — {data: partial ScanResponse} per node (fields known so far)
-      coach_delta — {text}                       typewriter slices of the coach card
-      complete    — {data: full ScanResponse}    final
-      error       — {message}                    on failure
+      stage       — {node, step}              per node (drives real progress)
+      coach_delta — {text}                    typewriter slices of the coach card
+      complete    — {data: full ScanResponse} final
+      error       — {message}                 on any failure
     """
     user_profile = user_name = routine_products = None
     if user_id:
@@ -184,24 +183,24 @@ async def run_scan_stream(
     loop = asyncio.get_running_loop()
     sentinel = object()
 
-    async def producer() -> None:
-        def _run() -> None:
-            try:
-                for chunk in graph_app.stream(
-                    initial_state, config, stream_mode=["updates", "values"]
-                ):
-                    loop.call_soon_threadsafe(queue.put_nowait, chunk)
-            except Exception as exc:  # noqa: BLE001 — surfaced to the client
-                loop.call_soon_threadsafe(queue.put_nowait, ("__error__", exc))
-                return
-            loop.call_soon_threadsafe(queue.put_nowait, sentinel)
+    def _run() -> None:
+        try:
+            for chunk in graph_app.stream(
+                initial_state, config, stream_mode=["updates", "values"]
+            ):
+                loop.call_soon_threadsafe(queue.put_nowait, chunk)
+        except BaseException as exc:  # noqa: BLE001 — surface it, never end silently
+            loop.call_soon_threadsafe(queue.put_nowait, ("__error__", exc))
+            return
+        loop.call_soon_threadsafe(queue.put_nowait, sentinel)
 
-        await loop.run_in_executor(None, _run)
-
-    task = asyncio.create_task(producer())
+    task = asyncio.create_task(asyncio.to_thread(_run))
     last_state: dict = initial_state
-    prev_advice: Optional[str] = None
     try:
+        # Drain per-node graph events, emitting a `stage` frame for progress. The
+        # full accumulated state arrives on `values`; we keep the latest to build
+        # the final response (intermediate states aren't serialised — the UI only
+        # needs progress, the coach reveal, and the final result).
         while True:
             try:
                 item = await asyncio.wait_for(queue.get(), timeout=_KEEPALIVE_S)
@@ -215,31 +214,23 @@ async def run_scan_stream(
             if mode == "__error__":
                 yield _sse({"event": "error", "message": str(data)})
                 return
-            if mode == "updates":
-                # data is {node_name: update_dict}
-                for node_name in data.keys():
+            if mode == "updates":  # {node_name: update_dict}
+                for node_name in data:
                     step = _NODE_STEP.get(node_name)
                     if step is not None:
                         yield _sse({"event": "stage", "node": node_name, "step": step})
-            elif mode == "values":
-                # data is the full accumulated state after a superstep
+            elif mode == "values":  # full accumulated state after a superstep
                 last_state = data
-                yield _sse({
-                    "event": "partial",
-                    "data": _to_response(data, None).model_dump(mode="json"),
-                })
-                advice = _pick_advice(data, lang)
-                if advice and advice != prev_advice:
-                    prev_advice = advice
-                    for i in range(0, len(advice), _COACH_CHUNK_CHARS):
-                        yield _sse({
-                            "event": "coach_delta",
-                            "text": advice[i:i + _COACH_CHUNK_CHARS],
-                        })
-                        await asyncio.sleep(_COACH_CHUNK_DELAY)
 
-        # The graph finished; persist to the routine if asked, then send the
-        # final, complete ScanResponse (same shape as the /scan endpoint).
+        # The graph finished. Reveal the coach card with a typewriter, persist to
+        # the routine if asked, then send the final ScanResponse (same shape as
+        # /scan). The coach is the last node, so its card lives on `last_state`.
+        advice = _pick_advice(last_state, lang)
+        if advice:
+            for i in range(0, len(advice), _COACH_CHUNK_CHARS):
+                yield _sse({"event": "coach_delta", "text": advice[i:i + _COACH_CHUNK_CHARS]})
+                await asyncio.sleep(_COACH_CHUNK_DELAY)
+
         added_product_id = None
         if add_to_routine and user_id:
             try:
@@ -250,10 +241,13 @@ async def run_scan_stream(
             "event": "complete",
             "data": _to_response(last_state, added_product_id).model_dump(mode="json"),
         })
+    except Exception as exc:  # noqa: BLE001 — a failure here must not end silently
+        logging.exception("scan stream failed")
+        yield _sse({"event": "error", "message": str(exc)})
     finally:
         if not task.done():
             task.cancel()
             try:
                 await task
-            except Exception:  # noqa: BLE001
+            except BaseException:  # noqa: BLE001 — task is being torn down
                 pass

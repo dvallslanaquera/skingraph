@@ -160,7 +160,6 @@ export const api = {
     },
     cb: {
       onStage?: (step: number, node: string) => void;
-      onPartial?: (partial: ScanResponse) => void;
       onCoachDelta?: (text: string) => void;
     } = {},
   ): Promise<ScanResponse> {
@@ -188,7 +187,6 @@ async function readScanStream(
   init: RequestInit,
   cb: {
     onStage?: (step: number, node: string) => void;
-    onPartial?: (partial: ScanResponse) => void;
     onCoachDelta?: (text: string) => void;
   },
 ): Promise<ScanResponse> {
@@ -246,9 +244,6 @@ async function readScanStream(
       switch (evt.event) {
         case "stage":
           cb.onStage?.(evt.step as number, evt.node as string);
-          break;
-        case "partial":
-          cb.onPartial?.(evt.data as ScanResponse);
           break;
         case "coach_delta":
           cb.onCoachDelta?.(evt.text as string);

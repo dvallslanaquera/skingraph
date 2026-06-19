@@ -46,8 +46,14 @@ def get_model():
     if _model is None:
         with _model_lock:
             if _model is None:
+                import torch
                 from sentence_transformers import SentenceTransformer
 
+                # The deploy runs one worker on a single shared vCPU. Extra torch
+                # intra-op threads add per-thread memory and contention without
+                # speeding up encoding there, so cap to 1 to keep peak RSS down
+                # (the model load is the worker's memory high-water mark).
+                torch.set_num_threads(1)
                 logging.info("Loading embedding model: %s", EMBEDDING_MODEL)
                 _model = SentenceTransformer(EMBEDDING_MODEL)
     return _model
