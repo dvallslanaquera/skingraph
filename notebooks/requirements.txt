@@ -1,0 +1,11 @@
+# Blast Radius benchmark dependencies.
+# The oracle, context builder, and scoring are pure stdlib — these are only needed
+# for live model calls and the analysis notebook.
+
+anthropic>=0.49.0      # Claude Opus 4.8 (claude-opus-4-8)
+openai>=1.40.0         # GLM-5.2 via the OpenAI-compatible z.ai / Zhipu endpoint
+
+# Notebook + plots
+pandas>=2.0
+matplotlib>=3.7
+jupyter>=1.0
