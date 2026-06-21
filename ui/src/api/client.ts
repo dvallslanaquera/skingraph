@@ -108,8 +108,14 @@ export const api = {
     return request(`/users/${encodeURIComponent(userId)}/routine`);
   },
 
-  getRoutineDashboard(userId: string): Promise<RoutineDashboard> {
-    return request(`/users/${encodeURIComponent(userId)}/routine/dashboard`);
+  getRoutineDashboard(
+    userId: string,
+    lang?: "ja" | "en",
+  ): Promise<RoutineDashboard> {
+    const query = lang ? `?lang=${lang}` : "";
+    return request(
+      `/users/${encodeURIComponent(userId)}/routine/dashboard${query}`,
+    );
   },
 
   addRoutineProduct(

@@ -128,10 +128,16 @@ class RoutineProduct(BaseModel):
         None, description="best time to use: 'AM', 'PM', or 'AM & PM'"
     )
     # Short application/sequencing cautions (e.g. "apply to completely dry skin",
-    # "wait ~1 min before the next layer"), from the coach card.
+    # "wait ~1 min before the next layer"), from the coach card. Stored per language
+    # so the routine dashboard can show notes in the user's UI language; the legacy
+    # ``application_notes`` field is the English copy (older rows only have this one).
     application_notes: List[str] = Field(
         default_factory=list,
-        description="how-to-apply / sequencing notes for this product",
+        description="how-to-apply / sequencing notes for this product (English)",
+    )
+    application_notes_ja: List[str] = Field(
+        default_factory=list,
+        description="Japanese how-to-apply / sequencing notes for this product",
     )
     # Amortizable price info, looked up once at add-time (best-effort).
     price_usd: Optional[float] = Field(

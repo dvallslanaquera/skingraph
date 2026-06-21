@@ -22,7 +22,7 @@ import { useI18n } from "../i18n";
 import { formatMonthlyTotal, formatProductPrice } from "../i18n/strings";
 
 export function MyRoutine() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { currentUserId } = useUsers();
 
   const [dashboard, setDashboard] = useState<RoutineDashboard | null>(null);
@@ -30,17 +30,22 @@ export function MyRoutine() {
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
 
-  const load = useCallback(async (userId: string) => {
-    setLoading(true);
-    setError(null);
-    try {
-      setDashboard(await api.getRoutineDashboard(userId));
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  // `lang` is a dep so switching the UI language re-fetches the dashboard with
+  // per-product notes in the new language.
+  const load = useCallback(
+    async (userId: string) => {
+      setLoading(true);
+      setError(null);
+      try {
+        setDashboard(await api.getRoutineDashboard(userId, lang));
+      } catch (e) {
+        setError(e instanceof Error ? e.message : String(e));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [lang],
+  );
 
   useEffect(() => {
     if (currentUserId) void load(currentUserId);

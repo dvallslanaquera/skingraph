@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -270,8 +270,15 @@ def add_routine(
     response_model=schemas.RoutineDashboard,
     tags=["routine"],
 )
-def read_routine_dashboard(user_id: str) -> schemas.RoutineDashboard:
-    dashboard = build_dashboard(user_id)
+def read_routine_dashboard(
+    user_id: str,
+    lang: str = Query(
+        "en", description="UI language for per-product notes: 'ja' or 'en'."
+    ),
+) -> schemas.RoutineDashboard:
+    if lang not in ("ja", "en"):
+        raise HTTPException(422, "lang must be 'ja' or 'en'.")
+    dashboard = build_dashboard(user_id, lang)
     if dashboard is None:
         raise HTTPException(404, f"No user found with id: {user_id}")
     return schemas.RoutineDashboard(**dashboard)

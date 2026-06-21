@@ -50,7 +50,26 @@ export default function App() {
     <div className="app">
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">✦</span>
+          <span className="brand-mark" aria-hidden="true">
+            {/* leaf + cat-ear mark — matches the landing page (ui/index.html) */}
+            <svg viewBox="0 0 34 34" fill="none">
+              <circle cx="17" cy="17" r="17" fill="#e6f1ea" />
+              <path d="M9 24c0-8 6-14 16-15-1 10-7 16-16 15Z" fill="#6db48c" />
+              <path
+                d="M9 24 24 9"
+                stroke="#fff"
+                strokeWidth="1.4"
+                strokeLinecap="round"
+              />
+              <path
+                d="M21 11.5l1.6-3 1.4 3M11 21.5l-2.6.6 1.7-2.2"
+                stroke="#4e9e78"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </span>
           <div>
             <div className="brand-name">SkinGraph</div>
             <div className="brand-sub">{t("brand.sub")}</div>

@@ -86,12 +86,14 @@ h3,
 .brand-mark {
   width: 38px;
   height: 38px;
+  flex: none;
   display: grid;
   place-items: center;
-  border-radius: 11px;
-  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
-  color: #fff;
-  font-size: 18px;
+}
+
+.brand-mark svg {
+  width: 100%;
+  height: 100%;
 }
 
 .brand-name {
@@ -338,9 +340,92 @@ h3,
 }
 
 .field-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-soft);
+}
+
+/* "?" help affordance: the field explanation lives in a tooltip that reveals on
+   hover or keyboard focus, keeping the form uncluttered. */
+.help-tip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  cursor: help;
+}
+
+.help-tip-icon {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 700;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  transition: background 0.15s, color 0.15s;
+}
+
+.help-tip:hover .help-tip-icon,
+.help-tip:focus-visible .help-tip-icon {
+  background: var(--accent);
+  color: #fff;
+}
+
+.help-tip-bubble {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  z-index: 30;
+  width: max-content;
+  max-width: 250px;
+  padding: 9px 11px;
+  background: var(--surface);
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.5;
+  text-align: left;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s, transform 0.15s, visibility 0.15s;
+}
+
+.help-tip-bubble::before {
+  content: "";
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: var(--border);
+}
+
+.help-tip-bubble::after {
+  content: "";
+  position: absolute;
+  bottom: calc(100% - 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-bottom-color: var(--surface);
+}
+
+.help-tip:hover .help-tip-bubble,
+.help-tip:focus-within .help-tip-bubble {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
 }
 
 .text-input,
@@ -660,6 +745,12 @@ h3,
   align-items: center;
   gap: 12px;
   margin-left: auto;
+}
+
+.page-actions-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .saved-flag {
