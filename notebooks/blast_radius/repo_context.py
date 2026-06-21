@@ -36,6 +36,10 @@ def list_source_files(repo_root: Path | None = None) -> list[str]:
         check=True,
     )
     files = [line.strip() for line in out.stdout.splitlines() if line.strip()]
+    files = [
+        f for f in files
+        if not any(f.startswith(p) for p in config.EXCLUDE_PREFIXES)
+    ]
     return sorted(files)
 
 

@@ -110,12 +110,13 @@ jupyter notebook analysis.ipynb
 - **Opus 4.8** input/output pricing is built in ($5 / $25 per 1M tokens) and it
   **prompt-caches** the shared repo dump, so the 10 per-symbol calls reuse one cached
   prefix (cache reads bill ~0.1×).
-- **GLM-5.2** pricing is a **placeholder** (defaults to GLM-4.6-class public rates).
-  Ollama Cloud bills by subscription/usage, so per-token cost is only indicative —
-  treat the GLM cost bar as a rough guide. Set your real rate to override:
+- **GLM-5.2** pricing defaults to the GLM-5.2 Cloud API list rate ($1.40 / $4.40 per
+  1M input/output tokens). When the GLM run goes through Ollama Cloud (the default
+  provider), billing is by subscription/usage, so the per-token cost is only
+  indicative — treat the GLM cost bar as a rough guide. Override with your real rate:
   ```bash
-  export GLM_INPUT_PRICE=0.60     # USD per 1M input tokens
-  export GLM_OUTPUT_PRICE=2.20    # USD per 1M output tokens
+  export GLM_INPUT_PRICE=1.40     # USD per 1M input tokens
+  export GLM_OUTPUT_PRICE=4.40    # USD per 1M output tokens
   ```
 
 ## Methodology & fairness notes

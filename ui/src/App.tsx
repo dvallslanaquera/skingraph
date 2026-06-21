@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { Flag } from "./components/Flag";
 import { UserPicker } from "./components/UserPicker";
 import { useI18n, type Lang } from "./i18n";
 import { LANGS, STRINGS } from "./i18n/strings";
@@ -14,9 +15,36 @@ const NAV: { id: View; icon: string }[] = [
   { id: "check", icon: "📷" },
 ];
 
+const VIEWS = NAV.map((n) => n.id);
+
+// Each tab lives at its own hash URL (e.g. /app#routine), so tabs are
+// shareable/bookmarkable and the browser Back/Forward buttons move between them.
+// An unknown or missing hash (e.g. a bare /app from the landing page) falls back
+// to the Check tab.
+function viewFromHash(): View {
+  const hash = window.location.hash.replace(/^#/, "");
+  return VIEWS.includes(hash as View) ? (hash as View) : "check";
+}
+
 export default function App() {
   const { t, lang, setLang } = useI18n();
-  const [view, setView] = useState<View>("check");
+  const [view, setView] = useState<View>(viewFromHash);
+
+  useEffect(() => {
+    // Browser Back/Forward (and any manual hash edit) re-syncs the active tab.
+    const onHashChange = () => setView(viewFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    // Normalise a bare /app into /app#<tab> without adding a history entry.
+    if (!window.location.hash) {
+      window.history.replaceState(null, "", `#${view}`);
+    }
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  // Navigate by updating the hash; the hashchange listener above sets `view`.
+  const goTo = (next: View) => {
+    window.location.hash = next;
+  };
 
   return (
     <div className="app">
@@ -36,7 +64,7 @@ export default function App() {
             <button
               key={item.id}
               className={`nav-item${view === item.id ? " active" : ""}`}
-              onClick={() => setView(item.id)}
+              onClick={() => goTo(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
               <span className="nav-text">
@@ -56,6 +84,7 @@ export default function App() {
               aria-pressed={lang === l}
               onClick={() => setLang(l)}
             >
+              <Flag lang={l} />
               {STRINGS[l]["lang.name"]}
             </button>
           ))}

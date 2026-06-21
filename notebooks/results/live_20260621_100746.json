@@ -1,0 +1,32 @@
+{
+  "schema_version": 1,
+  "mode": "live",
+  "synthetic": false,
+  "generated_at": "2026-06-21T01:07:47.125934+00:00",
+  "repo": {
+    "n_files": 69,
+    "char_count": 523683,
+    "est_tokens": 141536
+  },
+  "symbols": [
+    "UserProfile"
+  ],
+  "oracle": {
+    "UserProfile": {
+      "files": 16,
+      "lines": 51
+    }
+  },
+  "models": {
+    "opus-4-8": {
+      "label": "Claude Opus 4.8",
+      "model_id": "claude-opus-4-8",
+      "skipped": "no_api_key"
+    },
+    "glm-5-2": {
+      "label": "GLM-5.2",
+      "model_id": "glm-5.2:cloud",
+      "skipped": "no_api_key"
+    }
+  }
+}

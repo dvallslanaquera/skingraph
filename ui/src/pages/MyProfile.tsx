@@ -159,7 +159,7 @@ export function MyProfile() {
                   placeholder={currentUser?.name ?? t("profile.displayName.placeholder")}
                 />
               </Field>
-              <Field label={t("profile.age")}>
+              <Field label={t("profile.age")} help={t("profile.age.help")}>
                 <input
                   className="text-input"
                   type="number"
@@ -174,7 +174,7 @@ export function MyProfile() {
               </Field>
             </div>
 
-            <FieldBlock label={t("profile.gender")}>
+            <FieldBlock label={t("profile.gender")} help={t("profile.gender.help")}>
               <div className="segmented" role="group" aria-label={t("profile.gender")}>
                 {GENDER_OPTIONS.map((g) => (
                   <button
@@ -238,7 +238,7 @@ export function MyProfile() {
             </FieldBlock>
 
             <div className="form-grid">
-              <Field label={t("profile.skinType")}>
+              <Field label={t("profile.skinType")} help={t("profile.skinType.help")}>
                 <Select
                   value={profile.skin_type ?? ""}
                   options={SKIN_TYPES}
@@ -248,7 +248,7 @@ export function MyProfile() {
                   }
                 />
               </Field>
-              <Field label={t("profile.sunDamage")}>
+              <Field label={t("profile.sunDamage")} help={t("profile.sunDamage.help")}>
                 <Select
                   value={profile.sun_damage_history ?? ""}
                   options={SUN_DAMAGE}
@@ -263,7 +263,7 @@ export function MyProfile() {
               </Field>
             </div>
 
-            <Field label={t("profile.goals")}>
+            <Field label={t("profile.goals")} help={t("profile.goals.help")}>
               <TagInput
                 values={profile.goals}
                 onChange={(v) => set("goals", v)}
@@ -273,7 +273,7 @@ export function MyProfile() {
               />
             </Field>
 
-            <Field label={t("profile.conditions")}>
+            <Field label={t("profile.conditions")} help={t("profile.conditions.help")}>
               <TagInput
                 values={profile.skin_conditions}
                 onChange={(v) => set("skin_conditions", v)}
@@ -287,7 +287,7 @@ export function MyProfile() {
           <section className="card">
             <h2 className="card-title">{t("profile.section.prefs")}</h2>
 
-            <FieldBlock label={t("profile.routineTime")}>
+            <FieldBlock label={t("profile.routineTime")} help={t("profile.routineTime.help")}>
               <div
                 className="routine-options"
                 role="group"
@@ -471,14 +471,17 @@ function RoutineCat({ kind }: { kind: "minimal" | "moderate" | "extensive" }) {
 
 function Field({
   label,
+  help,
   children,
 }: {
   label: string;
+  help?: string;
   children: React.ReactNode;
 }) {
   return (
     <label className="field">
       <span className="field-label">{label}</span>
+      {help && <span className="field-help">{help}</span>}
       {children}
     </label>
   );
@@ -488,14 +491,17 @@ function Field({
 // groups, sliders with help text) that shouldn't live inside a <label>.
 function FieldBlock({
   label,
+  help,
   children,
 }: {
   label: string;
+  help?: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="field">
       <span className="field-label">{label}</span>
+      {help && <span className="field-help">{help}</span>}
       {children}
     </div>
   );

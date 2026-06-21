@@ -6,7 +6,7 @@
     <title>SkinGraph — your gentle skincare reading coach</title>
     <meta
       name="description"
-      content="Snap a Japanese or Korean skincare label and SkinGraph reads it for you — checking what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading."
+      content="Snap any skincare label, in any language, and SkinGraph reads it for you — checking what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading."
     />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -242,6 +242,9 @@
         margin-left: 6px;
       }
       .lang button {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
         font: inherit;
         font-size: 13px;
         font-weight: 600;
@@ -252,6 +255,13 @@
         border-radius: var(--radius-pill);
         cursor: pointer;
         transition: color 0.15s, background 0.15s;
+      }
+      .lang .flag {
+        width: 18px;
+        height: 13px;
+        border-radius: 2px;
+        flex: none;
+        box-shadow: 0 0 0 1px rgba(44, 58, 50, 0.1);
       }
       .lang button.on {
         background: var(--leaf-soft);
@@ -1116,8 +1126,27 @@
           <a class="nav-link" href="#harmony" data-i18n="nav.harmony">Safety</a>
 
           <span class="lang" role="group" aria-label="Language">
-            <button type="button" data-lang="en" class="on">EN</button>
-            <button type="button" data-lang="ja" lang="ja">日本語</button>
+            <button type="button" data-lang="en">
+              <svg class="flag" viewBox="0 0 20 14" aria-hidden="true">
+                <rect x="0" y="0" width="10" height="14" fill="#012169" />
+                <path d="M0 0 10 14 M10 0 0 14" stroke="#fff" stroke-width="2.4" />
+                <path d="M0 0 10 14 M10 0 0 14" stroke="#c8102e" stroke-width="1" />
+                <path d="M5 0V14 M0 7H10" stroke="#fff" stroke-width="3" />
+                <path d="M5 0V14 M0 7H10" stroke="#c8102e" stroke-width="1.6" />
+                <rect x="10" y="0" width="10" height="14" fill="#fff" />
+                <g fill="#b31942"><rect x="10" y="0" width="10" height="2" /><rect x="10" y="4" width="10" height="2" /><rect x="10" y="8" width="10" height="2" /><rect x="10" y="12" width="10" height="2" /></g>
+                <rect x="10" y="0" width="5.6" height="7" fill="#0a3161" />
+                <g fill="#fff"><circle cx="11.4" cy="1.7" r="0.5" /><circle cx="13" cy="1.7" r="0.5" /><circle cx="14.4" cy="1.7" r="0.5" /><circle cx="12.2" cy="3.5" r="0.5" /><circle cx="13.8" cy="3.5" r="0.5" /><circle cx="11.4" cy="5.3" r="0.5" /><circle cx="13" cy="5.3" r="0.5" /><circle cx="14.4" cy="5.3" r="0.5" /></g>
+              </svg>
+              EN
+            </button>
+            <button type="button" data-lang="ja" lang="ja">
+              <svg class="flag" viewBox="0 0 20 14" aria-hidden="true">
+                <rect width="20" height="14" fill="#fff" />
+                <circle cx="10" cy="7" r="3.6" fill="#bc002d" />
+              </svg>
+              日本語
+            </button>
           </span>
 
           <span class="nav-cta-wrap">
@@ -1132,13 +1161,13 @@
       <section class="hero">
         <div class="wrap hero-grid">
           <div class="hero-copy">
-            <p class="eyebrow" data-i18n="hero.eyebrow">Japan &amp; Korea skincare, read for you</p>
+            <p class="eyebrow" data-i18n="hero.eyebrow">Skincare labels, read for you — in any language</p>
             <h1>
               <span data-i18n="hero.title1">Every label,</span><br />
               <span class="soft" data-i18n="hero.title2">read with care.</span>
             </h1>
             <p class="hero-sub" data-i18n="hero.sub">
-              Snap a Japanese or Korean skincare label and SkinGraph reads it for
+              Snap any skincare label, in any language, and SkinGraph reads it for
               you — what's safe, what fits your routine, and how to use it. Your
               calm, plant-loving coach does the reading.
             </p>
@@ -1150,7 +1179,7 @@
               <a class="btn btn-ghost" href="#how" data-i18n="cta.how">See how it works</a>
             </div>
             <ul class="hero-trust">
-              <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust1">Made for J- &amp; K-beauty</span></li>
+              <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust1">Any label, any language</span></li>
               <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust2">Pregnancy-aware</span></li>
               <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust3">Advice in 日本語 + English</span></li>
             </ul>
@@ -1252,7 +1281,7 @@
               </div>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>
               <h3 data-i18n="how.s1t">Snap the label</h3>
-              <p data-i18n="how.s1b">Front or back, Japanese or Korean — even with glare, curved bottles, or tiny embossed print.</p>
+              <p data-i18n="how.s1b">Front or back, in any language — even with glare, curved bottles, or tiny embossed print.</p>
             </article>
 
             <article class="step reveal d1">
@@ -1262,7 +1291,7 @@
               </div>
               <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="2.5"/></svg>
               <h3 data-i18n="how.s2t">We read &amp; check</h3>
-              <p data-i18n="how.s2b">SkinGraph turns the label into a clean ingredient list and checks every one against your skin and your shelf.</p>
+              <p data-i18n="how.s2b">SkinGraph works on any skincare product — turning its label into a clean ingredient list and checking every one against your skin and your shelf.</p>
             </article>
 
             <article class="step reveal d2">
@@ -1284,11 +1313,11 @@
           <div class="coach-copy reveal">
             <p class="eyebrow" data-i18n="coach.eyebrow">Your coach</p>
             <h2 data-i18n="coach.title">Honest advice, gently given.</h2>
-            <p data-i18n="coach.sub">Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — and never pushes you to buy.</p>
+            <p data-i18n="coach.sub">Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — weighing your budget, your time, and the products you already own, and never pushing you to buy.</p>
             <ul class="coach-traits">
               <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t1b">Speaks your language.</b> <span data-i18n="coach.t1r">Every verdict in 日本語 or English, your choice.</span></span></li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t2b">Knows your skin.</b> <span data-i18n="coach.t2r">Your type, goals, and pregnancy status shape the advice.</span></span></li>
-              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t3b">Watches your whole shelf.</b> <span data-i18n="coach.t3r">Flags conflicts and overlaps with what you already use.</span></span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t2b">Knows your skin and your limits.</b> <span data-i18n="coach.t2r">Your skin type and goals — plus the time and budget you actually have — shape every tip.</span></span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t3b">Builds on what you own.</b> <span data-i18n="coach.t3r">It reads the products already in your routine, flagging conflicts and overlaps instead of selling you more.</span></span></li>
             </ul>
           </div>
 
@@ -1329,11 +1358,12 @@
           <div class="reveal">
             <p class="eyebrow" data-i18n="harm.eyebrow">Calm &amp; careful</p>
             <h2><span class="care" data-i18n="harm.t1">Gentle with you.</span><br /><span class="strict" data-i18n="harm.t2">Strict on safety.</span></h2>
-            <p data-i18n="harm.body">The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, and pregnancy flags are decided the same careful way every time.</p>
+            <p data-i18n="harm.body">The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, pregnancy flags, and any skin conditions or illnesses you've noted are weighed the same careful way every time.</p>
             <ul class="reassure">
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r1">No guessing on safety</span></li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r2">Pregnancy-aware</span></li>
               <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r3">JCIA-standard names</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r4">Conditions &amp; illnesses weighed</span></li>
             </ul>
           </div>
 
@@ -1429,12 +1459,12 @@
           "cta.try": "Try a scan",
           "cta.how": "See how it works",
 
-          "hero.eyebrow": "Japan & Korea skincare, read for you",
+          "hero.eyebrow": "Skincare labels, read for you — in any language",
           "hero.title1": "Every label,",
           "hero.title2": "read with care.",
           "hero.sub":
-            "Snap a Japanese or Korean skincare label and SkinGraph reads it for you — what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading.",
-          "hero.trust1": "Made for J- & K-beauty",
+            "Snap any skincare label, in any language, and SkinGraph reads it for you — what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading.",
+          "hero.trust1": "Any label, any language",
           "hero.trust2": "Pregnancy-aware",
           "hero.trust3": "Advice in 日本語 + English",
 
@@ -1455,10 +1485,10 @@
             "No ingredient dictionaries, no guesswork on your side. Point your camera and let the coach do the careful part.",
           "how.s1t": "Snap the label",
           "how.s1b":
-            "Front or back, Japanese or Korean — even with glare, curved bottles, or tiny embossed print.",
+            "Front or back, in any language — even with glare, curved bottles, or tiny embossed print.",
           "how.s2t": "We read & check",
           "how.s2b":
-            "SkinGraph turns the label into a clean ingredient list and checks every one against your skin and your shelf.",
+            "SkinGraph works on any skincare product — turning its label into a clean ingredient list and checking every one against your skin and your shelf.",
           "how.s3t": "Your coach advises",
           "how.s3b":
             "A leaf score and honest, gentle advice in Japanese or English — what to love, and what to keep an eye on.",
@@ -1466,13 +1496,13 @@
           "coach.eyebrow": "Your coach",
           "coach.title": "Honest advice, gently given.",
           "coach.sub":
-            "Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — and never pushes you to buy.",
+            "Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — weighing your budget, your time, and the products you already own, and never pushing you to buy.",
           "coach.t1b": "Speaks your language.",
           "coach.t1r": "Every verdict in 日本語 or English, your choice.",
-          "coach.t2b": "Knows your skin.",
-          "coach.t2r": "Your type, goals, and pregnancy status shape the advice.",
-          "coach.t3b": "Watches your whole shelf.",
-          "coach.t3r": "Flags conflicts and overlaps with what you already use.",
+          "coach.t2b": "Knows your skin and your limits.",
+          "coach.t2r": "Your skin type and goals — plus the time and budget you actually have — shape every tip.",
+          "coach.t3b": "Builds on what you own.",
+          "coach.t3r": "It reads the products already in your routine, flagging conflicts and overlaps instead of selling you more.",
           "coach.name": "Your SkinGraph coach",
           "coach.re": "on · COSRX Advanced Snail 96",
           "coach.badge": "4 / 5 leaves",
@@ -1488,10 +1518,11 @@
           "harm.t1": "Gentle with you.",
           "harm.t2": "Strict on safety.",
           "harm.body":
-            "The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, and pregnancy flags are decided the same careful way every time.",
+            "The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, pregnancy flags, and any skin conditions or illnesses you've noted are weighed the same careful way every time.",
           "harm.r1": "No guessing on safety",
           "harm.r2": "Pregnancy-aware",
           "harm.r3": "JCIA-standard names",
+          "harm.r4": "Conditions & illnesses weighed",
 
           "final.eyebrow": "Ready when your skin is",
           "final.title": "Find your harmony.",
@@ -1509,12 +1540,12 @@
           "cta.try": "スキャンを試す",
           "cta.how": "使い方を見る",
 
-          "hero.eyebrow": "日本・韓国コスメを、あなたのために解読",
+          "hero.eyebrow": "スキンケアのラベルを、どんな言語でも解読",
           "hero.title1": "すべてのラベルを、",
           "hero.title2": "ていねいに。",
           "hero.sub":
-            "日本や韓国のスキンケアのラベルを撮るだけ。SkinGraphがあなたの肌に合わせて、安全性・ルーティンとの相性・使い方を読み解きます。植物好きのおだやかなコーチにおまかせ。",
-          "hero.trust1": "日本・韓国コスメ向け",
+            "どんな言語のスキンケアのラベルでも撮るだけ。SkinGraphがあなたの肌に合わせて、安全性・ルーティンとの相性・使い方を読み解きます。植物好きのおだやかなコーチにおまかせ。",
+          "hero.trust1": "どの言語のラベルもOK",
           "hero.trust2": "妊娠中にも配慮",
           "hero.trust3": "日本語・英語でアドバイス",
 
@@ -1535,10 +1566,10 @@
             "成分の辞書も、むずかしい判断もいりません。カメラを向けるだけ。ていねいな部分はコーチにおまかせ。",
           "how.s1t": "ラベルを撮る",
           "how.s1b":
-            "表でも裏でも、日本語でも韓国語でも。グレアや曲面ボトル、小さな刻印文字もОК。",
+            "表でも裏でも、どんな言語でも。グレアや曲面ボトル、小さな刻印文字もОК。",
           "how.s2t": "読んで、チェック",
           "how.s2b":
-            "ラベルをきれいな成分リストに変換し、ひとつずつあなたの肌と棚の製品に照らし合わせます。",
+            "どんなスキンケア製品にも対応。ラベルをきれいな成分リストに変換し、ひとつずつあなたの肌と棚の製品に照らし合わせます。",
           "how.s3t": "コーチがアドバイス",
           "how.s3b":
             "葉のスコアと、ホンネのやさしいアドバイスを日本語か英語で。いいところも、気をつけたいところも。",
@@ -1546,13 +1577,13 @@
           "coach.eyebrow": "あなたのコーチ",
           "coach.title": "ホンネを、やさしく。",
           "coach.sub":
-            "SkinGraphコーチは、植物が大好きなおだやかな案内役。ラベルを代わりに読み解き、無理にすすめたりしません。",
+            "SkinGraphコーチは、植物が大好きなおだやかな案内役。あなたの予算・時間・いま持っているアイテムまで考えて、ラベルを代わりに読み解きます。無理にすすめたりしません。",
           "coach.t1b": "あなたの言葉で。",
           "coach.t1r": "アドバイスは日本語でも英語でも、お好みのほうで。",
-          "coach.t2b": "あなたの肌を知っている。",
-          "coach.t2r": "肌タイプ・目標・妊娠の状況に合わせて判断します。",
-          "coach.t3b": "棚ぜんたいを見ている。",
-          "coach.t3r": "今使っているアイテムとの競合や重複を教えます。",
+          "coach.t2b": "あなたの肌と事情を理解。",
+          "coach.t2r": "肌タイプや目標に加え、使える時間と予算に合わせてアドバイスします。",
+          "coach.t3b": "今あるものを活かす。",
+          "coach.t3r": "今のルーティンの製品を読み取り、競合や重複を指摘。むやみにすすめません。",
           "coach.name": "SkinGraphコーチ",
           "coach.re": "対象 · COSRX アドバンスド スネイル 96",
           "coach.badge": "葉 4 / 5",
@@ -1568,10 +1599,11 @@
           "harm.t1": "あなたにはやさしく。",
           "harm.t2": "安全にはきびしく。",
           "harm.body":
-            "楽しい部分 — グレアだらけの読みにくいラベルを読むこと — には賢いAIを。けれど、あなたの肌に触れる部分は、推測ではなく決まったルールで毎回ていねいに判定します。競合・注意成分・妊娠中のフラグも、いつも同じ慎重さで。",
+            "楽しい部分 — グレアだらけの読みにくいラベルを読むこと — には賢いAIを。けれど、あなたの肌に触れる部分は、推測ではなく決まったルールで毎回ていねいに判定します。競合・注意成分・妊娠中のフラグ、そして登録された肌の症状や持病も、いつも同じ慎重さで考慮します。",
           "harm.r1": "安全性は推測しない",
           "harm.r2": "妊娠中にも配慮",
           "harm.r3": "JCIA基準の成分名",
+          "harm.r4": "症状・持病も考慮",
 
           "final.eyebrow": "あなたの肌の準備ができたら",
           "final.title": "あなたの調和を見つけよう。",
@@ -1603,10 +1635,11 @@
         b.addEventListener("click", () => setLang(b.dataset.lang))
       );
 
-      let saved = "en";
+      // Japanese is the default; an explicit stored choice still wins.
+      let saved = "ja";
       try {
         const stored = localStorage.getItem("sg-lang");
-        saved = stored || ((navigator.language || "").startsWith("ja") ? "ja" : "en");
+        saved = stored || "ja";
       } catch (e) {}
       setLang(saved);
 

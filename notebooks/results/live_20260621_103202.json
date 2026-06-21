@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "mode": "live",
+  "synthetic": false,
+  "generated_at": "2026-06-21T01:32:30.460173+00:00",
+  "repo": {
+    "n_files": 61,
+    "char_count": 477685,
+    "est_tokens": 129104
+  },
+  "symbols": [
+    "UserProfile"
+  ],
+  "oracle": {
+    "UserProfile": {
+      "files": 13,
+      "lines": 48
+    }
+  },
+  "models": {
+    "opus-4-8": {
+      "label": "Claude Opus 4.8",
+      "model_id": "claude-opus-4-8",
+      "per_symbol": [
+        {
+          "symbol": "UserProfile",
+          "oracle_files": 13,
+          "oracle_lines": 48,
+          "file": {
+            "precision": 0.9,
+            "recall": 0.6923,
+            "f1": 0.7826,
+            "tp": 9,
+            "fp": 1,
+            "fn": 4,
+            "n_pred": 10,
+            "n_truth": 13
+          },
+          "line": {
+            "precision": 0.9444,
+            "recall": 0.7083,
+            "f1": 0.8095,
+            "tp": 34,
+            "fp": 2,
+            "fn": 14,
+            "n_pred": 36,
+            "n_truth": 48
+          },
+          "n_pred": 36,
+          "latency_s": 11.114,
+          "input_tokens": 200,
+          "output_tokens": 905,
+          "cache_read_tokens": 0,
+          "cost_usd": 1.276925,
+          "error": null
+        }
+      ],
+      "aggregate": {
+        "file": {
+          "macro": {
+            "precision": 0.9,
+            "recall": 0.6923,
+            "f1": 0.7826,
+            "tp": 9,
+            "fp": 1,
+            "fn": 4,
+            "n_pred": 10,
+            "n_truth": 13
+          },
+          "micro": {
+            "precision": 0.9,
+            "recall": 0.6923,
+            "f1": 0.7826,
+            "tp": 9,
+            "fp": 1,
+            "fn": 4,
+            "n_pred": 10,
+            "n_truth": 13
+          }
+        },
+        "line": {
+          "macro": {
+            "precision": 0.9444,
+            "recall": 0.7083,
+            "f1": 0.8095,
+            "tp": 34,
+            "fp": 2,
+            "fn": 14,
+            "n_pred": 36,
+            "n_truth": 48
+          },
+          "micro": {
+            "precision": 0.9444,
+            "recall": 0.7083,
+            "f1": 0.8095,
+            "tp": 34,
+            "fp": 2,
+            "fn": 14,
+            "n_pred": 36,
+            "n_truth": 48
+          }
+        },
+        "latency_s_mean": 11.114,
+        "total_cost_usd": 1.276925,
+        "total_input_tokens": 200,
+        "total_output_tokens": 905,
+        "n_errors": 0
+      }
+    },
+    "glm-5-2": {
+      "label": "GLM-5.2",
+      "model_id": "glm-5.2:cloud",
+      "per_symbol": [
+        {
+          "symbol": "UserProfile",
+          "oracle_files": 13,
+          "oracle_lines": 48,
+          "file": {
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96,
+            "tp": 12,
+            "fp": 0,
+            "fn": 1,
+            "n_pred": 12,
+            "n_truth": 13
+          },
+          "line": {
+            "precision": 0.9512,
+            "recall": 0.8125,
+            "f1": 0.8764,
+            "tp": 39,
+            "fp": 2,
+            "fn": 9,
+            "n_pred": 41,
+            "n_truth": 48
+          },
+          "n_pred": 41,
+          "latency_s": 12.622,
+          "input_tokens": 141380,
+          "output_tokens": 724,
+          "cache_read_tokens": 0,
+          "cost_usd": 0.086421,
+          "error": null
+        }
+      ],
+      "aggregate": {
+        "file": {
+          "macro": {
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96,
+            "tp": 12,
+            "fp": 0,
+            "fn": 1,
+            "n_pred": 12,
+            "n_truth": 13
+          },
+          "micro": {
+            "precision": 1.0,
+            "recall": 0.9231,
+            "f1": 0.96,
+            "tp": 12,
+            "fp": 0,
+            "fn": 1,
+            "n_pred": 12,
+            "n_truth": 13
+          }
+        },
+        "line": {
+          "macro": {
+            "precision": 0.9512,
+            "recall": 0.8125,
+            "f1": 0.8764,
+            "tp": 39,
+            "fp": 2,
+            "fn": 9,
+            "n_pred": 41,
+            "n_truth": 48
+          },
+          "micro": {
+            "precision": 0.9512,
+            "recall": 0.8125,
+            "f1": 0.8764,
+            "tp": 39,
+            "fp": 2,
+            "fn": 9,
+            "n_pred": 41,
+            "n_truth": 48
+          }
+        },
+        "latency_s_mean": 12.622,
+        "total_cost_usd": 0.086421,
+        "total_input_tokens": 141380,
+        "total_output_tokens": 724,
+        "n_errors": 0
+      }
+    }
+  }
+}
