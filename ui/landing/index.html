@@ -1,0 +1,1669 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SkinGraph — your gentle skincare reading coach</title>
+    <meta
+      name="description"
+      content="Snap a Japanese or Korean skincare label and SkinGraph reads it for you — checking what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading."
+    />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* ===========================================================
+         SkinGraph landing — "dewy botanical, with a cat"
+         Palette derived from K-/J-beauty glass-skin + plants + cats.
+         One signature: the cat coach reading a label into a leaf score.
+         =========================================================== */
+
+      :root {
+        --bg: #f4f7f4; /* clean cool-green white — hygiene, not beige */
+        --surface: #ffffff;
+        --surface-soft: #fbfcfb;
+        --ink: #2c3a32; /* soft deep-green charcoal */
+        --ink-soft: #5d6c62;
+        --mute: #9aa69e;
+        --line: #e4ebe5;
+        --line-soft: #eef3ef;
+
+        --leaf: #6db48c; /* young-leaf green — the brand */
+        --leaf-deep: #4e9e78;
+        --leaf-soft: #e6f1ea;
+        --leaf-mist: #f0f7f2;
+
+        --blossom: #ee9e92; /* soft coral — warmth + the cat's nose */
+        --blossom-deep: #d97c6e;
+        --blossom-soft: #fceae6;
+
+        --lilac: #cfc6ec; /* harmony whisper — used sparingly */
+        --lilac-soft: #f2eefb;
+
+        --radius: 26px;
+        --radius-sm: 16px;
+        --radius-pill: 999px;
+        --shadow-soft: 0 2px 8px rgba(76, 110, 90, 0.05),
+          0 18px 44px rgba(76, 110, 90, 0.08);
+        --shadow-lift: 0 4px 14px rgba(76, 110, 90, 0.08),
+          0 30px 70px rgba(76, 110, 90, 0.12);
+        --ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        scroll-behavior: smooth;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Hanken Grotesk", "Zen Maru Gothic", system-ui, sans-serif;
+        font-size: 17px;
+        line-height: 1.62;
+        -webkit-font-smoothing: antialiased;
+        text-rendering: optimizeLegibility;
+        overflow-x: hidden;
+      }
+
+      /* Japanese reads in the rounded Zen Maru face for warmth/harmony. */
+      :lang(ja),
+      .jp {
+        font-family: "Zen Maru Gothic", "Hanken Grotesk", sans-serif;
+      }
+
+      h1,
+      h2,
+      h3,
+      .wordmark,
+      .display {
+        font-family: "Zen Maru Gothic", "Hanken Grotesk", sans-serif;
+        font-weight: 700;
+        letter-spacing: 0.005em;
+        line-height: 1.18;
+        margin: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+
+      img,
+      svg {
+        display: block;
+      }
+
+      ::selection {
+        background: var(--leaf-soft);
+      }
+
+      :focus-visible {
+        outline: 2.5px solid var(--leaf-deep);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+
+      .wrap {
+        width: min(1120px, 100% - 48px);
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0 0 18px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--leaf-deep);
+      }
+      .eyebrow::before {
+        content: "";
+        width: 18px;
+        height: 1.5px;
+        border-radius: 2px;
+        background: var(--leaf);
+      }
+
+      .section {
+        padding: 86px 0;
+      }
+
+      /* ---- buttons ---------------------------------------------------- */
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font: inherit;
+        font-weight: 600;
+        padding: 13px 24px;
+        border-radius: var(--radius-pill);
+        border: 1.5px solid transparent;
+        cursor: pointer;
+        text-decoration: none;
+        transition: transform 0.2s var(--ease), background 0.2s var(--ease),
+          box-shadow 0.2s var(--ease), border-color 0.2s var(--ease);
+      }
+      .btn-primary {
+        background: var(--leaf);
+        color: #fff;
+        box-shadow: 0 8px 20px rgba(109, 180, 140, 0.32);
+      }
+      .btn-primary:hover {
+        background: var(--leaf-deep);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 26px rgba(78, 158, 120, 0.36);
+      }
+      .btn-ghost {
+        background: transparent;
+        border-color: var(--line);
+        color: var(--ink);
+      }
+      .btn-ghost:hover {
+        border-color: var(--leaf);
+        color: var(--leaf-deep);
+        background: var(--surface);
+        transform: translateY(-2px);
+      }
+      .btn svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* ---- top nav ---------------------------------------------------- */
+
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        backdrop-filter: saturate(1.4) blur(10px);
+        background: rgba(244, 247, 244, 0.78);
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.3s, background 0.3s;
+      }
+      .nav.scrolled {
+        border-bottom-color: var(--line);
+      }
+      .nav-inner {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        height: 70px;
+      }
+      .wordmark {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 21px;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .wordmark .mark {
+        width: 34px;
+        height: 34px;
+      }
+      .nav-links {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .nav-link {
+        padding: 8px 12px;
+        border-radius: var(--radius-pill);
+        text-decoration: none;
+        color: var(--ink-soft);
+        font-weight: 500;
+        font-size: 15px;
+        transition: color 0.15s, background 0.15s;
+      }
+      .nav-link:hover {
+        color: var(--ink);
+        background: var(--leaf-mist);
+      }
+      .lang {
+        display: inline-flex;
+        padding: 3px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-pill);
+        margin-left: 6px;
+      }
+      .lang button {
+        font: inherit;
+        font-size: 13px;
+        font-weight: 600;
+        border: none;
+        background: transparent;
+        color: var(--mute);
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        cursor: pointer;
+        transition: color 0.15s, background 0.15s;
+      }
+      .lang button.on {
+        background: var(--leaf-soft);
+        color: var(--leaf-deep);
+      }
+      .nav .btn {
+        padding: 10px 18px;
+      }
+      .nav-cta-wrap {
+        margin-left: 6px;
+      }
+
+      /* ---- hero ------------------------------------------------------- */
+
+      .hero {
+        position: relative;
+        padding: 56px 0 74px;
+        overflow: hidden;
+      }
+      /* soft dewy bloom behind the hero */
+      .hero::before,
+      .hero::after {
+        content: "";
+        position: absolute;
+        border-radius: 50%;
+        filter: blur(70px);
+        opacity: 0.55;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .hero::before {
+        width: 520px;
+        height: 520px;
+        top: -180px;
+        right: -120px;
+        background: radial-gradient(circle, var(--leaf-soft), transparent 70%);
+      }
+      .hero::after {
+        width: 460px;
+        height: 460px;
+        bottom: -200px;
+        left: -160px;
+        background: radial-gradient(circle, var(--lilac-soft), transparent 70%);
+      }
+
+      .hero-grid {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: 56px;
+        align-items: center;
+      }
+
+      .hero h1 {
+        font-size: clamp(2.5rem, 5.2vw, 4.05rem);
+        letter-spacing: -0.01em;
+      }
+      .hero h1 .soft {
+        color: var(--leaf-deep);
+      }
+      .hero-sub {
+        margin: 22px 0 30px;
+        font-size: 18px;
+        color: var(--ink-soft);
+        max-width: 40ch;
+      }
+      .hero-cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        align-items: center;
+      }
+      .hero-trust {
+        margin: 30px 0 0;
+        padding: 0;
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 18px;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .hero-trust li {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+      }
+      .hero-trust .leaf-tick {
+        width: 16px;
+        height: 16px;
+        color: var(--leaf);
+        flex: none;
+      }
+
+      /* ---- signature: the scan card + cat coach ----------------------- */
+
+      .scene {
+        position: relative;
+      }
+
+      .scan-card {
+        position: relative;
+        z-index: 2;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-lift);
+        padding: 18px;
+      }
+
+      .scan-head {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        padding: 2px 4px 14px;
+        color: var(--mute);
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .scan-head .dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--leaf);
+        box-shadow: 0 0 0 4px var(--leaf-soft);
+      }
+
+      .scan-body {
+        display: grid;
+        grid-template-columns: 0.86fr 1fr;
+        gap: 14px;
+      }
+
+      /* the label thumbnail being read */
+      .label {
+        position: relative;
+        overflow: hidden;
+        border-radius: var(--radius-sm);
+        background: linear-gradient(160deg, #fff 0%, #f5faf6 100%);
+        border: 1px solid var(--line-soft);
+        padding: 16px 14px;
+        min-height: 232px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .label-brand {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--leaf-deep);
+        font-weight: 700;
+      }
+      .label-name {
+        font-family: "Zen Maru Gothic", sans-serif;
+        font-weight: 700;
+        font-size: 17px;
+        line-height: 1.3;
+        color: var(--ink);
+      }
+      .label-rule {
+        height: 1px;
+        background: var(--line-soft);
+        margin: 2px 0 4px;
+      }
+      .label-ings {
+        font-size: 11.5px;
+        line-height: 1.85;
+        color: #9eb3a4;
+        word-break: break-all;
+      }
+      .label-cap {
+        margin-top: auto;
+        font-size: 10.5px;
+        letter-spacing: 0.04em;
+        color: var(--mute);
+      }
+      /* specular glare drifting across the label */
+      .label .glare {
+        position: absolute;
+        inset: -40% -10%;
+        background: linear-gradient(
+          115deg,
+          transparent 38%,
+          rgba(255, 255, 255, 0.72) 50%,
+          transparent 62%
+        );
+        transform: translateX(-30%);
+        animation: glare 7s var(--ease) infinite;
+        pointer-events: none;
+      }
+      @keyframes glare {
+        0%,
+        62%,
+        100% {
+          transform: translateX(-60%);
+          opacity: 0;
+        }
+        12%,
+        46% {
+          opacity: 0.9;
+        }
+        46.001% {
+          transform: translateX(60%);
+        }
+      }
+      /* the gentle scan light sweeping down */
+      .label .sweep {
+        position: absolute;
+        left: 0;
+        right: 0;
+        height: 64px;
+        top: -64px;
+        background: linear-gradient(
+          to bottom,
+          transparent,
+          rgba(109, 180, 140, 0.16) 60%,
+          rgba(109, 180, 140, 0.42)
+        );
+        border-bottom: 2px solid var(--leaf);
+        box-shadow: 0 0 18px rgba(109, 180, 140, 0.5);
+        animation: sweep 4.2s var(--ease) infinite;
+        pointer-events: none;
+      }
+      @keyframes sweep {
+        0% {
+          top: -64px;
+          opacity: 0;
+        }
+        12% {
+          opacity: 1;
+        }
+        72% {
+          opacity: 1;
+        }
+        86%,
+        100% {
+          top: 100%;
+          opacity: 0;
+        }
+      }
+
+      /* the result the coach gives back */
+      .result {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .score {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .score-leaves {
+        display: inline-flex;
+        gap: 4px;
+      }
+      .score-leaves .leaf {
+        width: 26px;
+        height: 26px;
+        color: var(--line);
+        transition: color 0.4s var(--ease), transform 0.4s var(--ease);
+      }
+      .score-leaves .leaf.on {
+        color: var(--leaf);
+      }
+      .score-label {
+        font-size: 13px;
+        color: var(--ink-soft);
+      }
+      .score-label b {
+        color: var(--ink);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 5px 10px;
+        border-radius: var(--radius-pill);
+      }
+      .chip svg {
+        width: 13px;
+        height: 13px;
+      }
+      .chip.good {
+        background: var(--leaf-soft);
+        color: var(--leaf-deep);
+      }
+      .chip.care {
+        background: var(--blossom-soft);
+        color: var(--blossom-deep);
+      }
+      .chip.note {
+        background: var(--lilac-soft);
+        color: #7a6aa8;
+      }
+
+      /* the coach quote, from the cat */
+      .coach-quote {
+        margin-top: 2px;
+        background: var(--leaf-mist);
+        border-radius: var(--radius-sm);
+        padding: 12px 13px;
+        font-size: 13.5px;
+        line-height: 1.55;
+        color: var(--ink);
+      }
+      .coach-quote .by {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 8px;
+        font-size: 12px;
+        color: var(--ink-soft);
+      }
+      .coach-quote .by .cat-chip {
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        display: grid;
+        place-items: center;
+        color: var(--ink);
+      }
+      .coach-quote .by .cat-chip svg {
+        width: 15px;
+        height: 15px;
+      }
+
+      /* the cat, peeking from leaves behind the card */
+      .cat-peek {
+        position: absolute;
+        z-index: 1;
+        right: -14px;
+        top: -64px;
+        width: 150px;
+        height: 150px;
+        color: var(--ink);
+        filter: drop-shadow(0 8px 16px rgba(76, 110, 90, 0.12));
+      }
+      .leaf-spray {
+        position: absolute;
+        z-index: 1;
+        color: var(--leaf);
+      }
+      .leaf-spray.tl {
+        left: -38px;
+        bottom: -26px;
+        width: 130px;
+        opacity: 0.9;
+        transform: rotate(-8deg);
+      }
+      .leaf-spray.br {
+        right: -30px;
+        bottom: 30px;
+        width: 92px;
+        opacity: 0.65;
+        transform: rotate(150deg);
+      }
+
+      /* ---- how it works ----------------------------------------------- */
+
+      .steps-head {
+        max-width: 620px;
+        margin-bottom: 44px;
+      }
+      .steps-head h2 {
+        font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+      }
+      .steps-head p {
+        margin: 14px 0 0;
+        color: var(--ink-soft);
+        font-size: 18px;
+      }
+      .steps {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+      .step {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 28px 26px 30px;
+        transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease),
+          border-color 0.25s var(--ease);
+      }
+      .step:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-soft);
+        border-color: var(--leaf-soft);
+      }
+      .step-leaf {
+        position: relative;
+        width: 52px;
+        height: 52px;
+        display: grid;
+        place-items: center;
+        margin-bottom: 20px;
+        color: var(--leaf-deep);
+      }
+      .step-leaf .bg {
+        position: absolute;
+        inset: 0;
+        color: var(--leaf-soft);
+      }
+      .step-leaf .num {
+        position: relative;
+        font-family: "Zen Maru Gothic", sans-serif;
+        font-weight: 700;
+        font-size: 17px;
+      }
+      .step h3 {
+        font-size: 20px;
+        margin-bottom: 8px;
+      }
+      .step p {
+        margin: 0;
+        color: var(--ink-soft);
+        font-size: 15.5px;
+      }
+      .step .icon {
+        position: absolute;
+        top: 24px;
+        right: 24px;
+        width: 30px;
+        height: 30px;
+        color: var(--leaf);
+        opacity: 0.5;
+      }
+
+      /* ---- the coach (cat) section ------------------------------------ */
+
+      .coach {
+        background: linear-gradient(180deg, var(--leaf-mist), var(--bg));
+        border-radius: 40px;
+        margin: 0 auto;
+      }
+      .coach-grid {
+        display: grid;
+        grid-template-columns: 0.92fr 1.08fr;
+        gap: 52px;
+        align-items: center;
+      }
+      .coach-copy h2 {
+        font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+      }
+      .coach-copy p {
+        color: var(--ink-soft);
+        font-size: 17px;
+        margin: 16px 0 0;
+      }
+      .coach-traits {
+        list-style: none;
+        margin: 26px 0 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .coach-traits li {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        font-size: 15.5px;
+      }
+      .coach-traits .tick {
+        flex: none;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: var(--leaf-soft);
+        color: var(--leaf-deep);
+        display: grid;
+        place-items: center;
+        margin-top: 1px;
+      }
+      .coach-traits .tick svg {
+        width: 14px;
+        height: 14px;
+      }
+      .coach-traits b {
+        color: var(--ink);
+      }
+
+      /* the cat coach card */
+      .coach-card {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow-soft);
+        padding: 26px;
+      }
+      .coach-card-top {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding-bottom: 18px;
+        border-bottom: 1px solid var(--line-soft);
+      }
+      .coach-avatar {
+        flex: none;
+        width: 56px;
+        height: 56px;
+        border-radius: 50%;
+        background: var(--leaf-mist);
+        border: 1.5px solid var(--leaf-soft);
+        display: grid;
+        place-items: center;
+        color: var(--ink);
+      }
+      .coach-avatar svg {
+        width: 38px;
+        height: 38px;
+      }
+      .coach-who b {
+        display: block;
+        font-family: "Zen Maru Gothic", sans-serif;
+      }
+      .coach-who span {
+        font-size: 13.5px;
+        color: var(--mute);
+      }
+      .coach-msg {
+        margin: 18px 0 0;
+        font-size: 15.5px;
+        line-height: 1.66;
+      }
+      .coach-msg.ja {
+        font-size: 15px;
+        line-height: 1.85;
+      }
+      .coach-msg + .coach-msg {
+        margin-top: 12px;
+        padding-top: 14px;
+        border-top: 1px dashed var(--line);
+        color: var(--ink-soft);
+      }
+      .coach-foot {
+        margin-top: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+
+      /* ---- harmony / trust -------------------------------------------- */
+
+      .harmony-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 52px;
+        align-items: center;
+      }
+      .harmony h2 {
+        font-size: clamp(1.9rem, 3.4vw, 2.7rem);
+      }
+      .harmony h2 .care {
+        color: var(--blossom-deep);
+      }
+      .harmony h2 .strict {
+        color: var(--leaf-deep);
+      }
+      .harmony p {
+        color: var(--ink-soft);
+        font-size: 17px;
+        margin: 18px 0 0;
+        max-width: 46ch;
+      }
+      .reassure {
+        list-style: none;
+        margin: 26px 0 0;
+        padding: 0;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .reassure li {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: var(--radius-pill);
+        padding: 9px 15px;
+        font-size: 14px;
+        font-weight: 500;
+      }
+      .reassure svg {
+        width: 16px;
+        height: 16px;
+        color: var(--leaf);
+      }
+
+      /* a calm botanical panel with the cat resting */
+      .harmony-art {
+        position: relative;
+        aspect-ratio: 1 / 1;
+        border-radius: 40px;
+        background: radial-gradient(
+            120% 120% at 70% 20%,
+            var(--lilac-soft),
+            transparent 55%
+          ),
+          linear-gradient(170deg, var(--leaf-mist), #fff);
+        border: 1px solid var(--line);
+        overflow: hidden;
+        display: grid;
+        place-items: center;
+      }
+      .harmony-art .pot {
+        width: 64%;
+        color: var(--ink);
+      }
+      .harmony-art .float-leaf {
+        position: absolute;
+        color: var(--leaf);
+        opacity: 0.5;
+      }
+      .harmony-art .fl-1 {
+        width: 60px;
+        top: 12%;
+        left: 14%;
+        transform: rotate(20deg);
+      }
+      .harmony-art .fl-2 {
+        width: 44px;
+        bottom: 16%;
+        right: 16%;
+        transform: rotate(-30deg);
+        opacity: 0.4;
+      }
+
+      /* ---- final cta -------------------------------------------------- */
+
+      .final {
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .final-card {
+        position: relative;
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 40px;
+        padding: 70px 32px 64px;
+        box-shadow: var(--shadow-soft);
+        overflow: hidden;
+      }
+      .final-card::before {
+        content: "";
+        position: absolute;
+        width: 360px;
+        height: 360px;
+        border-radius: 50%;
+        filter: blur(60px);
+        background: radial-gradient(circle, var(--leaf-soft), transparent 70%);
+        top: -160px;
+        left: 50%;
+        transform: translateX(-50%);
+        opacity: 0.8;
+      }
+      .final-card > * {
+        position: relative;
+      }
+      .final h2 {
+        font-size: clamp(2rem, 4vw, 3rem);
+      }
+      .final p {
+        margin: 16px auto 30px;
+        color: var(--ink-soft);
+        font-size: 18px;
+        max-width: 42ch;
+      }
+      .final .cat-rest {
+        width: 84px;
+        height: 84px;
+        margin: 0 auto 18px;
+        color: var(--ink);
+      }
+
+      /* ---- footer ----------------------------------------------------- */
+
+      .foot {
+        padding: 44px 0 56px;
+        border-top: 1px solid var(--line);
+        margin-top: 80px;
+      }
+      .foot-inner {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px 28px;
+        align-items: center;
+      }
+      .foot .wordmark {
+        font-size: 18px;
+      }
+      .foot-links {
+        margin-left: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 22px;
+      }
+      .foot-links a {
+        color: var(--ink-soft);
+        text-decoration: none;
+        font-size: 14.5px;
+        font-weight: 500;
+      }
+      .foot-links a:hover {
+        color: var(--leaf-deep);
+      }
+      .foot-note {
+        width: 100%;
+        margin-top: 22px;
+        padding-top: 22px;
+        border-top: 1px solid var(--line-soft);
+        font-size: 13px;
+        color: var(--mute);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .foot-note svg {
+        width: 15px;
+        height: 15px;
+        color: var(--leaf);
+      }
+
+      /* ---- scroll reveal ---------------------------------------------- */
+
+      .reveal {
+        opacity: 0;
+        transform: translateY(22px);
+        transition: opacity 0.7s var(--ease), transform 0.7s var(--ease);
+      }
+      .reveal.in {
+        opacity: 1;
+        transform: none;
+      }
+      .reveal.d1 {
+        transition-delay: 0.08s;
+      }
+      .reveal.d2 {
+        transition-delay: 0.16s;
+      }
+
+      /* ---- responsive ------------------------------------------------- */
+
+      @media (max-width: 920px) {
+        .hero-grid,
+        .coach-grid,
+        .harmony-grid {
+          grid-template-columns: 1fr;
+          gap: 44px;
+        }
+        .scene {
+          max-width: 460px;
+          margin: 0 auto;
+        }
+        .harmony-art {
+          max-width: 420px;
+          margin: 0 auto;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+          max-width: 460px;
+          margin: 0 auto;
+        }
+      }
+
+      @media (max-width: 620px) {
+        body {
+          font-size: 16px;
+        }
+        .nav-links .nav-link {
+          display: none;
+        }
+        .section {
+          padding: 64px 0;
+        }
+        .scan-body {
+          grid-template-columns: 1fr;
+        }
+        .label {
+          min-height: 180px;
+        }
+        .cat-peek {
+          width: 110px;
+          top: -48px;
+          right: 0;
+        }
+        .coach {
+          border-radius: 28px;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        .label .sweep,
+        .label .glare {
+          animation: none;
+        }
+        .label .sweep {
+          display: none;
+        }
+        .reveal {
+          opacity: 1;
+          transform: none;
+          transition: none;
+        }
+        .btn,
+        .step {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- =========================== NAV =========================== -->
+    <header class="nav" id="nav">
+      <div class="wrap nav-inner">
+        <a class="wordmark" href="#top" aria-label="SkinGraph home">
+          <span class="mark" aria-hidden="true">
+            <!-- leaf + cat-ear mark -->
+            <svg viewBox="0 0 34 34" fill="none">
+              <circle cx="17" cy="17" r="17" fill="#e6f1ea" />
+              <path
+                d="M9 24c0-8 6-14 16-15-1 10-7 16-16 15Z"
+                fill="#6db48c"
+              />
+              <path d="M9 24 24 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />
+              <path
+                d="M21 11.5l1.6-3 1.4 3M11 21.5l-2.6.6 1.7-2.2"
+                stroke="#4e9e78"
+                stroke-width="1.3"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+          </span>
+          SkinGraph
+        </a>
+
+        <nav class="nav-links">
+          <a class="nav-link" href="#how" data-i18n="nav.how">How it works</a>
+          <a class="nav-link" href="#coach" data-i18n="nav.coach">Your coach</a>
+          <a class="nav-link" href="#harmony" data-i18n="nav.harmony">Safety</a>
+
+          <span class="lang" role="group" aria-label="Language">
+            <button type="button" data-lang="en" class="on">EN</button>
+            <button type="button" data-lang="ja" lang="ja">日本語</button>
+          </span>
+
+          <span class="nav-cta-wrap">
+            <a class="btn btn-primary" href="https://skingraph-chi.vercel.app" data-i18n="cta.try">Try a scan</a>
+          </span>
+        </nav>
+      </div>
+    </header>
+
+    <main id="top">
+      <!-- =========================== HERO =========================== -->
+      <section class="hero">
+        <div class="wrap hero-grid">
+          <div class="hero-copy">
+            <p class="eyebrow" data-i18n="hero.eyebrow">Japan &amp; Korea skincare, read for you</p>
+            <h1>
+              <span data-i18n="hero.title1">Every label,</span><br />
+              <span class="soft" data-i18n="hero.title2">read with care.</span>
+            </h1>
+            <p class="hero-sub" data-i18n="hero.sub">
+              Snap a Japanese or Korean skincare label and SkinGraph reads it for
+              you — what's safe, what fits your routine, and how to use it. Your
+              calm, plant-loving coach does the reading.
+            </p>
+            <div class="hero-cta">
+              <a class="btn btn-primary" href="https://skingraph-chi.vercel.app">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h2M17 5h2a2 2 0 0 1 2 2v2M21 15v2a2 2 0 0 1-2 2h-2M7 19H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+                <span data-i18n="cta.try">Try a scan</span>
+              </a>
+              <a class="btn btn-ghost" href="#how" data-i18n="cta.how">See how it works</a>
+            </div>
+            <ul class="hero-trust">
+              <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust1">Made for J- &amp; K-beauty</span></li>
+              <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust2">Pregnancy-aware</span></li>
+              <li><span class="leaf-tick"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span><span data-i18n="hero.trust3">Advice in 日本語 + English</span></li>
+            </ul>
+          </div>
+
+          <!-- ---- signature scene: scan card + cat in the leaves ---- -->
+          <div class="scene">
+            <!-- cat peeking behind the card -->
+            <svg class="cat-peek" id="catPeek" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <!-- ears -->
+              <path d="M34 52 28 28 52 42Z" fill="#fff" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M86 52 92 28 68 42Z" fill="#fff" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M35 46 33 36 44 42Z" fill="#fceae6"/>
+              <path d="M85 46 87 36 76 42Z" fill="#fceae6"/>
+              <!-- head -->
+              <path d="M60 38c18 0 30 14 30 31 0 18-13 30-30 30S30 87 30 69c0-17 12-31 30-31Z" fill="#fff" stroke="currentColor" stroke-width="3"/>
+              <!-- calm closed eyes -->
+              <path class="eye" d="M44 66c2.5 3 6.5 3 9 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <path class="eye" d="M67 66c2.5 3 6.5 3 9 0" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+              <!-- nose + mouth -->
+              <path d="M56 75h8l-4 4Z" fill="#ee9e92"/>
+              <path d="M60 79c-1.5 3-5 3-6.5 1M60 79c1.5 3 5 3 6.5 1" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/>
+              <!-- whiskers -->
+              <path d="M40 72 22 69M41 78 24 80M80 72 98 69M79 78 96 80" stroke="currentColor" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+            </svg>
+
+            <!-- botanical sprays -->
+            <svg class="leaf-spray tl" viewBox="0 0 120 90" fill="currentColor" aria-hidden="true">
+              <path d="M10 80C10 40 40 14 86 12c2 40-26 68-76 68Z" opacity="0.9"/>
+              <path d="M10 80 86 14" stroke="#fff" stroke-width="2" fill="none"/>
+              <path d="M52 47 38 40M64 33 53 24M40 60 28 56" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none" opacity="0.8"/>
+            </svg>
+            <svg class="leaf-spray br" viewBox="0 0 120 90" fill="currentColor" aria-hidden="true">
+              <path d="M10 80C10 40 40 14 86 12c2 40-26 68-76 68Z"/>
+            </svg>
+
+            <article class="scan-card" aria-label="Example scan result">
+              <div class="scan-head">
+                <span class="dot"></span>
+                <span data-i18n="scan.head">Reading label…</span>
+              </div>
+              <div class="scan-body">
+                <!-- the label being read -->
+                <div class="label">
+                  <div class="glare"></div>
+                  <div class="sweep"></div>
+                  <span class="label-brand">肌ラボ · HADA LABO</span>
+                  <span class="label-name jp" lang="ja">極潤<br />ヒアルロン液</span>
+                  <span class="label-rule"></span>
+                  <span class="label-ings jp" lang="ja">水、グリセリン、BG、ヒアルロン酸Na、加水分解ヒアルロン酸、アセチルヒアルロン酸Na、香料…</span>
+                  <span class="label-cap" data-i18n="scan.cap">back label · 成分</span>
+                </div>
+
+                <!-- what the coach gives back -->
+                <div class="result">
+                  <div class="score">
+                    <span class="score-leaves" id="scoreLeaves" aria-label="4 of 5 leaves">
+                      <span class="leaf"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span>
+                      <span class="leaf"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span>
+                      <span class="leaf"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span>
+                      <span class="leaf"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span>
+                      <span class="leaf"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg></span>
+                    </span>
+                    <span class="score-label"><b data-i18n="scan.scoreA">Lovely for dry skin.</b> <span data-i18n="scan.scoreB">4 / 5 leaves</span></span>
+                  </div>
+                  <div class="chips">
+                    <span class="chip good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="scan.chip1">Pregnancy-safe</span></span>
+                    <span class="chip good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="scan.chip2">No conflicts</span></span>
+                    <span class="chip care"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v5M12 17h.01"/><circle cx="12" cy="12" r="9"/></svg><span data-i18n="scan.chip3">Has 香料</span></span>
+                  </div>
+                  <div class="coach-quote">
+                    <span data-i18n="scan.quote">“A gentle hydrating layer — pat it on after toner. The fragrance is mild, but patch-test first. 💧”</span>
+                    <span class="by">
+                      <span class="cat-chip"><svg viewBox="0 0 120 120" fill="none"><path d="M34 52 28 30 50 43Z" fill="currentColor"/><path d="M86 52 92 30 70 43Z" fill="currentColor"/><path d="M60 40c17 0 28 13 28 29s-12 28-28 28-28-12-28-28 11-29 28-29Z" fill="currentColor"/><path d="M48 66c2 2.5 6 2.5 8 0M64 66c2 2.5 6 2.5 8 0" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M57 75h6l-3 3Z" fill="#fff"/></svg></span>
+                      <span data-i18n="scan.by">Your SkinGraph coach</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== HOW IT WORKS =========================== -->
+      <section class="section" id="how">
+        <div class="wrap">
+          <div class="steps-head reveal">
+            <p class="eyebrow" data-i18n="how.eyebrow">How it works</p>
+            <h2 data-i18n="how.title">Three soft steps.</h2>
+            <p data-i18n="how.sub">No ingredient dictionaries, no guesswork on your side. Point your camera and let the coach do the careful part.</p>
+          </div>
+
+          <div class="steps">
+            <article class="step reveal">
+              <div class="step-leaf">
+                <svg class="bg" viewBox="0 0 52 52" fill="currentColor"><path d="M9 43c0-19 14-31 36-33-2 22-15 35-36 33Z"/></svg>
+                <span class="num">1</span>
+              </div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 4h-5L8 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-4l-1.5-2Z"/><circle cx="12" cy="13" r="3.5"/></svg>
+              <h3 data-i18n="how.s1t">Snap the label</h3>
+              <p data-i18n="how.s1b">Front or back, Japanese or Korean — even with glare, curved bottles, or tiny embossed print.</p>
+            </article>
+
+            <article class="step reveal d1">
+              <div class="step-leaf">
+                <svg class="bg" viewBox="0 0 52 52" fill="currentColor"><path d="M9 43c0-19 14-31 36-33-2 22-15 35-36 33Z"/></svg>
+                <span class="num">2</span>
+              </div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z"/><circle cx="12" cy="12" r="2.5"/></svg>
+              <h3 data-i18n="how.s2t">We read &amp; check</h3>
+              <p data-i18n="how.s2b">SkinGraph turns the label into a clean ingredient list and checks every one against your skin and your shelf.</p>
+            </article>
+
+            <article class="step reveal d2">
+              <div class="step-leaf">
+                <svg class="bg" viewBox="0 0 52 52" fill="currentColor"><path d="M9 43c0-19 14-31 36-33-2 22-15 35-36 33Z"/></svg>
+                <span class="num">3</span>
+              </div>
+              <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M7.5 4 28 4" /><path d="M21 15a7 7 0 0 1-7 7H6l-3 3V11a7 7 0 0 1 7-7h4a7 7 0 0 1 7 7v4Z"/></svg>
+              <h3 data-i18n="how.s3t">Your coach advises</h3>
+              <p data-i18n="how.s3b">A leaf score and honest, gentle advice in Japanese or English — what to love, and what to keep an eye on.</p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== THE COACH =========================== -->
+      <section class="coach section" id="coach">
+        <div class="wrap coach-grid">
+          <div class="coach-copy reveal">
+            <p class="eyebrow" data-i18n="coach.eyebrow">Your coach</p>
+            <h2 data-i18n="coach.title">Honest advice, gently given.</h2>
+            <p data-i18n="coach.sub">Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — and never pushes you to buy.</p>
+            <ul class="coach-traits">
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t1b">Speaks your language.</b> <span data-i18n="coach.t1r">Every verdict in 日本語 or English, your choice.</span></span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t2b">Knows your skin.</b> <span data-i18n="coach.t2r">Your type, goals, and pregnancy status shape the advice.</span></span></li>
+              <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span><span><b data-i18n="coach.t3b">Watches your whole shelf.</b> <span data-i18n="coach.t3r">Flags conflicts and overlaps with what you already use.</span></span></li>
+            </ul>
+          </div>
+
+          <div class="coach-card reveal d1">
+            <div class="coach-card-top">
+              <div class="coach-avatar">
+                <svg viewBox="0 0 120 120" fill="none">
+                  <path d="M34 52 28 28 52 42Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+                  <path d="M86 52 92 28 68 42Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+                  <path d="M35 46 33 36 44 42Z" fill="#fceae6"/>
+                  <path d="M85 46 87 36 76 42Z" fill="#fceae6"/>
+                  <path d="M60 38c18 0 30 14 30 31 0 18-13 30-30 30S30 87 30 69c0-17 12-31 30-31Z" fill="#fff" stroke="#2c3a32" stroke-width="3"/>
+                  <path d="M44 66c2.5 3 6.5 3 9 0M67 66c2.5 3 6.5 3 9 0" stroke="#2c3a32" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M56 75h8l-4 4Z" fill="#ee9e92"/>
+                  <path d="M60 79c-1.5 3-5 3-6.5 1M60 79c1.5 3 5 3 6.5 1" stroke="#2c3a32" stroke-width="2.4" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div class="coach-who">
+                <b data-i18n="coach.name">Your SkinGraph coach</b>
+                <span data-i18n="coach.re">on · COSRX Advanced Snail 96</span>
+              </div>
+              <span class="chip note" style="margin-left:auto" data-i18n="coach.badge">4 / 5 leaves</span>
+            </div>
+            <p class="coach-msg" data-i18n="coach.msgEn">This one suits your dehydrated skin beautifully — the snail mucin and hyaluronic acid are big drinks of water. It plays well with everything on your shelf. Use it morning and night, right after toner.</p>
+            <p class="coach-msg ja" lang="ja" data-i18n="coach.msgJa">乾燥が気になるあなたの肌にぴったり。スネルムチンとヒアルロン酸がたっぷりうるおいを届けます。お手持ちのアイテムとも相性よし。化粧水のあと、朝晩にどうぞ。</p>
+            <div class="coach-foot">
+              <span class="chip good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="coach.f1">Pregnancy-safe</span></span>
+              <span class="chip good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="coach.f2">Fits your routine</span></span>
+              <span class="chip note" data-i18n="coach.f3">薬機法-safe wording</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== HARMONY / SAFETY =========================== -->
+      <section class="section harmony" id="harmony">
+        <div class="wrap harmony-grid">
+          <div class="reveal">
+            <p class="eyebrow" data-i18n="harm.eyebrow">Calm &amp; careful</p>
+            <h2><span class="care" data-i18n="harm.t1">Gentle with you.</span><br /><span class="strict" data-i18n="harm.t2">Strict on safety.</span></h2>
+            <p data-i18n="harm.body">The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, and pregnancy flags are decided the same careful way every time.</p>
+            <ul class="reassure">
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r1">No guessing on safety</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r2">Pregnancy-aware</span></li>
+              <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l7 3v5c0 5-3 8-7 10-4-2-7-5-7-10V6l7-3Z"/></svg><span data-i18n="harm.r3">JCIA-standard names</span></li>
+            </ul>
+          </div>
+
+          <div class="harmony-art reveal d1" aria-hidden="true">
+            <svg class="float-leaf fl-1" viewBox="0 0 60 46" fill="currentColor"><path d="M5 40C5 18 22 6 56 5c-1 22-19 35-51 35Z"/></svg>
+            <svg class="float-leaf fl-2" viewBox="0 0 60 46" fill="currentColor"><path d="M5 40C5 18 22 6 56 5c-1 22-19 35-51 35Z"/></svg>
+            <!-- a cat resting beside a potted plant -->
+            <svg class="pot" viewBox="0 0 220 220" fill="none">
+              <!-- plant -->
+              <path d="M132 116c0-30 16-50 56-54-2 30-22 52-56 54Z" fill="#6db48c"/>
+              <path d="M132 118c-2-30-18-48-50-52 2 28 18 48 50 52Z" fill="#8cc6a6"/>
+              <path d="M132 118c0-22 8-40 28-52" stroke="#fff" stroke-width="2" fill="none"/>
+              <path d="M132 120c0-18-8-34-24-44" stroke="#fff" stroke-width="2" fill="none"/>
+              <!-- pot -->
+              <path d="M104 116h56l-8 40a8 8 0 0 1-8 7h-24a8 8 0 0 1-8-7Z" fill="#fff" stroke="#2c3a32" stroke-width="3"/>
+              <path d="M100 112h64v8h-64Z" fill="#fceae6" stroke="#2c3a32" stroke-width="3"/>
+              <!-- resting cat -->
+              <g transform="translate(20 120)">
+                <path d="M8 44c0-16 12-24 26-24s26 8 26 24Z" fill="#fff" stroke="#2c3a32" stroke-width="3"/>
+                <path d="M18 24 14 8 30 19Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M50 24 54 8 38 19Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+                <path d="M24 33c1.5 2 4.5 2 6 0M38 33c1.5 2 4.5 2 6 0" stroke="#2c3a32" stroke-width="2.6" stroke-linecap="round"/>
+                <path d="M32 38h4l-2 2Z" fill="#ee9e92"/>
+                <path d="M60 44c14 0 18-10 14-18" stroke="#2c3a32" stroke-width="3" fill="none" stroke-linecap="round"/>
+              </g>
+            </svg>
+          </div>
+        </div>
+      </section>
+
+      <!-- =========================== FINAL CTA =========================== -->
+      <section class="section final">
+        <div class="wrap">
+          <div class="final-card reveal">
+            <svg class="cat-rest" viewBox="0 0 120 120" fill="none" aria-hidden="true">
+              <path d="M34 52 28 28 52 42Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M86 52 92 28 68 42Z" fill="#fff" stroke="#2c3a32" stroke-width="3" stroke-linejoin="round"/>
+              <path d="M35 46 33 36 44 42Z" fill="#fceae6"/>
+              <path d="M85 46 87 36 76 42Z" fill="#fceae6"/>
+              <path d="M60 38c18 0 30 14 30 31 0 18-13 30-30 30S30 87 30 69c0-17 12-31 30-31Z" fill="#fff" stroke="#2c3a32" stroke-width="3"/>
+              <path d="M44 66c2.5 3 6.5 3 9 0M67 66c2.5 3 6.5 3 9 0" stroke="#2c3a32" stroke-width="3" stroke-linecap="round"/>
+              <path d="M56 75h8l-4 4Z" fill="#ee9e92"/>
+              <path d="M60 79c-1.5 3-5 3-6.5 1M60 79c1.5 3 5 3 6.5 1" stroke="#2c3a32" stroke-width="2.4" stroke-linecap="round"/>
+              <path d="M40 72 22 69M80 72 98 69" stroke="#2c3a32" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
+            </svg>
+            <p class="eyebrow" style="justify-content:center" data-i18n="final.eyebrow">Ready when your skin is</p>
+            <h2 data-i18n="final.title">Find your harmony.</h2>
+            <p data-i18n="final.sub">Scan your first label and meet the coach. Free to try, in your language.</p>
+            <a class="btn btn-primary" href="https://skingraph-chi.vercel.app">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9V7a2 2 0 0 1 2-2h2M17 5h2a2 2 0 0 1 2 2v2M21 15v2a2 2 0 0 1-2 2h-2M7 19H5a2 2 0 0 1-2-2v-2"/><circle cx="12" cy="12" r="3"/></svg>
+              <span data-i18n="cta.try">Try a scan</span>
+            </a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- =========================== FOOTER =========================== -->
+    <footer class="foot">
+      <div class="wrap">
+        <div class="foot-inner">
+          <a class="wordmark" href="#top">
+            <span class="mark" aria-hidden="true">
+              <svg viewBox="0 0 34 34" fill="none">
+                <circle cx="17" cy="17" r="17" fill="#e6f1ea" />
+                <path d="M9 24c0-8 6-14 16-15-1 10-7 16-16 15Z" fill="#6db48c" />
+                <path d="M9 24 24 9" stroke="#fff" stroke-width="1.4" stroke-linecap="round" />
+              </svg>
+            </span>
+            SkinGraph
+          </a>
+          <nav class="foot-links">
+            <a href="https://skingraph-chi.vercel.app" data-i18n="foot.app">Open the app</a>
+            <a href="#how" data-i18n="nav.how">How it works</a>
+            <a href="#coach" data-i18n="nav.coach">Your coach</a>
+            <a href="https://github.com/ShinBellator/skingraph">GitHub</a>
+          </nav>
+        </div>
+        <p class="foot-note">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z"/></svg>
+          <span data-i18n="foot.note">SkinGraph · a gentle skincare reading coach for Japan &amp; Korea. Made with leaves &amp; cats.</span>
+        </p>
+      </div>
+    </footer>
+
+    <script>
+      // ---- i18n: warm, end-user copy in EN / JA -----------------------
+      const I18N = {
+        en: {
+          "nav.how": "How it works",
+          "nav.coach": "Your coach",
+          "nav.harmony": "Safety",
+          "cta.try": "Try a scan",
+          "cta.how": "See how it works",
+
+          "hero.eyebrow": "Japan & Korea skincare, read for you",
+          "hero.title1": "Every label,",
+          "hero.title2": "read with care.",
+          "hero.sub":
+            "Snap a Japanese or Korean skincare label and SkinGraph reads it for you — what's safe, what fits your routine, and how to use it. Your calm, plant-loving coach does the reading.",
+          "hero.trust1": "Made for J- & K-beauty",
+          "hero.trust2": "Pregnancy-aware",
+          "hero.trust3": "Advice in 日本語 + English",
+
+          "scan.head": "Reading label…",
+          "scan.cap": "back label · 成分",
+          "scan.scoreA": "Lovely for dry skin.",
+          "scan.scoreB": "4 / 5 leaves",
+          "scan.chip1": "Pregnancy-safe",
+          "scan.chip2": "No conflicts",
+          "scan.chip3": "Has 香料",
+          "scan.quote":
+            "“A gentle hydrating layer — pat it on after toner. The fragrance is mild, but patch-test first. 💧”",
+          "scan.by": "Your SkinGraph coach",
+
+          "how.eyebrow": "How it works",
+          "how.title": "Three soft steps.",
+          "how.sub":
+            "No ingredient dictionaries, no guesswork on your side. Point your camera and let the coach do the careful part.",
+          "how.s1t": "Snap the label",
+          "how.s1b":
+            "Front or back, Japanese or Korean — even with glare, curved bottles, or tiny embossed print.",
+          "how.s2t": "We read & check",
+          "how.s2b":
+            "SkinGraph turns the label into a clean ingredient list and checks every one against your skin and your shelf.",
+          "how.s3t": "Your coach advises",
+          "how.s3b":
+            "A leaf score and honest, gentle advice in Japanese or English — what to love, and what to keep an eye on.",
+
+          "coach.eyebrow": "Your coach",
+          "coach.title": "Honest advice, gently given.",
+          "coach.sub":
+            "Meet your SkinGraph coach: a calm, plant-loving guide who reads the label so you don't have to — and never pushes you to buy.",
+          "coach.t1b": "Speaks your language.",
+          "coach.t1r": "Every verdict in 日本語 or English, your choice.",
+          "coach.t2b": "Knows your skin.",
+          "coach.t2r": "Your type, goals, and pregnancy status shape the advice.",
+          "coach.t3b": "Watches your whole shelf.",
+          "coach.t3r": "Flags conflicts and overlaps with what you already use.",
+          "coach.name": "Your SkinGraph coach",
+          "coach.re": "on · COSRX Advanced Snail 96",
+          "coach.badge": "4 / 5 leaves",
+          "coach.msgEn":
+            "This one suits your dehydrated skin beautifully — the snail mucin and hyaluronic acid are big drinks of water. It plays well with everything on your shelf. Use it morning and night, right after toner.",
+          "coach.msgJa":
+            "乾燥が気になるあなたの肌にぴったり。スネイルムチンとヒアルロン酸がたっぷりうるおいを届けます。お手持ちのアイテムとも相性よし。化粧水のあと、朝晩にどうぞ。",
+          "coach.f1": "Pregnancy-safe",
+          "coach.f2": "Fits your routine",
+          "coach.f3": "薬機法-safe wording",
+
+          "harm.eyebrow": "Calm & careful",
+          "harm.t1": "Gentle with you.",
+          "harm.t2": "Strict on safety.",
+          "harm.body":
+            "The playful part — reading messy, glare-streaked labels — uses clever AI. The part that touches your skin is checked by exact rules, never a guess. Conflicts, risky ingredients, and pregnancy flags are decided the same careful way every time.",
+          "harm.r1": "No guessing on safety",
+          "harm.r2": "Pregnancy-aware",
+          "harm.r3": "JCIA-standard names",
+
+          "final.eyebrow": "Ready when your skin is",
+          "final.title": "Find your harmony.",
+          "final.sub":
+            "Scan your first label and meet the coach. Free to try, in your language.",
+
+          "foot.app": "Open the app",
+          "foot.note":
+            "SkinGraph · a gentle skincare reading coach for Japan & Korea. Made with leaves & cats.",
+        },
+        ja: {
+          "nav.how": "使い方",
+          "nav.coach": "あなたのコーチ",
+          "nav.harmony": "安全性",
+          "cta.try": "スキャンを試す",
+          "cta.how": "使い方を見る",
+
+          "hero.eyebrow": "日本・韓国コスメを、あなたのために解読",
+          "hero.title1": "すべてのラベルを、",
+          "hero.title2": "ていねいに。",
+          "hero.sub":
+            "日本や韓国のスキンケアのラベルを撮るだけ。SkinGraphがあなたの肌に合わせて、安全性・ルーティンとの相性・使い方を読み解きます。植物好きのおだやかなコーチにおまかせ。",
+          "hero.trust1": "日本・韓国コスメ向け",
+          "hero.trust2": "妊娠中にも配慮",
+          "hero.trust3": "日本語・英語でアドバイス",
+
+          "scan.head": "ラベルを読み取り中…",
+          "scan.cap": "裏面ラベル · 成分",
+          "scan.scoreA": "乾燥肌にぴったり。",
+          "scan.scoreB": "葉 4 / 5",
+          "scan.chip1": "妊娠中も安心",
+          "scan.chip2": "競合なし",
+          "scan.chip3": "香料あり",
+          "scan.quote":
+            "「やさしい保湿の一品。化粧水のあとにそっとなじませて。香りは控えめだけど、まずはパッチテストを。💧」",
+          "scan.by": "SkinGraphコーチ",
+
+          "how.eyebrow": "使い方",
+          "how.title": "やさしい3ステップ。",
+          "how.sub":
+            "成分の辞書も、むずかしい判断もいりません。カメラを向けるだけ。ていねいな部分はコーチにおまかせ。",
+          "how.s1t": "ラベルを撮る",
+          "how.s1b":
+            "表でも裏でも、日本語でも韓国語でも。グレアや曲面ボトル、小さな刻印文字もОК。",
+          "how.s2t": "読んで、チェック",
+          "how.s2b":
+            "ラベルをきれいな成分リストに変換し、ひとつずつあなたの肌と棚の製品に照らし合わせます。",
+          "how.s3t": "コーチがアドバイス",
+          "how.s3b":
+            "葉のスコアと、ホンネのやさしいアドバイスを日本語か英語で。いいところも、気をつけたいところも。",
+
+          "coach.eyebrow": "あなたのコーチ",
+          "coach.title": "ホンネを、やさしく。",
+          "coach.sub":
+            "SkinGraphコーチは、植物が大好きなおだやかな案内役。ラベルを代わりに読み解き、無理にすすめたりしません。",
+          "coach.t1b": "あなたの言葉で。",
+          "coach.t1r": "アドバイスは日本語でも英語でも、お好みのほうで。",
+          "coach.t2b": "あなたの肌を知っている。",
+          "coach.t2r": "肌タイプ・目標・妊娠の状況に合わせて判断します。",
+          "coach.t3b": "棚ぜんたいを見ている。",
+          "coach.t3r": "今使っているアイテムとの競合や重複を教えます。",
+          "coach.name": "SkinGraphコーチ",
+          "coach.re": "対象 · COSRX アドバンスド スネイル 96",
+          "coach.badge": "葉 4 / 5",
+          "coach.msgEn":
+            "This one suits your dehydrated skin beautifully — the snail mucin and hyaluronic acid are big drinks of water. It plays well with everything on your shelf. Use it morning and night, right after toner.",
+          "coach.msgJa":
+            "乾燥が気になるあなたの肌にぴったり。スネイルムチンとヒアルロン酸がたっぷりうるおいを届けます。お手持ちのアイテムとも相性よし。化粧水のあと、朝晩にどうぞ。",
+          "coach.f1": "妊娠中も安心",
+          "coach.f2": "ルーティンに合う",
+          "coach.f3": "薬機法に配慮した表現",
+
+          "harm.eyebrow": "おだやかに、ていねいに",
+          "harm.t1": "あなたにはやさしく。",
+          "harm.t2": "安全にはきびしく。",
+          "harm.body":
+            "楽しい部分 — グレアだらけの読みにくいラベルを読むこと — には賢いAIを。けれど、あなたの肌に触れる部分は、推測ではなく決まったルールで毎回ていねいに判定します。競合・注意成分・妊娠中のフラグも、いつも同じ慎重さで。",
+          "harm.r1": "安全性は推測しない",
+          "harm.r2": "妊娠中にも配慮",
+          "harm.r3": "JCIA基準の成分名",
+
+          "final.eyebrow": "あなたの肌の準備ができたら",
+          "final.title": "あなたの調和を見つけよう。",
+          "final.sub":
+            "最初のラベルをスキャンして、コーチに会いに行きましょう。あなたの言葉で、無料で試せます。",
+
+          "foot.app": "アプリを開く",
+          "foot.note":
+            "SkinGraph · 日本と韓国のための、やさしいスキンケア解読コーチ。leaves & cats でつくりました。",
+        },
+      };
+
+      function setLang(lang) {
+        const dict = I18N[lang] || I18N.en;
+        document.documentElement.lang = lang;
+        document.querySelectorAll("[data-i18n]").forEach((el) => {
+          const v = dict[el.getAttribute("data-i18n")];
+          if (v != null) el.innerHTML = v;
+        });
+        document.querySelectorAll(".lang button").forEach((b) =>
+          b.classList.toggle("on", b.dataset.lang === lang)
+        );
+        try {
+          localStorage.setItem("sg-lang", lang);
+        } catch (e) {}
+      }
+
+      document.querySelectorAll(".lang button").forEach((b) =>
+        b.addEventListener("click", () => setLang(b.dataset.lang))
+      );
+
+      let saved = "en";
+      try {
+        const stored = localStorage.getItem("sg-lang");
+        saved = stored || ((navigator.language || "").startsWith("ja") ? "ja" : "en");
+      } catch (e) {}
+      setLang(saved);
+
+      // ---- sticky-nav shadow on scroll --------------------------------
+      const nav = document.getElementById("nav");
+      const onScroll = () => nav.classList.toggle("scrolled", window.scrollY > 8);
+      onScroll();
+      window.addEventListener("scroll", onScroll, { passive: true });
+
+      // ---- scroll reveal ----------------------------------------------
+      const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reveals = document.querySelectorAll(".reveal");
+      if (reduce || !("IntersectionObserver" in window)) {
+        reveals.forEach((el) => el.classList.add("in"));
+      } else {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((e) => {
+              if (e.isIntersecting) {
+                e.target.classList.add("in");
+                io.unobserve(e.target);
+              }
+            });
+          },
+          { threshold: 0.18 }
+        );
+        reveals.forEach((el) => io.observe(el));
+      }
+
+      // ---- leaf score: fill 4 of 5, in gentle sequence ----------------
+      const leaves = document.querySelectorAll("#scoreLeaves .leaf");
+      const FILL = 4;
+      function fillLeaves() {
+        leaves.forEach((lf, i) => {
+          if (i < FILL) {
+            if (reduce) {
+              lf.classList.add("on");
+            } else {
+              setTimeout(() => lf.classList.add("on"), 380 + i * 180);
+            }
+          }
+        });
+      }
+      fillLeaves();
+
+      // ---- the cat blinks, every so often (skipped if reduced motion) --
+      if (!reduce) {
+        const eyes = document.querySelectorAll("#catPeek .eye");
+        setInterval(() => {
+          eyes.forEach((e) => {
+            e.animate(
+              [{ transform: "scaleY(1)" }, { transform: "scaleY(0.2)" }, { transform: "scaleY(1)" }],
+              { duration: 220, easing: "ease-in-out", transformOrigin: "center" }
+            );
+          });
+        }, 4200);
+      }
+    </script>
+  </body>
+</html>
