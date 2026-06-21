@@ -207,8 +207,7 @@ export function MyProfile() {
           <section className="card">
             <h2 className="card-title">{t("profile.section.skin")}</h2>
 
-            <FieldBlock label={t("profile.fitz")}>
-              <p className="field-help">{t("profile.fitz.help")}</p>
+            <FieldBlock label={t("profile.fitz")} help={t("profile.fitz.help")}>
               <div className="fitz-scale">
                 <FitzRow
                   label={t("profile.fitz.asian")}
@@ -329,8 +328,7 @@ export function MyProfile() {
               <span>{t("profile.devices")}</span>
             </label>
 
-            <FieldBlock label={t("profile.budget")}>
-              <p className="field-help">{t("profile.budget.help")}</p>
+            <FieldBlock label={t("profile.budget")} help={t("profile.budget.help")}>
               <div className="budget-slider">
                 <input
                   type="range"
@@ -355,15 +353,7 @@ export function MyProfile() {
           </section>
 
           <div className="page-actions">
-            <button
-              className="btn btn-danger"
-              onClick={() => void handleDelete()}
-              disabled={deleting || saving}
-            >
-              {deleting ? t("profile.deleting") : t("profile.delete")}
-            </button>
-            <div className="page-actions-right">
-              {saved && <span className="saved-flag">{t("profile.saved")}</span>}
+            <div className="page-actions-left">
               <button
                 className="btn btn-primary"
                 onClick={() => void handleSave()}
@@ -371,7 +361,15 @@ export function MyProfile() {
               >
                 {saving ? t("common.saving") : t("profile.save")}
               </button>
+              {saved && <span className="saved-flag">{t("profile.saved")}</span>}
             </div>
+            <button
+              className="btn btn-danger"
+              onClick={() => void handleDelete()}
+              disabled={deleting || saving}
+            >
+              {deleting ? t("profile.deleting") : t("profile.delete")}
+            </button>
           </div>
         </>
       )}
@@ -480,8 +478,7 @@ function Field({
 }) {
   return (
     <label className="field">
-      <span className="field-label">{label}</span>
-      {help && <span className="field-help">{help}</span>}
+      <FieldLabel label={label} help={help} />
       {children}
     </label>
   );
@@ -500,10 +497,34 @@ function FieldBlock({
 }) {
   return (
     <div className="field">
-      <span className="field-label">{label}</span>
-      {help && <span className="field-help">{help}</span>}
+      <FieldLabel label={label} help={help} />
       {children}
     </div>
+  );
+}
+
+// A field title with an optional "?" help affordance. The explanation lives in a
+// tooltip that reveals on hover/focus, so the form stays uncluttered.
+function FieldLabel({ label, help }: { label: string; help?: string }) {
+  return (
+    <span className="field-label">
+      {label}
+      {help && <HelpTip text={help} />}
+    </span>
+  );
+}
+
+// A small "?" badge that shows `text` in a tooltip on hover or keyboard focus.
+function HelpTip({ text }: { text: string }) {
+  return (
+    <span className="help-tip" tabIndex={0} role="note" aria-label={text}>
+      <span className="help-tip-icon" aria-hidden="true">
+        ?
+      </span>
+      <span className="help-tip-bubble" aria-hidden="true">
+        {text}
+      </span>
+    </span>
   );
 }
 

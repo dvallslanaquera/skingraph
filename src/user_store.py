@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS routine_products (
     is_quasi_drug     INTEGER,
     timing            TEXT,
     application_notes TEXT,
+    application_notes_ja TEXT,
     price_usd         REAL,
     price_native      REAL,
     price_currency    TEXT,
@@ -89,6 +90,7 @@ CREATE TABLE IF NOT EXISTS routine_products (
 _ROUTINE_COLUMNS_ADDED = {
     "timing": "TEXT",
     "application_notes": "TEXT",
+    "application_notes_ja": "TEXT",
     "price_usd": "REAL",
     "price_native": "REAL",
     "price_currency": "TEXT",
@@ -275,6 +277,7 @@ def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
         return row[name] if name in keys else None
 
     notes_raw = opt("application_notes")
+    notes_ja_raw = opt("application_notes_ja")
     return RoutineProduct(
         product_id=row["product_id"],
         brand=row["brand"] or "",
@@ -285,6 +288,7 @@ def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
         ),
         timing=opt("timing"),
         application_notes=json.loads(notes_raw) if notes_raw else [],
+        application_notes_ja=json.loads(notes_ja_raw) if notes_ja_raw else [],
         price_usd=opt("price_usd"),
         price_native=opt("price_native"),
         price_currency=opt("price_currency"),
@@ -303,6 +307,7 @@ def add_routine_product(
     *,
     timing: Optional[str] = None,
     application_notes: Optional[List[str]] = None,
+    application_notes_ja: Optional[List[str]] = None,
     price_usd: Optional[float] = None,
     price_native: Optional[float] = None,
     price_currency: Optional[str] = None,
@@ -331,9 +336,10 @@ def add_routine_product(
             """
             INSERT OR REPLACE INTO routine_products (
                 product_id, user_id, brand, product_name, ingredients,
-                is_quasi_drug, timing, application_notes, price_usd, price_native,
+                is_quasi_drug, timing, application_notes, application_notes_ja,
+                price_usd, price_native,
                 price_currency, price_market, months_supply, price_source, added_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 product_id,
@@ -344,6 +350,7 @@ def add_routine_product(
                 None if is_quasi_drug is None else int(is_quasi_drug),
                 timing,
                 json.dumps(application_notes or []),
+                json.dumps(application_notes_ja or []),
                 price_usd,
                 price_native,
                 price_currency,
@@ -412,6 +419,7 @@ def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
     card = final_state.get("coach_card") or {}
     timing = card.get("timing") or None
     application_notes = card.get("application_notes") or []
+    application_notes_ja = card.get("application_notes_ja") or []
 
     price = _lookup_price_safe(data.brand, data.product_name)
 
@@ -423,6 +431,7 @@ def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
         data.is_quasi_drug,
         timing=timing,
         application_notes=application_notes,
+        application_notes_ja=application_notes_ja,
         price_usd=price.price_usd if price else None,
         price_native=price.price_native if price else None,
         price_currency=price.currency if price else None,

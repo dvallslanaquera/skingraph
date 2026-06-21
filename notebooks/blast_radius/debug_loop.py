@@ -19,8 +19,8 @@ the images"):
 
 Run via the repo entry point::
 
-    python run_benchmark.py --debug-loop                # both models
-    python run_benchmark.py --debug-loop --models opus-4-8 --steps 15
+    python run_benchmark.py --debug-loop                          # both models, 5 trials each
+    python run_benchmark.py --debug-loop --trials 1 --steps 8     # quick smoke test
 
 Results are written to ``results/debug_loop_<timestamp>.json`` (+ ``debug_loop_latest.json``)
 and NEVER touch ``results/latest.json`` (the single-shot benchmark's file).
@@ -38,7 +38,9 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from math import comb
 from pathlib import Path
+from statistics import mean, median
 
 from . import config, models
 
@@ -64,7 +66,13 @@ VERDICT_TARGET = "scan_stream"      # pytest -k expression that defines "done"
 REGRESSION_TARGET = "tests/test_api.py"  # full file — must not regress
 
 DEFAULT_STEPS = 15
+DEFAULT_TRIALS = 5                 # independent attempts per model (pass@k)
 RUN_TESTS_TIMEOUT = 180            # seconds
+
+# The agentic loop re-sends a growing history each step and (for Opus) reasons before
+# acting — thinking tokens count toward the output cap, so give it room.
+LOOP_MAX_TOKENS = 16000
+OPUS_EFFORT = "high"               # adaptive-thinking depth for Opus 4.8
 
 
 # --- Prompts (identical for every model) ------------------------------------
@@ -77,32 +85,29 @@ SYSTEM_PROMPT = (
 )
 
 USER_PROMPT = """\
-A bug is reported in this backend (FastAPI + LangGraph).
+A bug is reported in this backend (FastAPI + LangGraph). The application source is \
+under `src/`.
 
-Symptom: on the deployed host, `POST /scan` runs the entire LangGraph pipeline in a \
-single blocking request. The connection sits idle for tens of seconds during the slow \
-coach/VLM step, exceeds the platform reverse-proxy timeout, and is dropped — so the \
-browser reports a generic "backend not running" network error even though the server is \
-healthy. The fix is to add a streaming endpoint so bytes flow continuously (no idle \
-proxy timeout) and the client gets per-stage progress. The existing `/scan` endpoint \
-must keep working unchanged.
+Symptom: on the deployed host, `POST /scan` hangs. The request runs for tens of seconds, \
+the platform's reverse-proxy drops the idle connection, and the browser shows a generic \
+"backend not running" network error — even though the server is healthy and the same \
+request succeeds locally. Whatever you change, the behavior of the existing endpoints \
+must keep working.
 
 "Done" is defined by tests: `tests/test_api.py` contains new `test_scan_stream_*` tests \
-(an SSE endpoint) that currently FAIL. Read that test file to learn the exact contract, \
-implement the endpoint, and use `run_tests` (target `scan_stream`) to confirm the \
-`scan_stream` tests pass and the rest of `tests/test_api.py` does not regress.
-
-Starting point: `/scan` and `run_scan` live in `src/api/main.py` and `src/api/service.py`. \
-The LangGraph graph object is `graph_app` in `src/api/service.py` and supports both \
-`.invoke(inputs, config)` and `.stream(inputs, config, stream_mode=[...])`.
+that currently FAIL. Read that test file first — it is the exact contract for the fix \
+(endpoint path, request/response shape, and behavior). The other tests in that file must \
+not regress.
 
 Current failing test output (the symptom):
 ```
 {symptom}
 ```
 
-Begin. Call tools to explore and edit; once the targeted tests pass, finish with a \
-plain-text summary and no tool calls."""
+Investigate with the tools, locate the relevant code yourself, implement the fix, and use \
+`run_tests` (target `scan_stream`) until those tests pass without regressing the rest of \
+`tests/test_api.py`. When done, finish with a short plain-text summary and no tool \
+calls."""
 
 
 # --- Tool surface (provider-neutral, OpenAI-shaped; mapped per provider) ----
@@ -370,7 +375,10 @@ class AnthropicLoop:
         try:
             resp = self.client.messages.create(
                 model=self.cfg.model_id,
-                max_tokens=config.MAX_OUTPUT_TOKENS,
+                max_tokens=LOOP_MAX_TOKENS,
+                thinking={"type": "adaptive"},
+                output_config={"effort": OPUS_EFFORT},
+                cache_control={"type": "ephemeral"},  # cache the growing prefix → real agent cost
                 system=self.system,
                 messages=self.messages,
                 tools=self._tools,
@@ -430,11 +438,12 @@ class OpenAILoop:
         try:
             resp = self.client.chat.completions.create(
                 model=self.cfg.model_id,
-                max_tokens=config.MAX_OUTPUT_TOKENS,
+                max_tokens=LOOP_MAX_TOKENS,
                 messages=self.messages,
                 tools=TOOLS,
                 tool_choice="auto",
                 temperature=0,
+                extra_body={"thinking": {"type": "enabled"}},  # z.ai GLM-5.2 thinking
             )
         except Exception as exc:  # noqa: BLE001
             return StepResult(error=f"{type(exc).__name__}: {exc}")
@@ -494,6 +503,7 @@ class OllamaLoop:
         else:
             self.client = ollama.Client()
         self.num_ctx = config.OLLAMA_NUM_CTX
+        self._send_think = True
         self.messages: list[dict] = [
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": task_prompt},
@@ -501,11 +511,25 @@ class OllamaLoop:
 
     def step(self) -> StepResult:
         t0 = time.perf_counter()
+        kwargs = dict(
+            model=self.cfg.model_id, messages=self.messages,
+            tools=TOOLS, options={"temperature": 0, "num_ctx": self.num_ctx},
+        )
+        if self._send_think:
+            kwargs["think"] = True  # GLM-5.2 is a reasoning model; enable thinking
         try:
-            resp = self.client.chat(
-                model=self.cfg.model_id, messages=self.messages,
-                tools=TOOLS, options={"temperature": 0, "num_ctx": self.num_ctx},
-            )
+            resp = self.client.chat(**kwargs)
+        except TypeError as exc:
+            # Older ollama clients predate think=; drop it and retry once.
+            if self._send_think and "think" in str(exc):
+                self._send_think = False
+                kwargs.pop("think", None)
+                try:
+                    resp = self.client.chat(**kwargs)
+                except Exception as exc2:  # noqa: BLE001
+                    return StepResult(error=f"{type(exc2).__name__}: {exc2}")
+            else:
+                return StepResult(error=f"{type(exc).__name__}: {exc}")
         except Exception as exc:  # noqa: BLE001
             return StepResult(error=f"{type(exc).__name__}: {exc}")
         latency = time.perf_counter() - t0
@@ -697,6 +721,57 @@ def gold_diff_stat() -> dict:
     return {"insertions": add, "deletions": del_}
 
 
+# --- Pass@k aggregation -----------------------------------------------------
+def _pass_at_k(n: int, c: int, k: int) -> float:
+    """Unbiased pass@k (Chen et al. 2021): P(>=1 of k samples passes), c correct of n."""
+    if k > n:
+        return float("nan")
+    if n - c < k:
+        return 1.0
+    return 1.0 - comb(n - c, k) / comb(n, k)
+
+
+def _aggregate_trials(trials: list[dict]) -> dict:
+    """Pass@k + efficiency distributions across a model's trials.
+
+    Efficiency axis is tool-call count and total tokens processed (cache-inclusive),
+    not steps — Opus can batch several tool calls into one step, so steps are not
+    comparable across providers. Cost is the fair per-trial dollar figure (Opus is
+    prompt-cached; GLM is list-priced). pass@k-vs-cost answers "what does it cost to
+    get a passing fix if I sample k times?".
+    """
+    n = len(trials)
+    c = sum(1 for t in trials if t.get("success"))
+    costs = [t["total_cost_usd"] for t in trials]
+    tools = [t["n_tool_calls_total"] for t in trials]
+    toks = [t["total_tokens"] for t in trials]
+    steps = [t["n_steps"] for t in trials]
+    lats = [t["total_latency_s"] for t in trials]
+    mean_cost = mean(costs) if costs else 0.0
+    return {
+        "trials": n,
+        "passes": c,
+        "pass_at_1": round(c / n, 4) if n else 0.0,
+        "pass_at_k": {str(k): round(_pass_at_k(n, c, k), 4) for k in range(1, n + 1)},
+        "mean_cost_usd": round(mean_cost, 6),
+        "median_cost_usd": round(median(costs), 6) if costs else 0.0,
+        "cost_per_pass_usd": round(sum(costs) / c, 6) if c else None,
+        "median_tool_calls": median(tools) if tools else 0,
+        "median_total_tokens": int(median(toks)) if toks else 0,
+        "median_steps": median(steps) if steps else 0,
+        "median_latency_s": round(median(lats), 2) if lats else 0.0,
+        "n_harness_errors": sum(
+            1 for t in trials
+            if (t.get("error") or "") and not (t.get("error") or "").startswith("step budget")
+        ),
+        "pass_at_k_vs_cost": [
+            {"k": k, "pass_at_k": round(_pass_at_k(n, c, k), 4),
+             "expected_cost_usd": round(k * mean_cost, 6)}
+            for k in range(1, n + 1)
+        ],
+    }
+
+
 # --- The loop ---------------------------------------------------------------
 def run_one_model(
     cfg: config.ModelConfig, task_prompt: str, worktree: Path, venv_python: str,
@@ -776,6 +851,9 @@ def run_one_model(
         "total_input_tokens": totals["input"],
         "total_output_tokens": totals["output"],
         "total_cache_read_tokens": totals["cache_read"],
+        "total_cache_creation_tokens": totals["cache_creation"],
+        "total_tokens": (totals["input"] + totals["output"]
+                         + totals["cache_read"] + totals["cache_creation"]),
         "total_cost_usd": round(total_cost, 6),
         "total_latency_s": round(total_latency, 3),
         "truncated": truncated,
@@ -789,7 +867,7 @@ def run_one_model(
 
 
 def run(
-    model_keys: list[str], *, max_steps: int, run_verdict: bool,
+    model_keys: list[str], *, max_steps: int, trials: int, run_verdict: bool,
     install_deps: bool, keep_worktree: bool, out_path: Path,
 ) -> dict:
     print("Resolving Poetry venv ...", flush=True)
@@ -838,18 +916,28 @@ def run(
             results_models[key] = {"label": cfg.label, "model_id": cfg.model_id,
                                    "skipped": "sdk_not_installed", "detail": sdk_err}
             continue
-        print(f"\n=== {cfg.label} ({cfg.model_id}) ===", flush=True)
-        wt = prepare_worktree(run_dir, key)
-        try:
-            results_models[key] = run_one_model(
-                cfg, task_prompt, wt, venv_python,
-                max_steps=max_steps, run_verdict=run_verdict,
-            )
-        finally:
-            if keep_worktree:
-                print(f"  kept worktree: {wt}", flush=True)
-            else:
-                _git("worktree", "remove", "--force", str(wt))
+        print(f"\n=== {cfg.label} ({cfg.model_id}) — {trials} trial(s) ===", flush=True)
+        trial_results: list[dict] = []
+        for t in range(1, trials + 1):
+            if trials > 1:
+                print(f"  -- trial {t}/{trials} --", flush=True)
+            wt = prepare_worktree(run_dir, f"{key}__t{t}")
+            try:
+                trial_results.append(run_one_model(
+                    cfg, task_prompt, wt, venv_python,
+                    max_steps=max_steps, run_verdict=run_verdict,
+                ))
+            finally:
+                if keep_worktree:
+                    print(f"  kept worktree: {wt}", flush=True)
+                else:
+                    _git("worktree", "remove", "--force", str(wt))
+        results_models[key] = {
+            "label": cfg.label,
+            "model_id": cfg.model_id,
+            "trials": trial_results,
+            "aggregate": _aggregate_trials(trial_results),
+        }
 
     if not keep_worktree:
         try:
@@ -869,6 +957,7 @@ def run(
             "source_files": list(SOURCE_FILES),
             "verdict_target": VERDICT_TARGET,
             "step_budget": max_steps,
+            "trials": trials,
             "gold_diff": gold,
         },
         "env": {
@@ -890,33 +979,42 @@ def run(
 
 
 def _print_summary(payload: dict) -> None:
-    print("\n" + "=" * 88)
-    print("DEBUG-LOOP SUMMARY")
-    print("=" * 88)
-    hdr = (f"{'model':<18}{'success':>9}{'steps':>7}{'tools':>7}{'edits':>7}"
-           f"{'tests':>7}{'in_tok':>10}{'out_tok':>9}{'cost$':>9}{'diff(+/-)':>12}")
+    print("\n" + "=" * 92)
+    print("DEBUG-LOOP SUMMARY  (efficiency = tool-calls + tokens; Opus cost is cache-fair)")
+    print("=" * 92)
+    hdr = (f"{'model':<16}{'pass@1':>8}{'passes':>9}{'med_tools':>11}"
+           f"{'med_tokens':>12}{'med_cost$':>11}{'cost/pass$':>12}")
     print(hdr)
-    print("-" * 88)
+    print("-" * 92)
     for key, m in payload["models"].items():
         if "skipped" in m:
-            print(f"{m['label']:<18}{'(skipped: ' + m.get('skipped','?') + ')':>62}")
+            print(f"{m['label']:<16}{'(skipped: ' + m.get('skipped', '?') + ')':>76}")
             continue
-        d = f"+{m['diff_insertions']}/-{m['diff_deletions']}"
+        a = m["aggregate"]
+        cpp = a["cost_per_pass_usd"]
         print(
-            f"{m['label']:<18}"
-            f"{('PASS' if m['success'] else 'FAIL'):>9}"
-            f"{m['n_steps']:>7}"
-            f"{m['n_tool_calls_total']:>7}"
-            f"{m['n_edits']:>7}"
-            f"{m['n_run_tests_calls']:>7}"
-            f"{m['total_input_tokens']:>10}"
-            f"{m['total_output_tokens']:>9}"
-            f"{m['total_cost_usd']:>9.4f}"
-            f"{d:>12}"
+            f"{m['label']:<16}"
+            f"{a['pass_at_1']:>8.2f}"
+            f"{str(a['passes']) + '/' + str(a['trials']):>9}"
+            f"{a['median_tool_calls']:>11}"
+            f"{a['median_total_tokens']:>12}"
+            f"{a['median_cost_usd']:>11.4f}"
+            f"{('n/a' if cpp is None else f'{cpp:.4f}'):>12}"
         )
+    print("\npass@k vs expected cost (k independent attempts):")
+    for key, m in payload["models"].items():
+        if "skipped" in m:
+            continue
+        a = m["aggregate"]
+        curve = "   ".join(
+            f"k={p['k']}: {p['pass_at_k']:.2f} @ ${p['expected_cost_usd']:.3f}"
+            for p in a["pass_at_k_vs_cost"]
+        )
+        print(f"  {m['label']:<14} {curve}")
     gold = payload["scenario"]["gold_diff"]
     print(f"\nGold fix: +{gold['insertions']}/-{gold['deletions']} lines. "
-          f"cost = model+provider+caching+tool-token-overhead (history re-sent per step).")
+          f"Opus cost reflects prompt-caching of the growing prefix; GLM cost is "
+          f"list-price (Ollama Cloud bills by subscription).")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -935,6 +1033,8 @@ def main(argv: list[str] | None = None) -> int:
                         help=f"comma-separated model keys. choices: {', '.join(config.MODELS)}")
     parser.add_argument("--steps", type=int, default=DEFAULT_STEPS,
                         help=f"max tool-loop steps per model (default {DEFAULT_STEPS}).")
+    parser.add_argument("--trials", type=int, default=DEFAULT_TRIALS,
+                        help=f"independent attempts per model for pass@k (default {DEFAULT_TRIALS}).")
     parser.add_argument("--no-verdict", action="store_true",
                         help="skip the pytest oracle; report loop mechanics only.")
     parser.add_argument("--install-deps", action="store_true",
@@ -954,8 +1054,11 @@ def main(argv: list[str] | None = None) -> int:
     stamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     out_path = args.out or (config.RESULTS_DIR / f"debug_loop_{stamp}.json")
 
-    run(model_keys, max_steps=args.steps, run_verdict=not args.no_verdict,
-        install_deps=args.install_deps, keep_worktree=args.keep_worktree, out_path=out_path)
+    if args.trials < 1:
+        parser.error("--trials must be >= 1")
+    run(model_keys, max_steps=args.steps, trials=args.trials,
+        run_verdict=not args.no_verdict, install_deps=args.install_deps,
+        keep_worktree=args.keep_worktree, out_path=out_path)
     return 0
 
 

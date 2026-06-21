@@ -75,7 +75,18 @@ def _monthly_cost_native(product: RoutineProduct) -> Optional[float]:
     return round(product.price_native / _amortized_months(product), 2)
 
 
-def _product_card(product: RoutineProduct) -> dict:
+def _localized_notes(product: RoutineProduct, lang: str) -> List[str]:
+    """How-to-apply notes in the requested UI language.
+
+    Products saved before notes were stored per language only have the English
+    copy, so the Japanese view falls back to it rather than showing nothing.
+    """
+    if lang == "ja" and product.application_notes_ja:
+        return product.application_notes_ja
+    return product.application_notes
+
+
+def _product_card(product: RoutineProduct, lang: str) -> dict:
     categories = set(present_function_categories(set(product.ingredients)))
     timing = product.timing or infer_timing(categories)
     return {
@@ -85,7 +96,7 @@ def _product_card(product: RoutineProduct) -> dict:
         "ingredients": product.ingredients,
         "is_quasi_drug": product.is_quasi_drug,
         "timing": timing,
-        "application_notes": product.application_notes,
+        "application_notes": _localized_notes(product, lang),
         "price_usd": product.price_usd,
         "price_native": product.price_native,
         "price_currency": product.price_currency,
@@ -127,14 +138,18 @@ def _leaf_score(goal_coverage: List[dict]) -> int:
     return round(5 * covered / len(assessable))
 
 
-def build_dashboard(user_id: str) -> Optional[dict]:
-    """Assemble the routine dashboard for a user, or None if the user is unknown."""
+def build_dashboard(user_id: str, lang: str = "en") -> Optional[dict]:
+    """Assemble the routine dashboard for a user, or None if the user is unknown.
+
+    ``lang`` ("en" | "ja") selects the language of each product's how-to-apply
+    notes so the dashboard reads in the active UI language.
+    """
     profile = get_user(user_id)
     if profile is None:
         return None
 
     routine = get_routine(user_id)
-    cards = [_product_card(p) for p in routine]
+    cards = [_product_card(p, lang) for p in routine]
     # Within the page, list products in application order (cleanser → … → SPF).
     cards.sort(key=lambda c: c["_step"])
 

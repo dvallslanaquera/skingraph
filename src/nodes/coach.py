@@ -703,11 +703,14 @@ def coach_node(state: AgentState) -> dict:
         len(all_warnings_en),
     )
 
-    # Structured English card persisted onto the shelf row when the scan is saved
-    # to the routine (timing + how-to-apply notes + risk warnings).
+    # Structured card persisted onto the shelf row when the scan is saved to the
+    # routine (timing + how-to-apply notes + risk warnings). How-to-apply notes are
+    # kept in both languages so the routine dashboard can show them in the user's
+    # UI language; warnings stay English (machine-readable / not surfaced there).
     coach_card = {
         "timing": en.timing,
         "application_notes": list(en.application_notes),
+        "application_notes_ja": list(ja.application_notes),
         "warnings": all_warnings_en,
     }
 
