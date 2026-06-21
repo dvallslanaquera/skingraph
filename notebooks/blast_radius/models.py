@@ -210,9 +210,65 @@ class GLMClient:
         return r
 
 
+class OllamaClient:
+    """GLM-5.2 via the Ollama Python client (Ollama Cloud, e.g. 'glm-5.2:cloud').
+
+    Two auth modes:
+    * ``OLLAMA_API_KEY`` set  -> talk to Ollama Cloud directly (no local daemon).
+    * key absent              -> use the default client, which targets a locally
+      running, signed-in daemon (`ollama signin`) — exactly like a bare
+      ``from ollama import chat``. The daemon routes ``:cloud`` models upstream.
+    """
+
+    def __init__(self, cfg: config.ModelConfig, context_text: str):
+        import ollama  # lazy import
+
+        self.cfg = cfg
+        key = resolve_api_key(cfg)
+        host = cfg.base_url
+        if key:
+            auth = key if key.lower().startswith("bearer ") else f"Bearer {key}"
+            self.client = ollama.Client(
+                host=host or "https://ollama.com",
+                headers={"Authorization": auth},
+            )
+        elif host:
+            self.client = ollama.Client(host=host)
+        else:
+            self.client = ollama.Client()  # default daemon (relies on `ollama signin`)
+        self.system_text = f"{SYSTEM_PREAMBLE}\n\n--- REPOSITORY ---\n\n{context_text}"
+        self.num_ctx = config.OLLAMA_NUM_CTX
+
+    def ask(self, symbol: str) -> ModelResult:
+        r = ModelResult(model_key=self.cfg.key, symbol=symbol)
+        t0 = time.perf_counter()
+        try:
+            resp = self.client.chat(
+                model=self.cfg.model_id,
+                messages=[
+                    {"role": "system", "content": self.system_text},
+                    {"role": "user", "content": USER_TEMPLATE.format(symbol=symbol)},
+                ],
+                options={"temperature": 0, "num_ctx": self.num_ctx},
+            )
+            r.latency_s = time.perf_counter() - t0
+            r.raw_text = (resp.message.content or "")
+            # Ollama reports token counts as prompt_eval_count / eval_count.
+            r.input_tokens = getattr(resp, "prompt_eval_count", 0) or 0
+            r.output_tokens = getattr(resp, "eval_count", 0) or 0
+            r.predictions = parse_references(r.raw_text)
+            r.cost_usd = _simple_cost(self.cfg, r)
+        except Exception as exc:  # noqa: BLE001
+            r.latency_s = time.perf_counter() - t0
+            r.error = f"{type(exc).__name__}: {exc}"
+        return r
+
+
 def make_client(cfg: config.ModelConfig, context_text: str):
     if cfg.provider == "anthropic":
         return OpusClient(cfg, context_text)
     if cfg.provider == "openai_compatible":
         return GLMClient(cfg, context_text)
+    if cfg.provider == "ollama":
+        return OllamaClient(cfg, context_text)
     raise ValueError(f"unknown provider: {cfg.provider}")

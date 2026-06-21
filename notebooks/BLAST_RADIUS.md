@@ -82,11 +82,11 @@ Set the keys, then run. Each model that has a key is benchmarked; the other is s
 # Claude Opus 4.8
 export ANTHROPIC_API_KEY=sk-ant-...
 
-# GLM-5.2 (Zhipu / z.ai OpenAI-compatible endpoint)
-export GLM_API_KEY=...
+# GLM-5.2 — default path is Ollama Cloud (glm-5.2:cloud), via the `ollama` package.
+export OLLAMA_API_KEY=...          # OR run `ollama signin` and omit this
 # optional overrides (defaults shown):
-export GLM_BASE_URL=https://api.z.ai/api/paas/v4
-export GLM_MODEL=glm-5.2
+export GLM_MODEL=glm-5.2:cloud
+export OLLAMA_NUM_CTX=131072       # keep large — Ollama truncates long input otherwise
 
 python run_benchmark.py                      # both models, all 10 symbols
 python run_benchmark.py --models opus-4-8    # one model only
@@ -94,6 +94,9 @@ python run_benchmark.py --limit 3            # first 3 symbols (quick/cheap)
 ```
 
 On Windows PowerShell use `$env:ANTHROPIC_API_KEY = "..."` instead of `export`.
+
+**To use z.ai / Zhipu instead of Ollama** for GLM, set `GLM_PROVIDER=openai_compatible`
+and provide `GLM_API_KEY` (+ optional `GLM_BASE_URL`, `GLM_MODEL`).
 
 Every run writes `results/<mode>_<timestamp>.json` **and** refreshes
 `results/latest.json`. Then open the notebook:
@@ -108,7 +111,8 @@ jupyter notebook analysis.ipynb
   **prompt-caches** the shared repo dump, so the 10 per-symbol calls reuse one cached
   prefix (cache reads bill ~0.1×).
 - **GLM-5.2** pricing is a **placeholder** (defaults to GLM-4.6-class public rates).
-  Set your real contract price before quoting cost numbers:
+  Ollama Cloud bills by subscription/usage, so per-token cost is only indicative —
+  treat the GLM cost bar as a rough guide. Set your real rate to override:
   ```bash
   export GLM_INPUT_PRICE=0.60     # USD per 1M input tokens
   export GLM_OUTPUT_PRICE=2.20    # USD per 1M output tokens

@@ -67,21 +67,46 @@ OPUS = ModelConfig(
     api_key_env=("ANTHROPIC_API_KEY",),
 )
 
-# GLM-5.2 via Zhipu/z.ai's OpenAI-compatible endpoint. Pricing is a PLACEHOLDER —
-# set GLM_INPUT_PRICE / GLM_OUTPUT_PRICE (USD per 1M tokens) to your contract rate
-# before quoting cost numbers. Defaults track GLM-4.6-class public pricing.
-GLM = ModelConfig(
-    key="glm-5-2",
-    label="GLM-5.2",
-    provider="openai_compatible",
-    model_id=os.getenv("GLM_MODEL", "glm-5.2"),
+# GLM-5.2 can be reached two ways; choose with GLM_PROVIDER:
+#   "ollama"            -> Ollama Cloud via the `ollama` package (model "glm-5.2:cloud") [default]
+#   "openai_compatible" -> Zhipu / z.ai OpenAI-compatible endpoint
+# Pricing is a PLACEHOLDER in both cases — set GLM_INPUT_PRICE / GLM_OUTPUT_PRICE
+# (USD per 1M tokens) to your real rate before quoting cost. Ollama Cloud bills by
+# subscription/usage, so its per-token cost is only indicative.
+GLM_PROVIDER = os.getenv("GLM_PROVIDER", "ollama")
+_GLM_PRICE = dict(
     input_price_per_mtok=float(os.getenv("GLM_INPUT_PRICE", "0.60")),
     output_price_per_mtok=float(os.getenv("GLM_OUTPUT_PRICE", "2.20")),
-    base_url=os.getenv("GLM_BASE_URL", "https://api.z.ai/api/paas/v4"),
-    api_key_env=("GLM_API_KEY", "ZHIPUAI_API_KEY"),
 )
 
+if GLM_PROVIDER == "ollama":
+    GLM = ModelConfig(
+        key="glm-5-2",
+        label="GLM-5.2",
+        provider="ollama",
+        model_id=os.getenv("GLM_MODEL", "glm-5.2:cloud"),
+        base_url=os.getenv("OLLAMA_HOST") or None,  # None -> ollama package default
+        api_key_env=("OLLAMA_API_KEY",),
+        **_GLM_PRICE,
+    )
+else:
+    GLM = ModelConfig(
+        key="glm-5-2",
+        label="GLM-5.2",
+        provider="openai_compatible",
+        model_id=os.getenv("GLM_MODEL", "glm-5.2"),
+        base_url=os.getenv("GLM_BASE_URL", "https://api.z.ai/api/paas/v4"),
+        api_key_env=("GLM_API_KEY", "ZHIPUAI_API_KEY"),
+        **_GLM_PRICE,
+    )
+
 MODELS: dict[str, ModelConfig] = {OPUS.key: OPUS, GLM.key: GLM}
+
+# Ollama defaults to a tiny context window (~4096 tokens) and SILENTLY TRUNCATES
+# longer input — which would gut a ~129k-token long-context benchmark. Force it wide.
+# (For ":cloud" models the cloud manages context server-side; passing this is a
+# harmless belt-and-suspenders.) Override with OLLAMA_NUM_CTX.
+OLLAMA_NUM_CTX = int(os.getenv("OLLAMA_NUM_CTX", "131072"))
 
 # Output cap for the answer. The reply is a JSON list of references — even a wide
 # blast radius is well under this. Small cap keeps non-streaming calls fast & cheap.
