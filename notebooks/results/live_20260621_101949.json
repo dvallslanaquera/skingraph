@@ -1,0 +1,200 @@
+{
+  "schema_version": 1,
+  "mode": "live",
+  "synthetic": false,
+  "generated_at": "2026-06-21T01:20:07.758540+00:00",
+  "repo": {
+    "n_files": 61,
+    "char_count": 477685,
+    "est_tokens": 129104
+  },
+  "symbols": [
+    "UserProfile"
+  ],
+  "oracle": {
+    "UserProfile": {
+      "files": 13,
+      "lines": 48
+    }
+  },
+  "models": {
+    "opus-4-8": {
+      "label": "Claude Opus 4.8",
+      "model_id": "claude-opus-4-8",
+      "per_symbol": [
+        {
+          "symbol": "UserProfile",
+          "oracle_files": 13,
+          "oracle_lines": 48,
+          "file": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "n_pred": 0,
+            "n_truth": 13
+          },
+          "line": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 48,
+            "n_pred": 0,
+            "n_truth": 48
+          },
+          "n_pred": 0,
+          "latency_s": 0.871,
+          "input_tokens": 0,
+          "output_tokens": 0,
+          "cache_read_tokens": 0,
+          "cost_usd": 0.0,
+          "error": "BadRequestError: Error code: 400 - {'type': 'error', 'error': {'type': 'invalid_request_error', 'message': 'Your credit balance is too low to access the Anthropic API. Please go to Plans & Billing to upgrade or purchase credits.'}, 'request_id': 'req_011CcFXU6qzJWBgTtozj9buD'}"
+        }
+      ],
+      "aggregate": {
+        "file": {
+          "macro": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "n_pred": 0,
+            "n_truth": 13
+          },
+          "micro": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 13,
+            "n_pred": 0,
+            "n_truth": 13
+          }
+        },
+        "line": {
+          "macro": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 48,
+            "n_pred": 0,
+            "n_truth": 48
+          },
+          "micro": {
+            "precision": 1.0,
+            "recall": 0.0,
+            "f1": 0.0,
+            "tp": 0,
+            "fp": 0,
+            "fn": 48,
+            "n_pred": 0,
+            "n_truth": 48
+          }
+        },
+        "latency_s_mean": 0.871,
+        "total_cost_usd": 0.0,
+        "total_input_tokens": 0,
+        "total_output_tokens": 0,
+        "n_errors": 1
+      }
+    },
+    "glm-5-2": {
+      "label": "GLM-5.2",
+      "model_id": "glm-5.2:cloud",
+      "per_symbol": [
+        {
+          "symbol": "UserProfile",
+          "oracle_files": 13,
+          "oracle_lines": 48,
+          "file": {
+            "precision": 0.8462,
+            "recall": 0.8462,
+            "f1": 0.8462,
+            "tp": 11,
+            "fp": 2,
+            "fn": 2,
+            "n_pred": 13,
+            "n_truth": 13
+          },
+          "line": {
+            "precision": 0.8372,
+            "recall": 0.75,
+            "f1": 0.7912,
+            "tp": 36,
+            "fp": 7,
+            "fn": 12,
+            "n_pred": 43,
+            "n_truth": 48
+          },
+          "n_pred": 43,
+          "latency_s": 12.164,
+          "input_tokens": 141380,
+          "output_tokens": 536,
+          "cache_read_tokens": 0,
+          "cost_usd": 0.086007,
+          "error": null
+        }
+      ],
+      "aggregate": {
+        "file": {
+          "macro": {
+            "precision": 0.8462,
+            "recall": 0.8462,
+            "f1": 0.8462,
+            "tp": 11,
+            "fp": 2,
+            "fn": 2,
+            "n_pred": 13,
+            "n_truth": 13
+          },
+          "micro": {
+            "precision": 0.8462,
+            "recall": 0.8462,
+            "f1": 0.8462,
+            "tp": 11,
+            "fp": 2,
+            "fn": 2,
+            "n_pred": 13,
+            "n_truth": 13
+          }
+        },
+        "line": {
+          "macro": {
+            "precision": 0.8372,
+            "recall": 0.75,
+            "f1": 0.7912,
+            "tp": 36,
+            "fp": 7,
+            "fn": 12,
+            "n_pred": 43,
+            "n_truth": 48
+          },
+          "micro": {
+            "precision": 0.8372,
+            "recall": 0.75,
+            "f1": 0.7912,
+            "tp": 36,
+            "fp": 7,
+            "fn": 12,
+            "n_pred": 43,
+            "n_truth": 48
+          }
+        },
+        "latency_s_mean": 12.164,
+        "total_cost_usd": 0.086007,
+        "total_input_tokens": 141380,
+        "total_output_tokens": 536,
+        "n_errors": 0
+      }
+    }
+  }
+}

@@ -2,6 +2,7 @@
 # The oracle, context builder, and scoring are pure stdlib — these are only needed
 # for live model calls and the analysis notebook.
 
+python-dotenv>=1.0     # auto-load keys from the project .env (optional; env vars also work)
 anthropic>=0.49.0      # Claude Opus 4.8 (claude-opus-4-8)
 ollama>=0.4.0          # GLM-5.2 via Ollama Cloud (glm-5.2:cloud) — default GLM path
 openai>=1.40.0         # GLM-5.2 via the OpenAI-compatible z.ai / Zhipu endpoint (GLM_PROVIDER=openai_compatible)

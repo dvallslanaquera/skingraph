@@ -22,6 +22,12 @@ RESULTS_DIR = Path(__file__).resolve().parents[1] / "results"
 # so the oracle isn't polluted by, e.g., a symbol name appearing in a fixture.
 SOURCE_GLOBS = ("*.py", "*.ts", "*.tsx")
 
+# Path prefixes excluded from the dump AND the oracle. The benchmark must never
+# measure its own source: notebooks/blast_radius/config.py literally lists the
+# target symbols as strings, which would contaminate the ground truth once the
+# notebooks/ folder is git-tracked.
+EXCLUDE_PREFIXES = ("notebooks/",)
+
 # --- Target symbols ---------------------------------------------------------
 # Chosen for a deliberate spread of blast-radius sizes (measured on this repo):
 # from a 2-file/3-line config dict up to a 13-file/48-line core type. Distinctive
@@ -70,13 +76,14 @@ OPUS = ModelConfig(
 # GLM-5.2 can be reached two ways; choose with GLM_PROVIDER:
 #   "ollama"            -> Ollama Cloud via the `ollama` package (model "glm-5.2:cloud") [default]
 #   "openai_compatible" -> Zhipu / z.ai OpenAI-compatible endpoint
-# Pricing is a PLACEHOLDER in both cases — set GLM_INPUT_PRICE / GLM_OUTPUT_PRICE
-# (USD per 1M tokens) to your real rate before quoting cost. Ollama Cloud bills by
-# subscription/usage, so its per-token cost is only indicative.
+# Pricing is GLM-5.2 Cloud API list pricing (USD per 1M tokens): $1.40 input,
+# $4.40 output. Override with GLM_INPUT_PRICE / GLM_OUTPUT_PRICE if you have a
+# discounted rate. Ollama Cloud bills by subscription/usage, so its per-token
+# cost is only indicative if used through that provider.
 GLM_PROVIDER = os.getenv("GLM_PROVIDER", "ollama")
 _GLM_PRICE = dict(
-    input_price_per_mtok=float(os.getenv("GLM_INPUT_PRICE", "0.60")),
-    output_price_per_mtok=float(os.getenv("GLM_OUTPUT_PRICE", "2.20")),
+    input_price_per_mtok=float(os.getenv("GLM_INPUT_PRICE", "1.40")),
+    output_price_per_mtok=float(os.getenv("GLM_OUTPUT_PRICE", "4.40")),
 )
 
 if GLM_PROVIDER == "ollama":

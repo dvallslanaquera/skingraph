@@ -51,7 +51,7 @@ export const SUN_DAMAGE: SunDamageHistory[] = [
 export const GENDER_OPTIONS: { value: Gender; label: string }[] = [
   { value: "male", label: "Male" },
   { value: "female", label: "Female" },
-  { value: "other", label: "Non-binary / Prefer not to say" },
+  { value: "other", label: "Prefer not to say" },
 ];
 
 // Fitzpatrick phototypes I–VI. The selected value stored on the profile is the

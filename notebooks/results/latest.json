@@ -2,11 +2,11 @@
   "schema_version": 1,
   "mode": "demo",
   "synthetic": true,
-  "generated_at": "2026-06-21T00:38:27.684482+00:00",
+  "generated_at": "2026-06-21T03:19:34.553077+00:00",
   "repo": {
-    "n_files": 69,
-    "char_count": 523683,
-    "est_tokens": 141536
+    "n_files": 61,
+    "char_count": 477685,
+    "est_tokens": 129104
   },
   "symbols": [
     "UserProfile",
@@ -14,12 +14,12 @@
   ],
   "oracle": {
     "UserProfile": {
-      "files": 16,
-      "lines": 51
+      "files": 13,
+      "lines": 48
     },
     "AgentState": {
-      "files": 12,
-      "lines": 46
+      "files": 11,
+      "lines": 45
     }
   },
   "models": {
@@ -29,29 +29,29 @@
       "per_symbol": [
         {
           "symbol": "UserProfile",
-          "oracle_files": 16,
-          "oracle_lines": 51,
+          "oracle_files": 13,
+          "oracle_lines": 48,
           "file": {
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 16,
+            "tp": 13,
             "fp": 0,
             "fn": 0,
-            "n_pred": 16,
-            "n_truth": 16
+            "n_pred": 13,
+            "n_truth": 13
           },
           "line": {
             "precision": 1.0,
-            "recall": 0.9608,
-            "f1": 0.98,
-            "tp": 49,
+            "recall": 0.9583,
+            "f1": 0.9787,
+            "tp": 46,
             "fp": 0,
             "fn": 2,
-            "n_pred": 49,
-            "n_truth": 51
+            "n_pred": 46,
+            "n_truth": 48
           },
-          "n_pred": 49,
+          "n_pred": 46,
           "latency_s": 0.0,
           "input_tokens": 0,
           "output_tokens": 0,
@@ -61,29 +61,29 @@
         },
         {
           "symbol": "AgentState",
-          "oracle_files": 12,
-          "oracle_lines": 46,
+          "oracle_files": 11,
+          "oracle_lines": 45,
           "file": {
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 12,
+            "tp": 11,
             "fp": 0,
             "fn": 0,
-            "n_pred": 12,
-            "n_truth": 12
+            "n_pred": 11,
+            "n_truth": 11
           },
           "line": {
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 46,
+            "tp": 45,
             "fp": 0,
             "fn": 0,
-            "n_pred": 46,
-            "n_truth": 46
+            "n_pred": 45,
+            "n_truth": 45
           },
-          "n_pred": 46,
+          "n_pred": 45,
           "latency_s": 0.0,
           "input_tokens": 0,
           "output_tokens": 0,
@@ -98,43 +98,43 @@
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 28,
+            "tp": 24,
             "fp": 0,
             "fn": 0,
-            "n_pred": 28,
-            "n_truth": 28
+            "n_pred": 24,
+            "n_truth": 24
           },
           "micro": {
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 28,
+            "tp": 24,
             "fp": 0,
             "fn": 0,
-            "n_pred": 28,
-            "n_truth": 28
+            "n_pred": 24,
+            "n_truth": 24
           }
         },
         "line": {
           "macro": {
             "precision": 1.0,
-            "recall": 0.9804,
-            "f1": 0.99,
-            "tp": 95,
+            "recall": 0.9791,
+            "f1": 0.9893,
+            "tp": 91,
             "fp": 0,
             "fn": 2,
-            "n_pred": 95,
-            "n_truth": 97
+            "n_pred": 91,
+            "n_truth": 93
           },
           "micro": {
             "precision": 1.0,
-            "recall": 0.9794,
-            "f1": 0.9896,
-            "tp": 95,
+            "recall": 0.9785,
+            "f1": 0.9891,
+            "tp": 91,
             "fp": 0,
             "fn": 2,
-            "n_pred": 95,
-            "n_truth": 97
+            "n_pred": 91,
+            "n_truth": 93
           }
         },
         "latency_s_mean": 0.0,
@@ -150,29 +150,29 @@
       "per_symbol": [
         {
           "symbol": "UserProfile",
-          "oracle_files": 16,
-          "oracle_lines": 51,
+          "oracle_files": 13,
+          "oracle_lines": 48,
           "file": {
             "precision": 1.0,
-            "recall": 0.9375,
-            "f1": 0.9677,
-            "tp": 15,
+            "recall": 0.9231,
+            "f1": 0.96,
+            "tp": 12,
             "fp": 0,
             "fn": 1,
-            "n_pred": 15,
-            "n_truth": 16
+            "n_pred": 12,
+            "n_truth": 13
           },
           "line": {
-            "precision": 0.913,
-            "recall": 0.8235,
-            "f1": 0.866,
-            "tp": 42,
+            "precision": 0.9048,
+            "recall": 0.7917,
+            "f1": 0.8444,
+            "tp": 38,
             "fp": 4,
-            "fn": 9,
-            "n_pred": 46,
-            "n_truth": 51
+            "fn": 10,
+            "n_pred": 42,
+            "n_truth": 48
           },
-          "n_pred": 46,
+          "n_pred": 42,
           "latency_s": 0.0,
           "input_tokens": 0,
           "output_tokens": 0,
@@ -182,29 +182,29 @@
         },
         {
           "symbol": "AgentState",
-          "oracle_files": 12,
-          "oracle_lines": 46,
+          "oracle_files": 11,
+          "oracle_lines": 45,
           "file": {
             "precision": 1.0,
             "recall": 1.0,
             "f1": 1.0,
-            "tp": 12,
+            "tp": 11,
             "fp": 0,
             "fn": 0,
-            "n_pred": 12,
-            "n_truth": 12
+            "n_pred": 11,
+            "n_truth": 11
           },
           "line": {
-            "precision": 0.814,
-            "recall": 0.7609,
-            "f1": 0.7865,
-            "tp": 35,
-            "fp": 8,
-            "fn": 11,
-            "n_pred": 43,
-            "n_truth": 46
+            "precision": 0.8462,
+            "recall": 0.7333,
+            "f1": 0.7857,
+            "tp": 33,
+            "fp": 6,
+            "fn": 12,
+            "n_pred": 39,
+            "n_truth": 45
           },
-          "n_pred": 43,
+          "n_pred": 39,
           "latency_s": 0.0,
           "input_tokens": 0,
           "output_tokens": 0,
@@ -217,45 +217,45 @@
         "file": {
           "macro": {
             "precision": 1.0,
-            "recall": 0.9688,
-            "f1": 0.9839,
-            "tp": 27,
+            "recall": 0.9616,
+            "f1": 0.98,
+            "tp": 23,
             "fp": 0,
             "fn": 1,
-            "n_pred": 27,
-            "n_truth": 28
+            "n_pred": 23,
+            "n_truth": 24
           },
           "micro": {
             "precision": 1.0,
-            "recall": 0.9643,
-            "f1": 0.9818,
-            "tp": 27,
+            "recall": 0.9583,
+            "f1": 0.9787,
+            "tp": 23,
             "fp": 0,
             "fn": 1,
-            "n_pred": 27,
-            "n_truth": 28
+            "n_pred": 23,
+            "n_truth": 24
           }
         },
         "line": {
           "macro": {
-            "precision": 0.8635,
-            "recall": 0.7922,
-            "f1": 0.8262,
-            "tp": 77,
-            "fp": 12,
-            "fn": 20,
-            "n_pred": 89,
-            "n_truth": 97
+            "precision": 0.8755,
+            "recall": 0.7625,
+            "f1": 0.8151,
+            "tp": 71,
+            "fp": 10,
+            "fn": 22,
+            "n_pred": 81,
+            "n_truth": 93
           },
           "micro": {
-            "precision": 0.8652,
-            "recall": 0.7938,
-            "f1": 0.828,
-            "tp": 77,
-            "fp": 12,
-            "fn": 20,
-            "n_pred": 89,
-            "n_truth": 97
+            "precision": 0.8765,
+            "recall": 0.7634,
+            "f1": 0.8161,
+            "tp": 71,
+            "fp": 10,
+            "fn": 22,
+            "n_pred": 81,
+            "n_truth": 93
           }
         },
         "latency_s_mean": 0.0,

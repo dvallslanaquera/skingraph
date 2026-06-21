@@ -1,24 +1,26 @@
 :root {
-  --bg: #f6f5f2;
+  /* Palette aligned with the landing page (ui/index.html): "dewy botanical".
+     Token NAMES are unchanged so every screen picks up the new look at once. */
+  --bg: #f4f7f4; /* cool green-white */
   --surface: #ffffff;
-  --surface-2: #faf9f7;
-  --border: #e7e3dc;
-  --text: #2a2724;
-  --text-soft: #6f6a63;
-  --muted: #9b958c;
-  --accent: #5a8a7d;
-  --accent-strong: #437061;
-  --accent-soft: #e8f0ed;
+  --surface-2: #fbfcfb;
+  --border: #e4ebe5;
+  --text: #2c3a32; /* soft deep-green charcoal */
+  --text-soft: #5d6c62;
+  --muted: #9aa69e;
+  --accent: #6db48c; /* young-leaf green — the brand */
+  --accent-strong: #4e9e78;
+  --accent-soft: #e6f1ea;
   --danger: #c0492f;
   --danger-soft: #fbeae6;
   --warn: #b9772a;
   --warn-soft: #fbf1e2;
-  --ok: #3f7d52;
-  --ok-soft: #e9f3ec;
-  --radius: 14px;
-  --radius-sm: 9px;
-  --shadow: 0 1px 2px rgba(40, 35, 30, 0.04),
-    0 6px 20px rgba(40, 35, 30, 0.06);
+  --ok: #4e9e78; /* positives read as the brand leaf */
+  --ok-soft: #e6f1ea;
+  --radius: 22px;
+  --radius-sm: 13px;
+  --shadow: 0 1px 2px rgba(76, 110, 90, 0.05),
+    0 8px 24px rgba(76, 110, 90, 0.07);
   font-synthesis: none;
 }
 
@@ -34,12 +36,27 @@ body,
 }
 
 body {
-  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: "Hanken Grotesk", "Zen Maru Gothic", system-ui, -apple-system,
+    "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
   font-size: 15px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+}
+
+/* Headings + the wordmark use the rounded Zen Maru display face, matching the
+   landing page. Japanese text also reads in Zen Maru for warmth/harmony. */
+h1,
+h2,
+h3,
+.brand-name,
+.cost-value {
+  font-family: "Zen Maru Gothic", "Hanken Grotesk", sans-serif;
+}
+
+:lang(ja) {
+  font-family: "Zen Maru Gothic", "Hanken Grotesk", sans-serif;
 }
 
 /* ---- layout ------------------------------------------------------------- */
@@ -148,6 +165,10 @@ body {
 
 .lang-option {
   flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   padding: 6px 10px;
   border: none;
   background: transparent;
@@ -157,6 +178,14 @@ body {
   color: var(--text-soft);
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
+}
+
+.lang-flag {
+  width: 18px;
+  height: 13px;
+  border-radius: 2px;
+  flex: none;
+  box-shadow: 0 0 0 1px rgba(40, 35, 30, 0.08);
 }
 
 .lang-option:hover {
@@ -362,6 +391,7 @@ body {
 }
 
 .field-help {
+  display: block;
   margin: 0 0 2px;
   font-size: 12.5px;
   color: var(--muted);
