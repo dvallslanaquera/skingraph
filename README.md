@@ -99,17 +99,17 @@ SkinGraphは**David Valls**（[GitHub @ShinBellator](https://github.com/ShinBell
 
 ```mermaid
 flowchart TB
-    User(["🌐 ユーザー\n（Web UI · Vercel）"])
-    Ingest["🖼️ 画像前処理\nホワイトバランス・グレア・ガンマ\nノイズ・傾き補正・CLAHE・シャープ化"]
-    Classify["🔀 OODゲート＋表裏判定\nGemini Flash · 表面 / 裏面検出"]
-    VLM["🤖 階層型推論エンジン\nGemini Flash → Pro（裏面ラベル）"]
-    Registry["📚 レジストリエンジン\nベクトルグラウンディング · Qdrant"]
-    WebSearch["🌐 Webサーチ\n成分検索\n（表面ラベル・レジストリ未登録品）"]
-    Normalizer["🔬 INCI正規化ノード\n原材料名 → 標準INCI名"]
-    Auditor["🛡️ 安全性監査\n単一製品フラグ"]
-    RoutineAdvisor["📋 ルーティンアドバイザー\nクロスコンフリクト · 冗長性 · 付加価値"]
-    Coach["💬 バイリンガルコーチ\n薬機法準拠 · パーソナライズ"]
-    Retake["🔁 グレースフルイグジット\nユーザーUXフィードバック"]
+    User(["🌐 ユーザー<br/>（Web UI · Vercel）"])
+    Ingest["🖼️ 画像前処理<br/>ホワイトバランス・グレア・ガンマ<br/>ノイズ・傾き補正・CLAHE・シャープ化"]
+    Classify["🔀 OODゲート＋表裏判定<br/>Gemini Flash · 表面 / 裏面検出"]
+    VLM["🤖 階層型推論エンジン<br/>Gemini Flash → Pro（裏面ラベル）"]
+    Registry["📚 レジストリエンジン<br/>ベクトルグラウンディング · Qdrant"]
+    WebSearch["🌐 Webサーチ<br/>成分検索<br/>（表面ラベル・レジストリ未登録品）"]
+    Normalizer["🔬 INCI正規化ノード<br/>原材料名 → 標準INCI名"]
+    Auditor["🛡️ 安全性監査<br/>単一製品フラグ"]
+    RoutineAdvisor["📋 ルーティンアドバイザー<br/>クロスコンフリクト · 冗長性 · 付加価値"]
+    Coach["💬 バイリンガルコーチ<br/>薬機法準拠 · パーソナライズ"]
+    Retake["🔁 グレースフルイグジット<br/>ユーザーUXフィードバック"]
 
     User -->|"高解像度画像"| Ingest
     Ingest -->|"最適化ペイロード"| Classify
@@ -311,17 +311,17 @@ SkinGraph is built by **David Valls** ([GitHub @ShinBellator](https://github.com
 
 ```mermaid
 flowchart TB
-    User(["🌐 User\n(Web UI · Vercel)"])
-    Ingest["🖼️ Image Pre-processing\nWhite Bal · Glare · Gamma\nNoise · Deskew · CLAHE · Sharpen"]
-    Classify["🔀 OOD Gate + Side Classifier\nGemini Flash · front / back detection"]
-    VLM["🤖 Tiered Inference Engine\nGemini Flash → Pro (back labels)"]
-    Registry["📚 Registry Engine\nVector Grounding · Qdrant"]
-    WebSearch["🌐 Web Search\nIngredient lookup\n(front labels + registry misses)"]
-    Normalizer["🔬 INCI Normalizer\nRaw name → canonical key"]
-    Auditor["🛡️ Safety Auditor\nSingle-product flags"]
-    RoutineAdvisor["📋 Routine Advisor\nCross-product conflicts\nRedundancy · Value-add"]
-    Coach["💬 Bilingual Coach\n薬機法-safe · Personalised"]
-    Retake["🔁 Graceful Exit\nUser UX Feedback"]
+    User(["🌐 User<br/>(Web UI · Vercel)"])
+    Ingest["🖼️ Image Pre-processing<br/>White Bal · Glare · Gamma<br/>Noise · Deskew · CLAHE · Sharpen"]
+    Classify["🔀 OOD Gate + Side Classifier<br/>Gemini Flash · front / back detection"]
+    VLM["🤖 Tiered Inference Engine<br/>Gemini Flash → Pro (back labels)"]
+    Registry["📚 Registry Engine<br/>Vector Grounding · Qdrant"]
+    WebSearch["🌐 Web Search<br/>Ingredient lookup<br/>(front labels + registry misses)"]
+    Normalizer["🔬 INCI Normalizer<br/>Raw name → canonical key"]
+    Auditor["🛡️ Safety Auditor<br/>Single-product flags"]
+    RoutineAdvisor["📋 Routine Advisor<br/>Cross-product conflicts<br/>Redundancy · Value-add"]
+    Coach["💬 Bilingual Coach<br/>薬機法-safe · Personalised"]
+    Retake["🔁 Graceful Exit<br/>User UX Feedback"]
 
     User -->|"High-res image"| Ingest
     Ingest -->|"Optimized payload"| Classify
