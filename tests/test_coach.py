@@ -2,14 +2,15 @@
 #
 # The Gemini call is mocked; the focus is the deterministic, safety-critical
 # logic the coach computes itself (pregnancy / dehydration / sun-sensitivity
-# cautions and card rendering) rather than the model's free text.
+# cautions, warning ordering, and anonymous score suppression) rather than the
+# model's free text.
 from unittest.mock import MagicMock
 
 import pytest
 
 from src.nodes import coach
-from src.nodes.coach import CoachResponse, Recommendation, RoutineFitCard
-from src.state import CrossConflict, RoutineFit, SafetyAudit, UserProfile
+from src.state import (CoachResponse, CrossConflict, Recommendation,
+                       RoutineFit, RoutineFitCard, SafetyAudit, UserProfile)
 
 from tests.helpers import make_extraction, std_ingredients
 
@@ -65,33 +66,12 @@ def test_pregnancy_names_flagged_ingredient():
 
 
 # --------------------------------------------------------------------------- #
-# _render_recommendation
-# --------------------------------------------------------------------------- #
-def test_render_prepends_extra_warnings_then_card_warnings():
-    card = Recommendation(
-        product="B — P", purpose="hydration",
-        warnings=["card warning"], timing="PM", frequency="Daily",
-    )
-    rendered = coach._render_recommendation(card, "en", ["extra warning"])
-    # Extra (deterministic) warnings come before the model's own warnings.
-    assert rendered.index("extra warning") < rendered.index("card warning")
-    assert "Best timing: PM" in rendered
-    assert "Frequency: Daily" in rendered
-
-
-def test_render_shows_none_when_no_warnings():
-    card = Recommendation(product="B — P", purpose="x", timing="AM", frequency="Daily")
-    assert "Warnings: None" in coach._render_recommendation(card, "en", [])
-    assert "注意事項: 特になし" in coach._render_recommendation(card, "ja", [])
-
-
-# --------------------------------------------------------------------------- #
 # coach_node
 # --------------------------------------------------------------------------- #
 def test_coach_node_placeholder_without_safety_report():
     result = coach.coach_node({"safety_report": None})
     assert "unable to generate" in result["coach_advice"].lower()
-    assert result["routine_recommendations"] == []
+    assert result["coach_cards"] is None
 
 
 @pytest.fixture
@@ -109,20 +89,25 @@ def mock_coach_llm(monkeypatch):
     return install
 
 
-def _response() -> CoachResponse:
+def _response(score=3) -> CoachResponse:
     return CoachResponse(
+        recommendation_score=score,
         japanese=Recommendation(
+            verdict="乾燥肌の方にうれしい保湿アイテムです。",
             product="Brand — Product", purpose="うるおいを与える",
             warnings=[], timing="PM", frequency="週2〜3回",
+            recommendation_rationale="保湿の目標に合っています。",
         ),
         english=Recommendation(
+            verdict="A nice hydrating pick for your dry skin.",
             product="Brand — Product", purpose="Provides moisture",
             warnings=[], timing="PM", frequency="2–3 times per week",
+            recommendation_rationale="Fits your hydration goal.",
         ),
     )
 
 
-def test_coach_node_renders_bilingual_card_and_machine_fields(mock_coach_llm):
+def test_coach_node_returns_structured_cards(mock_coach_llm):
     mock_coach_llm(_response())
     state = {
         "safety_report": SafetyAudit(safety_score=0.85),
@@ -133,38 +118,72 @@ def test_coach_node_renders_bilingual_card_and_machine_fields(mock_coach_llm):
     }
     result = coach.coach_node(state)
 
-    advice = result["coach_advice"]
-    assert "【日本語】" in advice and "【English】" in advice
+    cards = result["coach_cards"]
+    assert cards is not None
+    assert cards.english.verdict.startswith("A nice hydrating pick")
+    assert cards.japanese.timing == "PM"
+    assert cards.recommendation_score == 3
+    # Complete scans no longer emit a rendered text blob; that's the CLI's job.
+    assert "coach_advice" not in result
 
-    recs = result["routine_recommendations"]
-    assert "[PRODUCT] Brand — Product" in recs
-    assert "[TIMING] PM" in recs
-    assert any(r.startswith("[FREQUENCY]") for r in recs)
+
+def test_coach_node_prepends_deterministic_warnings(mock_coach_llm):
+    response = _response()
+    response.japanese.warnings = ["モデルからの注意。"]
+    response.english.warnings = ["A model-written caution."]
+    mock_coach_llm(response)
+
+    state = {
+        "safety_report": SafetyAudit(safety_score=0.7),
+        # Retinol is both pregnancy-flagged and photosensitising.
+        "standardized_ingredients": std_ingredients(("レチノール", "Retinol")),
+        "extracted_data": make_extraction(brand="Brand", product_name="Product"),
+        "user_profile": UserProfile(is_pregnant=True, skin_type="dry"),
+    }
+    cards = coach.coach_node(state)["coach_cards"]
+
+    # Deterministic (system-computed) cautions come first, model text last.
+    assert "Pregnancy caution" in cards.english.warnings[0]
+    assert any("Sun-sensitivity caution" in w for w in cards.english.warnings[:-1])
+    assert cards.english.warnings[-1] == "A model-written caution."
+    assert "妊娠中の注意" in cards.japanese.warnings[0]
+    assert cards.japanese.warnings[-1] == "モデルからの注意。"
 
 
-def test_coach_node_omits_routine_fit_without_routine(mock_coach_llm):
-    mock_coach_llm(_response())
+def test_coach_node_suppresses_score_for_anonymous_scans(mock_coach_llm):
+    mock_coach_llm(_response(score=4))
     state = {
         "safety_report": SafetyAudit(safety_score=0.9),
         "standardized_ingredients": std_ingredients(("水", "Water")),
         "extracted_data": make_extraction(brand="Brand", product_name="Product"),
-        # No routine_fit in state → no Routine Fit section.
+        # No user_profile → anonymous scan.
     }
-    result = coach.coach_node(state)
-    assert "Routine Fit" not in result["coach_advice"]
-    assert not any(r.startswith("[ROUTINE-") for r in result["routine_recommendations"])
+    cards = coach.coach_node(state)["coach_cards"]
+    assert cards.recommendation_score is None
+    assert cards.japanese.recommendation_rationale == ""
+    assert cards.english.recommendation_rationale == ""
 
 
-def test_coach_node_renders_routine_fit_section_and_machine_lines(mock_coach_llm):
+def test_coach_node_defaults_missing_score_to_zero_for_users(mock_coach_llm):
+    mock_coach_llm(_response(score=None))
+    state = {
+        "safety_report": SafetyAudit(safety_score=0.9),
+        "standardized_ingredients": std_ingredients(("水", "Water")),
+        "extracted_data": make_extraction(brand="Brand", product_name="Product"),
+        "user_profile": UserProfile(skin_type="dry"),
+    }
+    cards = coach.coach_node(state)["coach_cards"]
+    assert cards.recommendation_score == 0
+
+
+def test_coach_node_passes_routine_cards_through(mock_coach_llm):
     response = _response()
     response.routine_japanese = RoutineFitCard(
         risks=["Acme — Peelとの併用に注意が必要です。"],
-        redundancy=[],
         value_add=["ブライトニングの目標に役立つ可能性があります。"],
     )
     response.routine_english = RoutineFitCard(
         risks=["Caution is advised when used with Acme — Peel."],
-        redundancy=[],
         value_add=["May support your brightening goal."],
     )
     mock_coach_llm(response)
@@ -187,29 +206,6 @@ def test_coach_node_renders_routine_fit_section_and_machine_lines(mock_coach_llm
             existing_products=["Acme — Peel"],
         ),
     }
-    result = coach.coach_node(state)
-
-    advice = result["coach_advice"]
-    assert "Routine Fit" in advice and "ルーティン適合" in advice
-    assert "Caution is advised when used with Acme — Peel." in advice
-
-    # Deterministic machine-readable findings are always emitted.
-    recs = result["routine_recommendations"]
-    assert any(r.startswith("[ROUTINE-RISK]") and "Acme — Peel" in r for r in recs)
-    assert any(r.startswith("[ROUTINE-VALUE]") for r in recs)
-
-
-def test_coach_node_injects_deterministic_pregnancy_and_sun_warnings(mock_coach_llm):
-    mock_coach_llm(_response())
-    state = {
-        "safety_report": SafetyAudit(safety_score=0.7),
-        # Retinol is both pregnancy-flagged and photosensitising.
-        "standardized_ingredients": std_ingredients(("レチノール", "Retinol")),
-        "extracted_data": make_extraction(brand="Brand", product_name="Product"),
-        "user_profile": UserProfile(is_pregnant=True, skin_type="dry"),
-    }
-    result = coach.coach_node(state)
-
-    warnings = [r for r in result["routine_recommendations"] if r.startswith("[WARNING]")]
-    assert any("Pregnancy caution" in w and "Retinol" in w for w in warnings)
-    assert any("Sun-sensitivity caution" in w for w in warnings)
+    cards = coach.coach_node(state)["coach_cards"]
+    assert "Acme — Peel" in cards.routine_english.risks[0]
+    assert cards.routine_japanese.value_add

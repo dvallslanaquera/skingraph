@@ -11,7 +11,8 @@ from fastapi.testclient import TestClient
 from src import user_store
 from src.api import service
 from src.api.main import app
-from src.state import Ingredient, ProductExtraction, SafetyAudit
+from src.state import (CoachResponse, Ingredient, ProductExtraction,
+                       Recommendation, SafetyAudit)
 
 
 def _fake_final_state() -> dict:
@@ -43,8 +44,24 @@ def _fake_final_state() -> dict:
         "unmatched_ingredients": [],
         "safety_report": SafetyAudit(),
         "routine_fit": None,
-        "coach_advice": "【日本語】...\n【English】...",
-        "routine_recommendations": ["[PRODUCT] Hada — Lotion"],
+        "coach_cards": CoachResponse(
+            japanese=Recommendation(
+                verdict="乾燥肌にうれしい保湿ローションです。",
+                product="Hada — Lotion",
+                purpose="うるおいを与える",
+                timing="AM & PM",
+                frequency="毎日",
+                application_notes=["湿った肌になじませてください"],
+            ),
+            english=Recommendation(
+                verdict="A gentle hydrating lotion for dry skin.",
+                product="Hada — Lotion",
+                purpose="Provides moisture",
+                timing="AM & PM",
+                frequency="Daily",
+                application_notes=["Apply to slightly damp skin"],
+            ),
+        ),
         "web_sources": [],
     }
 
@@ -148,10 +165,16 @@ def test_scan_success_and_adds_to_routine(client):
     assert body["status"] == "complete"
     assert body["product"]["brand"] == "Hada"
     assert body["standardized_ingredients"][0]["name_standardized"] == "Water"
+    assert body["coach"]["english"]["verdict"].startswith("A gentle hydrating")
+    assert body["coach"]["japanese"]["timing"] == "AM & PM"
     assert body["added_product_id"] is not None
 
-    # The scanned product was actually persisted to the shelf.
-    assert client.get(f"/users/{uid}/routine").json()[0]["product_name"] == "Lotion"
+    # The scanned product was actually persisted to the shelf, carrying the
+    # coach card's timing and per-language application notes.
+    saved = client.get(f"/users/{uid}/routine").json()[0]
+    assert saved["product_name"] == "Lotion"
+    assert saved["timing"] == "AM & PM"
+    assert saved["application_notes"] == ["Apply to slightly damp skin"]
 
 
 def test_scan_without_user_does_not_save(client):
@@ -189,28 +212,20 @@ def _sse_events(resp) -> list[dict]:
     return events
 
 
-def test_scan_stream_emits_stage_coach_then_complete(client):
-    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
+def test_scan_stream_emits_stages_then_complete(client):
+    resp = client.post("/scan/stream", files={"image": IMAGE})
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/event-stream")
 
     events = _sse_events(resp)
     kinds = [e["event"] for e in events]
     assert "stage" in kinds           # real per-node progress
-    assert "coach_delta" in kinds      # typewriter reveal of the coach card
     assert kinds[-1] == "complete"     # final full ScanResponse last
 
     complete = events[-1]["data"]
     assert complete["status"] == "complete"
     assert complete["product"]["brand"] == "Hada"
-
-
-def test_scan_stream_coach_deltas_reconstruct_the_card(client):
-    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
-    events = _sse_events(resp)
-    streamed = "".join(e["text"] for e in events if e["event"] == "coach_delta")
-    # lang=en with no coach_advice_en falls back to the combined coach_advice blob.
-    assert streamed == _fake_final_state()["coach_advice"]
+    assert complete["coach"]["english"]["verdict"].startswith("A gentle hydrating")
 
 
 def test_scan_stream_adds_to_routine(client):
@@ -218,7 +233,7 @@ def test_scan_stream_adds_to_routine(client):
     resp = client.post(
         "/scan/stream",
         files={"image": IMAGE},
-        data={"user_id": uid, "add_to_routine": "true", "lang": "ja"},
+        data={"user_id": uid, "add_to_routine": "true"},
     )
     assert resp.status_code == 200
     events = _sse_events(resp)
@@ -240,7 +255,7 @@ def test_scan_stream_surfaces_failures_as_error_not_silent_eof(client, monkeypat
         raise RuntimeError("worker exploded")
 
     monkeypatch.setattr(service.graph_app, "stream", _boom)
-    resp = client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "en"})
+    resp = client.post("/scan/stream", files={"image": IMAGE})
     assert resp.status_code == 200
     events = _sse_events(resp)
     kinds = [e["event"] for e in events]
@@ -250,10 +265,6 @@ def test_scan_stream_surfaces_failures_as_error_not_silent_eof(client, monkeypat
 
 
 def test_scan_stream_validation_errors(client):
-    assert (
-        client.post("/scan/stream", files={"image": IMAGE}, data={"lang": "fr"}).status_code
-        == 422
-    )
     assert (
         client.post("/scan/stream", files={"image": IMAGE}, data={"image_type": "side"}).status_code
         == 422

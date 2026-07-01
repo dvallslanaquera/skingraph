@@ -10,10 +10,10 @@ from typing import List, Optional, Tuple, cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL
-from src.state import AgentState, RoutineFit, UserProfile, inci_names
+from src.state import (AgentState, CoachResponse, RoutineFit, UserProfile,
+                       inci_names)
 
 # Ingredients that are contraindicated during pregnancy / breastfeeding.
 _PREGNANCY_FLAGGED_INCI = {
@@ -208,18 +208,29 @@ against, and its AM/PM placement relative to what they already use. When a
 otherwise describe where it slots into a typical routine. Keep it 薬機法-safe and
 never promise outcomes. Fill it in both the Japanese and English cards.
 
+━━ VERDICT (the headline) ━━
+Open the card with 'verdict': 1–2 sentences giving your overall call on this
+product for THIS user — a knowledgeable friend's bottom line, e.g. "Nice pick
+for your dry skin — just keep it to evenings and wear SPF the next morning."
+Name the main reason it does (or doesn't) suit them and the single most
+important caution, if any. Warm and specific; no hedging boilerplate, and do
+not repeat the full warnings list. 薬機法-safe like everything else.
+
 ━━ OUTPUT CONTRACT ━━
 • ONLY reference ingredients listed in the product context below.
 • Do NOT invent benefits not supported by the ingredient list.
 • Produce a single recommendation card with exactly these fields:
+    verdict   — the 1–2 sentence headline per the VERDICT rules above.
     product   — "Brand — Product Name" as given in the context.
     recommendation_rationale — ONE sentence justifying the recommendation_score.
     purpose   — ONE sentence on what this product is for.
-    warnings  — user-tailored cautions; one concern per item. MUST call out if
-                the product can make skin more prone to dehydration or to sun
-                damage (raised sun sensitivity). Include the sticky/tacky
-                nighttime heads-up here when it applies (as a comfort tip, never
-                a deterrent). [] if genuinely none.
+    warnings  — user-tailored cautions; one concern per item, ORDERED BY
+                IMPORTANCE to this user — the first three must be the ones they
+                genuinely need to know. MUST call out if the product can make
+                skin more prone to dehydration or to sun damage (raised sun
+                sensitivity). Include the sticky/tacky nighttime heads-up here
+                when it applies (as a comfort tip, never a deterrent). [] if
+                genuinely none.
     timing    — "AM", "PM", or "AM & PM" per the rules above.
     frequency — e.g. "Daily" or "2–3 times per week".
     application_notes — short how-to-apply / sequencing cautions per the
@@ -234,115 +245,6 @@ never promise outcomes. Fill it in both the Japanese and English cards.
   versions must convey the same content; 'timing' stays "AM"/"PM"/"AM & PM"
   in both.
 """.strip()
-
-
-class Recommendation(BaseModel):
-    """One complete recommendation card, written entirely in a single language."""
-
-    product: str = Field(
-        default="",
-        description="The scanned product as 'Brand — Product Name'.",
-    )
-    purpose: str = Field(
-        default="",
-        description="ONE sentence describing what this product is intended for.",
-    )
-    warnings: List[str] = Field(
-        default_factory=list,
-        description=(
-            "User-tailored cautions, one concern per item. MUST flag if the "
-            "product can make skin more prone to dehydration or sun damage. "
-            "Empty list if there are genuinely none."
-        ),
-    )
-    timing: str = Field(
-        default="",
-        description="Best time to use: exactly 'AM', 'PM', or 'AM & PM'.",
-    )
-    frequency: str = Field(
-        default="",
-        description="How often to use, e.g. 'Daily' or '2–3 times per week'.",
-    )
-    application_notes: List[str] = Field(
-        default_factory=list,
-        description=(
-            "Short how-to-apply / sequencing cautions, one per item, e.g. "
-            "'apply to completely dry skin', 'wait ~1 minute before the next "
-            "layer', 'avoid if skin is irritated from a PM retinoid'. Empty if "
-            "there is nothing special about how to apply it."
-        ),
-    )
-    recommendation_rationale: str = Field(
-        default="",
-        description=(
-            "ONE short sentence explaining the recommendation_score: why this "
-            "product does (or does not) suit this user, citing the main driver "
-            "— a goal it serves, a concern/skin-type it raises, or budget fit."
-        ),
-    )
-    routine_integration: str = Field(
-        default="",
-        description=(
-            "One or two sentences on how to slot THIS product into the user's "
-            "CURRENT routine: where in the sequence it goes, which existing "
-            "products to pair it with or alternate against, and its AM/PM "
-            "placement relative to what they already use. Name the actual "
-            "existing products when a Routine Context block is provided; "
-            "otherwise describe where it fits in a typical routine."
-        ),
-    )
-
-
-class RoutineFitCard(BaseModel):
-    """How the product fits the user's existing routine, in a single language.
-
-    Populated only when a Routine Context block is provided; otherwise empty.
-    """
-
-    risks: List[str] = Field(
-        default_factory=list,
-        description=(
-            "One line per cross-product conflict from the routine context, "
-            "naming the existing product. Empty if none."
-        ),
-    )
-    redundancy: List[str] = Field(
-        default_factory=list,
-        description="Gentle notes that the product overlaps an existing one.",
-    )
-    value_add: List[str] = Field(
-        default_factory=list,
-        description="How the product helps an otherwise-uncovered user goal.",
-    )
-
-
-class CoachResponse(BaseModel):
-    recommendation_score: int = Field(
-        default=0,
-        ge=0,
-        le=5,
-        description=(
-            "0–5 leaves: how well THIS product suits THIS user, weighing their "
-            "goals (does it contain ingredients that serve them), concerns / "
-            "skin type (appropriate or risky), and budget (does its price band "
-            "fit). 5 = excellent fit on all three; 0 = poorly suited or risky. "
-            "Set once; it is language-independent."
-        ),
-    )
-    japanese: Recommendation = Field(
-        description="The card written ONLY in Japanese (敬体, 薬機法-compliant)."
-    )
-    english: Recommendation = Field(
-        description="The same card written ONLY in English."
-    )
-    routine_japanese: RoutineFitCard = Field(
-        default_factory=RoutineFitCard,
-        description="Routine-fit notes in Japanese; empty if no routine context.",
-    )
-    routine_english: RoutineFitCard = Field(
-        default_factory=RoutineFitCard,
-        description="Routine-fit notes in English; empty if no routine context.",
-    )
 
 
 def _product_context(state: AgentState) -> str:
@@ -528,62 +430,6 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
     return ja, en
 
 
-# Field labels + "none" placeholder per language, hoisted so the renderers don't
-# rebuild these tables on every call.
-_REC_LABELS = {
-    "ja": ("製品", "用途", "注意事項", "使用タイミング", "使用頻度", "ルーティンへの取り入れ方"),
-    "en": ("Product", "Purpose", "Warnings", "Best timing", "Frequency", "Fitting it into your routine"),
-}
-_FIT_LABELS = {
-    "ja": ("リスク", "重複", "追加価値"),
-    "en": ("Risks", "Redundancy", "Adds value"),
-}
-_NONE_TEXT = {"ja": "特になし", "en": "None"}
-
-
-def _render_recommendation(
-    card: Recommendation, lang: str, extra_warnings: List[str]
-) -> str:
-    """Render one single-language Recommendation as the recommendation card."""
-    prod_l, purp_l, warn_l, time_l, freq_l, fit_l = _REC_LABELS[lang]
-    warnings = extra_warnings + card.warnings
-
-    none_text = _NONE_TEXT[lang]
-    lines = [
-        f"1. {prod_l}: {card.product}",
-        f"2. {purp_l}: {card.purpose}",
-    ]
-    if warnings:
-        lines.append(f"3. {warn_l}:")
-        lines.extend(f"   • {w}" for w in warnings)
-    else:
-        lines.append(f"3. {warn_l}: {none_text}")
-    lines.append(f"4. {time_l}: {card.timing}")
-    lines.append(f"5. {freq_l}: {card.frequency}")
-    if card.routine_integration:
-        lines.append(f"6. {fit_l}: {card.routine_integration}")
-    return "\n".join(lines)
-
-
-def _render_routine_fit(card: RoutineFitCard, lang: str) -> str:
-    """Render one single-language routine-fit card (risks / redundancy / value)."""
-    risk_l, red_l, val_l = _FIT_LABELS[lang]
-    none_text = _NONE_TEXT[lang]
-
-    lines: List[str] = []
-    for label, items in (
-        (risk_l, card.risks),
-        (red_l, card.redundancy),
-        (val_l, card.value_add),
-    ):
-        if items:
-            lines.append(f"{label}:")
-            lines.extend(f"  • {x}" for x in items)
-        else:
-            lines.append(f"{label}: {none_text}")
-    return "\n".join(lines)
-
-
 def coach_node(state: AgentState) -> dict:
     if state.get("safety_report") is None:
         logging.warning("Coach reached without safety_report — returning placeholder.")
@@ -592,7 +438,7 @@ def coach_node(state: AgentState) -> dict:
                 "Safety audit data unavailable; "
                 "unable to generate personalised advice."
             ),
-            "routine_recommendations": [],
+            "coach_cards": None,
         }
 
     profile: Optional[UserProfile] = state.get("user_profile")
@@ -642,57 +488,20 @@ def coach_node(state: AgentState) -> dict:
 
     ja, en = response.japanese, response.english
 
-    # Single-language cards, each shown on its own depending on the UI language.
-    coach_advice_ja = _render_recommendation(ja, "ja", extra_ja)
-    coach_advice_en = _render_recommendation(en, "en", extra_en)
+    # The deterministic safety cautions (pregnancy / dehydration / sun) lead
+    # each card's warnings: they are computed by the system, never left to the
+    # model's discretion, and they are what the user most needs to see first.
+    ja.warnings = extra_ja + ja.warnings
+    en.warnings = extra_en + en.warnings
 
-    # Routine Fit section (only when there is a routine to compare against),
-    # appended to each language's card so the split stays self-contained.
-    if routine_context:
-        rf_ja = _render_routine_fit(response.routine_japanese, "ja")
-        rf_en = _render_routine_fit(response.routine_english, "en")
-        coach_advice_ja += "\n\n" + "─" * 40 + "\n【ルーティン適合】\n" + rf_ja
-        coach_advice_en += "\n\n" + "─" * 40 + "\n【Routine Fit】\n" + rf_en
-
-    # Combined bilingual blob, kept for back-compat / non-localised consumers.
-    coach_advice = (
-        "【日本語】\n" + coach_advice_ja + "\n\n" + "=" * 60 + "\n\n"
-        "【English】\n" + coach_advice_en
-    )
-
-    # Recommendability score (0–5) only makes sense against a user's goals /
-    # concerns / budget, so it is suppressed for anonymous scans.
+    # The 0–5 recommendability score only makes sense against a user's goals /
+    # concerns / budget, so it (and its rationale) is cleared for anonymous scans.
     if profile is not None:
-        reco_score: Optional[int] = max(0, min(5, response.recommendation_score))
-        reco_rationale_ja: Optional[str] = ja.recommendation_rationale or None
-        reco_rationale_en: Optional[str] = en.recommendation_rationale or None
+        response.recommendation_score = max(0, min(5, response.recommendation_score or 0))
     else:
-        reco_score = None
-        reco_rationale_ja = None
-        reco_rationale_en = None
-
-    # Machine-readable card keeps the English fields for downstream consumers.
-    all_warnings_en = extra_en + en.warnings
-    recommendations: List[str] = (
-        [f"[PRODUCT] {en.product}"]
-        + ([f"[SCORE] {reco_score}/5"] if reco_score is not None else [])
-        + [f"[PURPOSE] {en.purpose}"]
-        + [f"[WARNING] {w}" for w in all_warnings_en]
-        + [f"[TIMING] {en.timing}"]
-        + [f"[FREQUENCY] {en.frequency}"]
-        + ([f"[ROUTINE-INTEGRATION] {en.routine_integration}"] if en.routine_integration else [])
-    )
-
-    # Deterministic routine findings, always emitted regardless of LLM phrasing,
-    # so the machine-readable trace never drops a cross-product risk.
-    if _has_routine_findings(routine_fit):
-        recommendations += [
-            f"[ROUTINE-RISK] {c.severity.upper()} vs {c.with_product} "
-            f"({c.groups[0]} ↔ {c.groups[1]}): {c.reason}"
-            for c in routine_fit.conflicts
-        ]
-        recommendations += [f"[ROUTINE-REDUNDANCY] {r}" for r in routine_fit.redundancy]
-        recommendations += [f"[ROUTINE-VALUE] {v}" for v in routine_fit.value_add]
+        response.recommendation_score = None
+        ja.recommendation_rationale = ""
+        en.recommendation_rationale = ""
 
     report = state["safety_report"]
     logging.info(
@@ -700,27 +509,7 @@ def coach_node(state: AgentState) -> dict:
         report.safety_score,
         en.timing,
         en.frequency,
-        len(all_warnings_en),
+        len(en.warnings),
     )
 
-    # Structured card persisted onto the shelf row when the scan is saved to the
-    # routine (timing + how-to-apply notes + risk warnings). How-to-apply notes are
-    # kept in both languages so the routine dashboard can show them in the user's
-    # UI language; warnings stay English (machine-readable / not surfaced there).
-    coach_card = {
-        "timing": en.timing,
-        "application_notes": list(en.application_notes),
-        "application_notes_ja": list(ja.application_notes),
-        "warnings": all_warnings_en,
-    }
-
-    return {
-        "coach_advice": coach_advice,
-        "coach_advice_ja": coach_advice_ja,
-        "coach_advice_en": coach_advice_en,
-        "routine_recommendations": recommendations,
-        "coach_card": coach_card,
-        "recommendation_score": reco_score,
-        "recommendation_rationale_ja": reco_rationale_ja,
-        "recommendation_rationale_en": reco_rationale_en,
-    }
+    return {"coach_cards": response}

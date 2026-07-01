@@ -1,8 +1,9 @@
-// Renders a completed ScanResponse: status, coach advice, product details,
-// ingredients, safety findings, and routine fit.
+// Renders a completed ScanResponse: status, the coach's structured card,
+// product details, ingredients, safety findings, and routine fit.
 import type { ScanResponse, ScanStatus } from "../api/types";
 import { useI18n } from "../i18n";
 import { LeafScore } from "./LeafScore";
+import { Typewriter } from "./Typewriter";
 
 const STATUS_TONE: Record<ScanStatus, string> = {
   complete: "ok",
@@ -27,13 +28,28 @@ export function ScanResult({ result }: { result: ScanResponse }) {
   const safety = result.safety_report;
   const fit = result.routine_fit;
 
-  const advice =
-    (lang === "ja" ? result.coach_advice_ja : result.coach_advice_en) ??
-    result.coach_advice;
-  const rationale =
-    lang === "ja"
-      ? result.recommendation_rationale_ja
-      : result.recommendation_rationale_en;
+  // The coach card in the UI's language; the LLM-phrased routine-fit notes
+  // (used for the Routine Fit section when present, since they match the UI
+  // language — the deterministic routine_fit stays as the fallback).
+  const coach = result.coach;
+  const card = coach ? (lang === "ja" ? coach.japanese : coach.english) : null;
+  const coachFit = coach
+    ? lang === "ja"
+      ? coach.routine_japanese
+      : coach.routine_english
+    : null;
+  const hasCoachFit =
+    !!coachFit &&
+    (coachFit.risks.length > 0 ||
+      coachFit.redundancy.length > 0 ||
+      coachFit.value_add.length > 0);
+
+  // "AM" / "PM" / "AM & PM" localised; unknown values fall back to the raw token.
+  function timingLabel(timing: string): string {
+    const key = `scan.coach.timing.${timing}`;
+    const label = t(key);
+    return label === key ? timing : label;
+  }
 
   return (
     <div className="scan-result">
@@ -42,19 +58,70 @@ export function ScanResult({ result }: { result: ScanResponse }) {
         {t(`scan.status.${result.status}.blurb`)}
       </div>
 
-      {advice && (
+      {card && (
         <section className="card coach-card">
           <h2 className="card-title">{t("scan.coachTitle")}</h2>
-          {result.recommendation_score != null && (
+
+          {card.verdict && (
+            <Typewriter text={card.verdict} className="coach-verdict" />
+          )}
+
+          {coach?.recommendation_score != null && (
             <div className="reco-score-banner">
               <div className="reco-score-head">
                 <span className="reco-score-label">{t("scan.recoLabel")}</span>
-                <LeafScore score={result.recommendation_score} />
+                <LeafScore score={coach.recommendation_score} />
               </div>
-              {rationale && <p className="reco-score-why">{rationale}</p>}
+              {card.recommendation_rationale && (
+                <p className="reco-score-why">{card.recommendation_rationale}</p>
+              )}
             </div>
           )}
-          <div className="coach-advice">{advice}</div>
+
+          {card.purpose && <p className="coach-purpose">{card.purpose}</p>}
+
+          {(card.timing || card.frequency) && (
+            <div className="coach-badges">
+              {card.timing && (
+                <span className="badge badge-coach" title={t("scan.coach.timing")}>
+                  🕐 {timingLabel(card.timing)}
+                </span>
+              )}
+              {card.frequency && (
+                <span className="badge badge-coach" title={t("scan.coach.frequency")}>
+                  🔁 {card.frequency}
+                </span>
+              )}
+            </div>
+          )}
+
+          {card.warnings.length > 0 && (
+            <Findings
+              title={t("scan.coach.warnings")}
+              items={card.warnings}
+              tone="warn"
+            />
+          )}
+          {card.application_notes.length > 0 && (
+            <Findings
+              title={t("scan.coach.howToApply")}
+              items={card.application_notes}
+              tone="ok"
+            />
+          )}
+          {card.routine_integration && (
+            <div className="fit-block">
+              <h3 className="fit-heading ok">{t("scan.coach.fit")}</h3>
+              <p className="coach-integration">{card.routine_integration}</p>
+            </div>
+          )}
+        </section>
+      )}
+
+      {!card && result.coach_advice && (
+        <section className="card coach-card">
+          <h2 className="card-title">{t("scan.coachTitle")}</h2>
+          <div className="coach-advice">{result.coach_advice}</div>
         </section>
       )}
 
@@ -144,7 +211,33 @@ export function ScanResult({ result }: { result: ScanResponse }) {
         </section>
       )}
 
-      {fit &&
+      {hasCoachFit ? (
+        <section className="card">
+          <h2 className="card-title">{t("scan.fitTitle")}</h2>
+          {coachFit.risks.length > 0 && (
+            <Findings
+              title={t("scan.fit.conflicts")}
+              items={coachFit.risks}
+              tone="danger"
+            />
+          )}
+          {coachFit.redundancy.length > 0 && (
+            <Findings
+              title={t("scan.fit.redundant")}
+              items={coachFit.redundancy}
+              tone="warn"
+            />
+          )}
+          {coachFit.value_add.length > 0 && (
+            <Findings
+              title={t("scan.fit.valueAdd")}
+              items={coachFit.value_add}
+              tone="ok"
+            />
+          )}
+        </section>
+      ) : (
+        fit &&
         (fit.conflicts.length > 0 ||
           fit.redundancy.length > 0 ||
           fit.value_add.length > 0) && (
@@ -182,7 +275,8 @@ export function ScanResult({ result }: { result: ScanResponse }) {
               />
             )}
           </section>
-        )}
+        )
+      )}
 
       {result.standardized_ingredients.length > 0 && (
         <section className="card">

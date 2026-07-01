@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from src.config import REGISTRY_CANDIDATES_PATH
 from src.graph import app
 from src.observability import log_tracing_status, scan_run_config
+from src.render import render_coach_cards
 from src.state import UserProfile, build_initial_state
 from src.user_store import (UserNotFoundError, load_user_context,
                             save_scanned_product, save_user)
@@ -156,19 +157,14 @@ def main():
             logging.info(f"  {warning}")
 
     ready = final_state.get("is_ready_for_logic")
-    advice = final_state.get("coach_advice")
-    if advice and ready:
+    cards = final_state.get("coach_cards")
+    if cards and ready:
         logging.info("--- COACH ADVICE ---")
-        for line in advice.splitlines():
+        for line in render_coach_cards(cards).splitlines():
             logging.info(line)
-        recs = final_state.get("routine_recommendations") or []
-        if recs:
-            logging.info("--- ROUTINE RECOMMENDATIONS ---")
-            for rec in recs:
-                logging.info("  %s", rec)
-    elif advice:
+    elif final_state.get("coach_advice"):
         # Graceful exit: retake, unsupported language, identity, or search miss.
-        logging.warning(f"ACTION NEEDED: {advice}")
+        logging.warning(f"ACTION NEEDED: {final_state['coach_advice']}")
 
     # Log un-registered products only when we proceeded with a usable list.
     if final_state.get("registry_matched") is False and ready:

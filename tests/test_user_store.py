@@ -5,6 +5,9 @@
 import pytest
 
 from src import user_store
+from src.state import CoachResponse, Recommendation
+
+from tests.helpers import make_extraction, std_ingredients
 
 
 @pytest.fixture
@@ -67,3 +70,29 @@ def test_routine_is_scoped_per_user(temp_db):
 def test_is_quasi_drug_none_round_trips(temp_db):
     user_store.add_routine_product("user-1", "Acme", "Toner", ["Water"])
     assert user_store.get_routine("user-1")[0].is_quasi_drug is None
+
+
+def test_save_scanned_product_carries_coach_card_onto_shelf(temp_db, monkeypatch):
+    monkeypatch.setattr(user_store, "_lookup_price_safe", lambda *a: None)
+    final_state = {
+        "is_ready_for_logic": True,
+        "extracted_data": make_extraction(brand="Hada", product_name="Lotion"),
+        "standardized_ingredients": std_ingredients(("水", "Water")),
+        "coach_cards": CoachResponse(
+            japanese=Recommendation(timing="PM", application_notes=["夜に使用"]),
+            english=Recommendation(timing="PM", application_notes=["Use at night"]),
+        ),
+    }
+    pid = user_store.save_scanned_product("user-1", final_state)
+
+    saved = user_store.get_routine("user-1")[0]
+    assert saved.product_id == pid
+    assert saved.timing == "PM"
+    assert saved.application_notes == ["Use at night"]
+    assert saved.application_notes_ja == ["夜に使用"]
+
+
+def test_save_scanned_product_skips_unready_scans(temp_db):
+    final_state = {"is_ready_for_logic": False, "extracted_data": None}
+    assert user_store.save_scanned_product("user-1", final_state) is None
+    assert user_store.get_routine("user-1") == []

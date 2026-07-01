@@ -11,7 +11,7 @@ import { useUsers } from "../context/UserContext";
 import { useI18n } from "../i18n";
 
 export function CheckProduct() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { currentUserId, currentUser } = useUsers();
 
   const [file, setFile] = useState<File | null>(null);
@@ -22,9 +22,8 @@ export function CheckProduct() {
   const [result, setResult] = useState<ScanResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Streaming state: real pipeline step (1..5) and the coach card as it types in.
+  // Streaming state: the real pipeline step (1..5) driving the progress list.
   const [pipelineStep, setPipelineStep] = useState(1);
-  const [coachText, setCoachText] = useState("");
 
   // Post-scan "save to my routine" (manual-add path), shown once a scan lands.
   const [saving, setSaving] = useState(false);
@@ -47,7 +46,6 @@ export function CheckProduct() {
     setSavedId(null);
     setSaveError(null);
     setPipelineStep(1);
-    setCoachText("");
     setFile(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -62,7 +60,6 @@ export function CheckProduct() {
     setSavedId(null);
     setSaveError(null);
     setPipelineStep(1);
-    setCoachText("");
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -79,17 +76,14 @@ export function CheckProduct() {
     setSavedId(null);
     setSaveError(null);
     setPipelineStep(1);
-    setCoachText("");
     try {
       const res = await api.scanStream(
         {
           image: file,
           userId: currentUserId ?? undefined,
-          lang,
         },
         {
           onStage: (step) => setPipelineStep((prev) => Math.max(prev, step)),
-          onCoachDelta: (text) => setCoachText((prev) => prev + text),
         },
       );
       setResult(res);
@@ -239,21 +233,10 @@ export function CheckProduct() {
       {error && <div className="banner banner-error">{error}</div>}
 
       {scanning && (
-        <>
-          <PipelineSteps
-            userName={currentUser?.name ?? undefined}
-            activeStep={pipelineStep}
-          />
-          {coachText && (
-            <section className="card coach-card">
-              <h2 className="card-title">{t("scan.coachTitle")}</h2>
-              <div className="coach-advice">
-                {coachText}
-                <span className="coach-caret">▍</span>
-              </div>
-            </section>
-          )}
-        </>
+        <PipelineSteps
+          userName={currentUser?.name ?? undefined}
+          activeStep={pipelineStep}
+        />
       )}
 
       {result && !scanning && (

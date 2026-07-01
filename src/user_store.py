@@ -416,10 +416,10 @@ def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
         return None
     inci = inci_names(final_state.get("standardized_ingredients"))
 
-    card = final_state.get("coach_card") or {}
-    timing = card.get("timing") or None
-    application_notes = card.get("application_notes") or []
-    application_notes_ja = card.get("application_notes_ja") or []
+    cards = final_state.get("coach_cards")
+    timing = (cards.english.timing or None) if cards else None
+    application_notes = list(cards.english.application_notes) if cards else []
+    application_notes_ja = list(cards.japanese.application_notes) if cards else []
 
     price = _lookup_price_safe(data.brand, data.product_name)
 

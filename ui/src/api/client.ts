@@ -161,19 +161,16 @@ export const api = {
       imageType?: "front" | "back";
       userId?: string;
       addToRoutine?: boolean;
-      lang?: "ja" | "en";
       signal?: AbortSignal;
     },
     cb: {
       onStage?: (step: number, node: string) => void;
-      onCoachDelta?: (text: string) => void;
     } = {},
   ): Promise<ScanResponse> {
     const form = new FormData();
     form.append("image", opts.image);
     if (opts.imageType) form.append("image_type", opts.imageType);
     if (opts.userId) form.append("user_id", opts.userId);
-    if (opts.lang) form.append("lang", opts.lang);
     form.append("add_to_routine", String(Boolean(opts.addToRoutine)));
 
     return readScanStream(
@@ -193,7 +190,6 @@ async function readScanStream(
   init: RequestInit,
   cb: {
     onStage?: (step: number, node: string) => void;
-    onCoachDelta?: (text: string) => void;
   },
 ): Promise<ScanResponse> {
   let res: Response;
@@ -250,9 +246,6 @@ async function readScanStream(
       switch (evt.event) {
         case "stage":
           cb.onStage?.(evt.step as number, evt.node as string);
-          break;
-        case "coach_delta":
-          cb.onCoachDelta?.(evt.text as string);
           break;
         case "complete":
           result = evt.data as ScanResponse;
