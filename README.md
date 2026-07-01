@@ -27,7 +27,7 @@
 
 > スキンケア製品のラベルを撮影するだけで、バイリンガル・安全性チェック済み・パーソナライズされたレコメンドを数秒で。
 
-**[▶️ ライブデモ](https://skingraph-production.up.railway.app/docs)** · **[📖 技術ドキュメント](legacy/README.md)** · **[🐛 バグ報告](https://github.com/ShinBellator/skingraph/issues)** · **[💡 機能リクエスト](https://github.com/ShinBellator/skingraph/issues)**
+**[▶️ ライブデモ](https://skingraph-production.up.railway.app/docs)** · **[📖 技術ドキュメント](docs/ARCHITECTURE.md)** · **[🐛 バグ報告](https://github.com/ShinBellator/skingraph/issues)** · **[💡 機能リクエスト](https://github.com/ShinBellator/skingraph/issues)**
 
 ---
 
@@ -91,7 +91,7 @@ SkinGraphは**David Valls**（[GitHub @ShinBellator](https://github.com/ShinBell
 - **可観測性** — LangSmith + Prometheus `/metrics`
 - **ツール** — Poetry · pytest · python-dotenv
 
-> コンポーネント別の詳細な内訳とリポジトリ構成は[技術ドキュメント](legacy/README.md)を参照してください。
+> コンポーネント別の詳細な内訳とリポジトリ構成は[技術ドキュメント](docs/ARCHITECTURE.md)を参照してください。
 
 ---
 
@@ -129,13 +129,13 @@ flowchart TB
     Retake -->|"再撮影 / アラート"| User
 ```
 
-LangGraphの完全な状態機械図（すべてのノード・ルーター・信頼スコア閾値）は[技術ドキュメント](legacy/README.md)にあります。
+LangGraphの完全な状態機械図（すべてのノード・ルーター・信頼スコア閾値）は[技術ドキュメント](docs/ARCHITECTURE.md)にあります。
 
 ---
 
 ## 🧭 設計判断
 
-システムを定義する5つの判断 — 詳細な理由は[技術ドキュメント](legacy/README.md)を参照：
+システムを定義する5つの判断 — 詳細な理由は[技術ドキュメント](docs/ARCHITECTURE.md)を参照：
 
 1. **Flash優先の階層型推論** — 約80%のラベルをFlashがProの1/10のコストで読み取り、Proは低信頼度・視覚的に困難なケースにのみ起動。ルーティングは信頼スコアで決定論的に制御。
 2. **決定論的自己修正** — 専用の修正ノードが失敗した抽出を読み取り、次のFlashプロンプトに的確なフィードバックを注入。追加LLMコストゼロ、Proへエスカレーション前に最大2回反復。
@@ -178,7 +178,7 @@ poetry run python run_pipeline.py data/golden_set/prod_001.jpg --user-id <id> --
 poetry run uvicorn src.api.main:app --reload   # → http://127.0.0.1:8000/docs
 ```
 
-これがエレベーターピッチです — [技術ドキュメント](legacy/README.md)がアーキテクチャ・画像パイプライン・全CLIフラグ・APIを網羅しています。
+これがエレベーターピッチです — [技術ドキュメント](docs/ARCHITECTURE.md)がアーキテクチャ・画像パイプライン・全CLIフラグ・APIを網羅しています。
 
 ---
 
@@ -214,7 +214,7 @@ poetry run uvicorn src.api.main:app --reload   # → http://127.0.0.1:8000/docs
 
 ## 📖 詳細情報
 
-- 📘 **[技術ドキュメント](legacy/README.md)** — アーキテクチャ図・7ステップ画像パイプライン・デプロイ・可観測性。
+- 📘 **[技術ドキュメント](docs/ARCHITECTURE.md)** — アーキテクチャ図・7ステップ画像パイプライン・デプロイ・可観測性。
 - 🧪 **[ライブAPIドキュメント](https://skingraph-production.up.railway.app/docs)** — 実行中サービスのインタラクティブSwagger UI。
 - 🐛 **[Issues & ディスカッション](https://github.com/ShinBellator/skingraph/issues)** — プロジェクトへの最速の連絡手段。
 
@@ -239,7 +239,7 @@ Built with ❤️ and matcha 🍵 by [David Valls](https://github.com/ShinBellat
 
 > Snap a photo of any skincare label and get a bilingual, safety-checked, personalised recommendation in seconds.
 
-**[▶️ Live demo](https://skingraph-production.up.railway.app/docs)** · **[📖 Full docs](legacy/README.md)** · **[🐛 Report a bug](https://github.com/ShinBellator/skingraph/issues)** · **[💡 Request a feature](https://github.com/ShinBellator/skingraph/issues)**
+**[▶️ Live demo](https://skingraph-production.up.railway.app/docs)** · **[📖 Full docs](docs/ARCHITECTURE.md)** · **[🐛 Report a bug](https://github.com/ShinBellator/skingraph/issues)** · **[💡 Request a feature](https://github.com/ShinBellator/skingraph/issues)**
 
 ---
 
@@ -303,7 +303,7 @@ SkinGraph is built by **David Valls** ([GitHub @ShinBellator](https://github.com
 - **Observability** — LangSmith + Prometheus `/metrics`
 - **Tooling** — Poetry · pytest · python-dotenv
 
-> Full per-component breakdown and repo layout in the [full technical README](legacy/README.md).
+> Full per-component breakdown and repo layout in the [full technical README](docs/ARCHITECTURE.md).
 
 ---
 
@@ -341,13 +341,13 @@ flowchart TB
     Retake -->|"Retake / Alert"| User
 ```
 
-The full LangGraph state-machine diagram (every node, router, and confidence threshold) is in the [full technical README](legacy/README.md).
+The full LangGraph state-machine diagram (every node, router, and confidence threshold) is in the [full technical README](docs/ARCHITECTURE.md).
 
 ---
 
 ## 🧭 Design decisions
 
-The five calls that define the system — full reasoning in the [full technical README](legacy/README.md):
+The five calls that define the system — full reasoning in the [full technical README](docs/ARCHITECTURE.md):
 
 1. **Flash-first tiered inference** — ~80% of labels are read by Flash at 1/10 the cost of Pro; Pro is invoked only for low-confidence, visually hard cases. Routing is deterministic on the confidence score.
 2. **Deterministic self-correction** — a dedicated Correction Node reads the failed extraction and injects targeted feedback into the next Flash prompt. Zero added LLM cost, up to 2 iterations before Pro escalation.
@@ -390,7 +390,7 @@ poetry run python run_pipeline.py data/golden_set/prod_001.jpg --user-id <id> --
 poetry run uvicorn src.api.main:app --reload   # → http://127.0.0.1:8000/docs
 ```
 
-That's the elevator pitch — the [full docs](legacy/README.md) cover the architecture, the image pipeline, every CLI flag, and the API surface.
+That's the elevator pitch — the [full docs](docs/ARCHITECTURE.md) cover the architecture, the image pipeline, every CLI flag, and the API surface.
 
 ---
 
@@ -426,7 +426,7 @@ Found a bug, or a label it misreads? **[Open an issue](https://github.com/ShinBe
 
 ## 📖 Learn More
 
-- 📘 **[Full technical README](legacy/README.md)** — architecture diagrams, the 7-step image pipeline, deployment, and observability.
+- 📘 **[Full technical README](docs/ARCHITECTURE.md)** — architecture diagrams, the 7-step image pipeline, deployment, and observability.
 - 🧪 **[Live API docs](https://skingraph-production.up.railway.app/docs)** — interactive Swagger UI for the running service.
 - 🐛 **[Issues & discussions](https://github.com/ShinBellator/skingraph/issues)** — the fastest way to reach the project.
 
