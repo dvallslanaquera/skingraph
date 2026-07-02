@@ -27,6 +27,23 @@ class ImageSide(BaseModel):
     confidence: float = Field(
         description="0.0-1.0 overall confidence in the content + side classification."
     )
+    # Branding read in the SAME call (the classifier already looks at it to decide
+    # front vs back), so a front photo can seed the web-search fallback without a
+    # separate identity VLM pass.
+    brand: str = Field(
+        default="", description="Brand name read from the label (English; may be empty)."
+    )
+    product_name: str = Field(
+        default="",
+        description="Product name read from the label (English; may be empty).",
+    )
+    identity_confidence: float = Field(
+        default=0.0,
+        description=(
+            "0.0-1.0 confidence that the brand AND product name are read "
+            "correctly. Use < 0.8 if either is blurry, cropped, or guessed."
+        ),
+    )
 
 
 def build_vlm(model: str, schema, *, temperature: float = 0.0):
@@ -73,7 +90,32 @@ def classify_side_node(state: AgentState) -> Dict[str, Any]:
         result.side,
         result.confidence,
     )
-    return {"image_type": result.side, "image_content": result.content}
+    out: Dict[str, Any] = {
+        "image_type": result.side,
+        "image_content": result.content,
+    }
+    # A front photo has no ingredient list to scan, so seed the identity the web
+    # fallback needs directly from this call's branding read — no separate
+    # verify_identity VLM pass. Back photos get their identity from the scanner
+    # instead, so we leave identity_confidence unset for them.
+    if result.side == "front" and result.content == "product":
+        logging.info(
+            "Front photo identity: %s — %s (confidence %.2f)",
+            result.brand,
+            result.product_name,
+            result.identity_confidence,
+        )
+        out["identity_confidence"] = result.identity_confidence
+        out["extracted_data"] = ProductExtraction(
+            brand=result.brand,
+            product_name=result.product_name,
+            ingredients=[],
+            source_language="",
+            extraction_confidence=result.identity_confidence,
+            system_status="INCOMPLETE",
+        )
+        out["model_used"] = "web"
+    return out
 
 
 # Both scanners share everything but the model, prompt, and the model tag they

@@ -13,6 +13,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import FLASH_MODEL
 from src.messages import COACH_UNAVAILABLE
+from src.nodes.routine_advisor import present_function_categories
 from src.prompts.coach import COACH_SYSTEM_PROMPT
 from src.state import (AgentState, CoachResponse, Notice, RoutineFit,
                        UserProfile, inci_names)
@@ -49,6 +50,10 @@ _PHOTOSENSITISING_INCI = {
     "Citrus Aurantium Dulcis (Orange) Oil",
     "Citrus Junos Fruit Extract",
 }
+
+# Function categories treated as "strong actives" for introduction pacing: the
+# retinoids and exfoliating acids that warrant easing in one at a time.
+_STRONG_ACTIVE_CATEGORIES = {"Retinoids", "AHA", "BHA"}
 
 
 def _product_context(state: AgentState) -> str:
@@ -234,6 +239,43 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
     return ja, en
 
 
+def _introduction_pacing_flags(
+    state: AgentState, profile: Optional[UserProfile]
+) -> Tuple[List[str], List[str]]:
+    """Deterministic 'one active at a time + patch-test' caution.
+
+    Fires when the new product introduces a strong active (retinoid / AHA / BHA)
+    AND either the saved shelf already carries a strong active or the user is
+    sensitive-skinned — the classic over-exfoliation / irritation risk. Safety-
+    adjacent (same rationale as the pregnancy / sun flags), so it is computed in
+    code, not left to the model.
+    """
+    new_cats = set(present_function_categories(
+        set(inci_names(state.get("standardized_ingredients")))
+    ))
+    if not (new_cats & _STRONG_ACTIVE_CATEGORIES):
+        return [], []
+
+    shelf_has_strong = any(
+        set(present_function_categories(set(p.ingredients)))
+        & _STRONG_ACTIVE_CATEGORIES
+        for p in (state.get("routine_products") or [])
+    )
+    is_sensitive = bool(profile and profile.skin_type == "sensitive")
+    if not (shelf_has_strong or is_sensitive):
+        return [], []
+
+    ja = [
+        "導入の注意: 新しい活性成分は一度に1つずつ取り入れ、はじめは"
+        "腕の内側で24時間パッチテストを行ってからご使用ください。"
+    ]
+    en = [
+        "Introduction caution: introduce one new active at a time, and patch-test "
+        "on your inner arm for 24 hours before applying to the face."
+    ]
+    return ja, en
+
+
 def coach_node(state: AgentState) -> dict:
     if state.get("safety_report") is None:
         logging.warning("Coach reached without safety_report — returning placeholder.")
@@ -243,8 +285,9 @@ def coach_node(state: AgentState) -> dict:
     user_name = state.get("user_name")
     preg_ja, preg_en = _pregnancy_cautions(state, profile)
     sun_ja, sun_en = _dehydration_sun_flags(state)
-    extra_ja = preg_ja + sun_ja
-    extra_en = preg_en + sun_en
+    pace_ja, pace_en = _introduction_pacing_flags(state, profile)
+    extra_ja = preg_ja + sun_ja + pace_ja
+    extra_en = preg_en + sun_en + pace_en
 
     routine_fit: Optional[RoutineFit] = state.get("routine_fit")
     routine_context = _routine_context(routine_fit)

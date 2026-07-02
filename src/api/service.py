@@ -27,6 +27,13 @@ def _status_of(final_state: dict) -> ScanStatus:
     return "incomplete"
 
 
+def _detected_language(final_state: dict) -> Optional[str]:
+    """The label language, read straight off the extraction (uppercased)."""
+    data = final_state.get("extracted_data")
+    lang = (data.source_language or "").strip().upper() if data else ""
+    return lang or None
+
+
 def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResponse:
     return ScanResponse(
         status=_status_of(final_state),
@@ -35,7 +42,7 @@ def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResp
         inference_confidence=final_state.get("inference_confidence"),
         registry_matched=final_state.get("registry_matched"),
         ingredient_source=final_state.get("ingredient_source"),
-        detected_language=final_state.get("detected_language"),
+        detected_language=_detected_language(final_state),
         product=final_state.get("extracted_data"),
         standardized_ingredients=final_state.get("standardized_ingredients") or [],
         unmatched_ingredients=final_state.get("unmatched_ingredients") or [],
@@ -102,9 +109,9 @@ def run_scan(
 _NODE_STEP = {
     "image_quality_gate": 1, "classify_side": 1, "flash_scanner": 1,
     "early_registry_check": 1, "correction": 1, "pro_scanner": 1,
-    "verify_identity": 1, "web_search": 1, "confirm_identity": 1,
+    "web_search": 1, "confirm_identity": 1,
     "search_failed": 1, "retake_request": 1,
-    "tag_language": 2, "registry_lookup": 2, "normalizer": 2,
+    "registry_lookup": 2, "normalizer": 2,
     "auditor": 3, "routine_advisor": 4, "coach": 5,
 }
 

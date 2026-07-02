@@ -58,12 +58,36 @@ def test_classify_side_honours_caller_override(mock_gemini):
     handles["cls"].assert_not_called()
 
 
-def test_classify_side_auto_detects_when_no_override(mock_gemini):
-    handles = mock_gemini(ImageSide(side="front", confidence=0.92))
+def test_classify_side_auto_detects_back(mock_gemini):
+    handles = mock_gemini(ImageSide(side="back", confidence=0.92))
     result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
-    # content defaults to "product" when the model doesn't flag an OOD frame.
-    assert result == {"image_type": "front", "image_content": "product"}
+    # A back photo carries no seeded identity — the scanner reads it instead.
+    assert result == {"image_type": "back", "image_content": "product"}
     handles["cls"].assert_called_once()
+
+
+def test_classify_side_front_seeds_identity(mock_gemini):
+    # A front photo has no ingredient list, so the classifier's branding read is
+    # seeded straight into extracted_data for the web fallback (no verify call).
+    mock_gemini(
+        ImageSide(
+            content="product",
+            side="front",
+            confidence=0.9,
+            brand="Curel",
+            product_name="Cream",
+            identity_confidence=0.88,
+        )
+    )
+    result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
+    assert result["image_type"] == "front"
+    assert result["identity_confidence"] == 0.88
+    assert result["model_used"] == "web"
+    seeded = result["extracted_data"]
+    assert seeded.brand == "Curel"
+    assert seeded.product_name == "Cream"
+    assert seeded.ingredients == []
+    assert seeded.extraction_confidence == 0.88
 
 
 def test_classify_side_surfaces_content_verdict(mock_gemini):

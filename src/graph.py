@@ -15,7 +15,7 @@ from src.nodes.routine_advisor import routine_advisor_node
 from src.nodes.scanner import (classify_side_node, flash_scanner_node,
                                pro_scanner_node)
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
-                                 verify_identity_node, web_search_node)
+                                 web_search_node)
 from src.preprocess import assess_image_quality
 from src.state import AgentState, Notice
 
@@ -48,12 +48,16 @@ def classify_router(state: AgentState) -> str:
 
     A non-product or multi-product frame is rejected before any extraction runs
     (the structured-output scanner cannot say "no product" — it would fabricate
-    one). Anything that is a single product falls through to the normal
-    front/back side routing.
+    one). A back photo carries the ingredient list, so it goes to the scanner. A
+    front photo has no readable list, so it skips straight to the identity-gated
+    web fallback — the classifier already read the branding, so we reuse
+    identity_router here instead of a separate verify_identity VLM call.
     """
     if state.get("image_content") in ("not_a_product", "multiple_products"):
         return "reject"
-    return side_router(state)
+    if side_router(state) == "front":
+        return identity_router(state)
+    return "back"
 
 
 def inference_router(state: AgentState) -> str:
@@ -110,32 +114,34 @@ def retake_node(state: AgentState) -> dict:
     }
 
 
-def tag_language_node(state: AgentState) -> dict:
-    """Record the detected label language for downstream use (no gating).
-
-    Any label language is accepted; this just surfaces what was read so the
-    registry candidate log and final summary can report it.
-    """
-    extracted = state["extracted_data"]
-    lang = (extracted.source_language or "").strip().upper() if extracted else ""
-    return {"detected_language": lang}
-
-
 def post_registry_router(state: AgentState) -> str:
     """After the registry lookup, decide whether we already have a usable list.
 
     A registry hit is always enough. On a miss we trust the photo only if it
-    yielded enough ingredients; otherwise we fall through to the web search.
+    yielded enough ingredients; otherwise we fall through to the identity-gated
+    web search (identity_router reuses the scanner's extraction_confidence).
     """
     if state.get("registry_matched"):
         return "have_ingredients"
     data = state.get("extracted_data")
     count = len(data.ingredients) if data else 0
-    return "have_ingredients" if count >= MIN_INGREDIENTS_FOR_AUDIT else "need_search"
+    if count >= MIN_INGREDIENTS_FOR_AUDIT:
+        return "have_ingredients"
+    return identity_router(state)
 
 
 def identity_router(state: AgentState) -> str:
-    conf = state.get("identity_confidence") or 0.0
+    """Gate the web-search fallback on how confidently we know the product name.
+
+    Front photos carry the classifier's ``identity_confidence`` (its branding
+    read, seeded by classify_side_node). The back-path web fallback has none, so
+    we fall back to the scanner's ``extraction_confidence`` — it already read the
+    brand/product off the label.
+    """
+    conf = state.get("identity_confidence")
+    if conf is None:
+        data = state.get("extracted_data")
+        conf = data.extraction_confidence if data else 0.0
     return "confident" if conf >= IDENTITY_CONFIDENCE_THRESHOLD else "uncertain"
 
 
@@ -153,13 +159,11 @@ workflow.add_node("flash_scanner", flash_scanner_node)
 workflow.add_node("early_registry_check", early_registry_check_node)
 workflow.add_node("correction", correction_node)
 workflow.add_node("pro_scanner", pro_scanner_node)
-workflow.add_node("tag_language", tag_language_node)
 workflow.add_node("registry_lookup", registry_lookup_node)
 workflow.add_node("normalizer", normalizer_node)
 workflow.add_node("auditor", auditor_node)
 workflow.add_node("routine_advisor", routine_advisor_node)
 workflow.add_node("coach", coach_node)
-workflow.add_node("verify_identity", verify_identity_node)
 workflow.add_node("web_search", web_search_node)
 workflow.add_node("confirm_identity", confirm_identity_node)
 workflow.add_node("search_failed", search_failed_node)
@@ -179,13 +183,16 @@ workflow.add_conditional_edges(
 )
 
 # Tier 2: the classifier's content verdict rejects non-product / multi-product
-# frames before extraction; single-product frames route on front/back as before.
+# frames before extraction. A back photo goes to the scanner; a front photo has
+# no ingredient list, so it routes straight to the identity-gated web fallback
+# (confident → search, uncertain → confirm) without a separate verify VLM call.
 workflow.add_conditional_edges(
     "classify_side",
     classify_router,
     {
-        "front": "verify_identity",
         "back": "flash_scanner",
+        "confident": "web_search",
+        "uncertain": "confirm_identity",
         "reject": "retake_request",
     },
 )
@@ -194,7 +201,7 @@ workflow.add_conditional_edges(
     "flash_scanner",
     inference_router,
     {
-        "accept": "tag_language",
+        "accept": "registry_lookup",
         "correct": "early_registry_check",
         "escalate": "pro_scanner",
     },
@@ -215,26 +222,18 @@ workflow.add_conditional_edges(
     "pro_scanner",
     pro_scanner_router,
     {
-        "accept": "tag_language",
+        "accept": "registry_lookup",
         "retake": "retake_request",
     },
 )
 
-workflow.add_edge("tag_language", "registry_lookup")
-
+# On a registry miss with too few photo ingredients, the same identity gate the
+# front path uses decides whether to web-search or ask the user to confirm.
 workflow.add_conditional_edges(
     "registry_lookup",
     post_registry_router,
     {
         "have_ingredients": "normalizer",
-        "need_search": "verify_identity",
-    },
-)
-
-workflow.add_conditional_edges(
-    "verify_identity",
-    identity_router,
-    {
         "confident": "web_search",
         "uncertain": "confirm_identity",
     },

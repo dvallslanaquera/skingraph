@@ -787,6 +787,25 @@ h3,
   border-color: #c4e0cc;
 }
 
+/* Nudge: soft-accent prompt shown after an anonymous scan, inviting the user to
+   set up a profile for tailored advice. */
+.banner-nudge {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: #c4ddce;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.nudge-link {
+  font-weight: 600;
+  color: var(--accent-strong);
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
 /* ---- empty states ------------------------------------------------------- */
 
 .empty-state {

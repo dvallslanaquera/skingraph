@@ -380,9 +380,6 @@ class AgentState(TypedDict):
     correction_feedback: Optional[str]
     trace_id: Optional[str]
 
-    # detected label language (recorded for reporting; no longer gated on)
-    detected_language: Optional[str]
-
     # registry + normalization
     registry_matched: Optional[bool]
     unmatched_ingredients: Optional[List[str]]

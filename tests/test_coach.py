@@ -10,7 +10,8 @@ import pytest
 
 from src.nodes import coach
 from src.state import (CoachResponse, CrossConflict, Recommendation,
-                       RoutineFit, RoutineFitCard, SafetyAudit, UserProfile)
+                       RoutineFit, RoutineFitCard, RoutineProduct, SafetyAudit,
+                       UserProfile)
 
 from tests.helpers import make_extraction, std_ingredients
 
@@ -36,6 +37,46 @@ def test_photosensitising_ingredient_raises_sun_caution():
     ja, en = coach._dehydration_sun_flags(state)
     assert any("Sun-sensitivity caution" in line and "Retinol" in line for line in en)
     assert any("紫外線に注意" in line for line in ja)
+
+
+# --------------------------------------------------------------------------- #
+# _introduction_pacing_flags
+# --------------------------------------------------------------------------- #
+def test_pacing_flag_fires_for_sensitive_skin_with_strong_active():
+    # Retinol is a Retinoids marker; sensitive skin triggers the one-at-a-time
+    # patch-test caution even with an empty shelf.
+    state = {"standardized_ingredients": std_ingredients(("レチノール", "Retinol"))}
+    ja, en = coach._introduction_pacing_flags(state, UserProfile(skin_type="sensitive"))
+    assert any("patch-test" in line.lower() for line in en)
+    assert any("パッチテスト" in line for line in ja)
+
+
+def test_pacing_flag_fires_when_shelf_already_has_strong_active():
+    state = {
+        "standardized_ingredients": std_ingredients(("レチノール", "Retinol")),
+        "routine_products": [
+            RoutineProduct(
+                product_id="p1", brand="B", product_name="Peel",
+                ingredients=["Salicylic Acid"],  # a BHA already on the shelf
+            )
+        ],
+    }
+    ja, en = coach._introduction_pacing_flags(state, UserProfile(skin_type="dry"))
+    assert ja and en
+
+
+def test_no_pacing_flag_without_shelf_strong_active_or_sensitivity():
+    state = {"standardized_ingredients": std_ingredients(("レチノール", "Retinol"))}
+    ja, en = coach._introduction_pacing_flags(state, UserProfile(skin_type="dry"))
+    assert ja == [] and en == []
+
+
+def test_no_pacing_flag_when_product_has_no_strong_active():
+    state = {"standardized_ingredients": std_ingredients(("水", "Water"))}
+    ja, en = coach._introduction_pacing_flags(
+        state, UserProfile(skin_type="sensitive")
+    )
+    assert ja == [] and en == []
 
 
 # --------------------------------------------------------------------------- #

@@ -52,7 +52,7 @@ def record_registry_candidate(final_state: dict) -> None:
         "brand": data.brand,
         "product_name": data.product_name,
         "jan_code": data.jan_code,
-        "source_language": final_state.get("detected_language"),
+        "source_language": (data.source_language or "").strip().upper() or None,
         "ingredients_raw": [ing.name_raw for ing in data.ingredients],
         "trace_id": final_state.get("trace_id"),
     })
@@ -126,7 +126,8 @@ def main():
         data = final_state["extracted_data"]
         logging.info(f"Product:  {data.brand} - {data.product_name}")
         logging.info(f"Status:   {data.system_status}")
-        logging.info(f"Language: {final_state.get('detected_language')}")
+        lang = (data.source_language or "").strip().upper() or None
+        logging.info(f"Language: {lang}")
         logging.info(f"Trace ID: {final_state.get('trace_id')}")
 
     if final_state.get("standardized_ingredients"):

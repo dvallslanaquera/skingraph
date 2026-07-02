@@ -143,6 +143,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "check.save.button": "Save to my routine",
     "check.save.saved": "✓ Saved to your routine.",
     "check.save.selectUser": "Select a user to save this product to a routine.",
+    "check.nudge.text": "Tell me your skin type and I can tailor this to you.",
+    "check.nudge.link": "Set up My Profile →",
 
     "pipeline.title": "Analysing…",
     "pipeline.step1": "Scanning the picture…",
@@ -313,6 +315,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "check.save.button": "ルーティンに保存",
     "check.save.saved": "✓ ルーティンに保存しました。",
     "check.save.selectUser": "この製品をルーティンに保存するにはユーザーを選択してください。",
+    "check.nudge.text": "肌質を教えていただければ、あなたに合わせてご提案できます。",
+    "check.nudge.link": "マイプロフィールを設定 →",
 
     "pipeline.title": "分析中…",
     "pipeline.step1": "画像をスキャン中…",

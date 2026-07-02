@@ -1,21 +1,8 @@
-# Prompts for the web-search fallback: the focused identity re-read and the
-# Google-grounded ingredient-list search (grounding cannot be combined with
-# structured output, so the search prompt demands a strict line format that is
-# parsed deterministically).
-
-VERIFY_PROMPT = """
-Look at this product image and read ONLY the brand and the product name.
-Do NOT extract ingredients. Focus entirely on whether the brand and product
-name are legible and unambiguous.
-
-Return:
-- brand: the brand name (transliterate to English if needed)
-- product_name: the official product name (transliterate katakana if needed)
-- identity_confidence: 0.0-1.0 — how certain you are that BOTH are correct.
-  Use a value below 0.8 if either is blurry, partially hidden, ambiguous,
-  or you had to guess.
-""".strip()
-
+# Prompt for the web-search fallback: the Google-grounded ingredient-list search
+# (grounding cannot be combined with structured output, so the prompt demands a
+# strict line format that is parsed deterministically). The brand + product name
+# it searches for are read upstream — by classify_side for a front photo, by the
+# scanner for a back photo — so there is no separate identity-read prompt here.
 
 SEARCH_PROMPT = """
 Find the official FULL ingredient list for this cosmetic product:

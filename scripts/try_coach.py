@@ -109,7 +109,7 @@ def _print_results(state):
     print("=" * 60)
     if data:
         print(f"PRODUCT : {data.brand} — {data.product_name}")
-        lang = state.get("detected_language")
+        lang = (data.source_language or "").strip().upper() or None
         model = state.get("model_used")
         print(f"LANGUAGE: {lang}  |  MODEL: {model}")
     if state.get("ingredient_source"):

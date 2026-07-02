@@ -59,8 +59,20 @@ Look at this photo and report what it shows, then which side of the product it i
    Rule of thumb: if you can read an actual ingredient LIST, it's "back". If you
    only see branding and no readable ingredient list, it's "front".
 
+3) branding — read the brand and product name from whatever text is visible
+   (you already look at the branding to decide front vs back):
+   - brand: the brand name, transliterated to English if needed. "" if none legible.
+   - product_name: the official product name, transliterating katakana if needed.
+     "" if none legible.
+   - identity_confidence: 0.0-1.0 — how certain you are that BOTH the brand AND
+     the product name are read correctly. Use a value below 0.8 if either is
+     blurry, partially hidden, ambiguous, or you had to guess.
+
 Return:
 - content: "product" | "not_a_product" | "multiple_products"
 - side: "front" or "back"
-- confidence: 0.0-1.0 — how certain you are overall.
+- confidence: 0.0-1.0 — how certain you are about content + side.
+- brand: the brand name (English), or "".
+- product_name: the product name (English), or "".
+- identity_confidence: 0.0-1.0 — certainty in the brand + product name.
 """.strip()

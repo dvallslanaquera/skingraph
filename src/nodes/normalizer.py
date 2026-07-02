@@ -5,14 +5,32 @@
 import json
 import logging
 import unicodedata
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
-from src.config import INGREDIENT_MASTER_PATH, INGREDIENT_MATCH_THRESHOLD
+from src.config import (FUNCTION_GROUPS_PATH, INGREDIENT_MASTER_PATH,
+                        INGREDIENT_MATCH_THRESHOLD)
 from src.state import AgentState
 from src.vectorstore import search_ingredient
 
 # Built once on first call, then reused across invocations.
 _INDEX_CACHE: Optional[Dict[str, str]] = None
+# Flat set of canonical INCI names that are functional "actives" — every marker
+# across all function categories. Built once, mirroring _INDEX_CACHE.
+_ACTIVE_MARKERS_CACHE: Optional[Set[str]] = None
+
+
+def _active_markers() -> Set[str]:
+    """The flat set of active-ingredient markers from the function taxonomy."""
+    global _ACTIVE_MARKERS_CACHE
+    if _ACTIVE_MARKERS_CACHE is None:
+        with open(FUNCTION_GROUPS_PATH, "r", encoding="utf-8") as f:
+            data = json.load(f)
+        markers: Set[str] = set()
+        for name, members in data.items():
+            if not name.startswith("_"):
+                markers.update(members)
+        _ACTIVE_MARKERS_CACHE = markers
+    return _ACTIVE_MARKERS_CACHE
 
 
 def _normalize(text: str) -> str:
@@ -84,6 +102,7 @@ def _select_input(state: AgentState) -> List[Tuple[str, Optional[bool], str]]:
 
 def normalizer_node(state: AgentState) -> dict:
     index = _load_index()
+    markers = _active_markers()
     raw_items = _select_input(state)
 
     normalized: List[dict] = []
@@ -97,6 +116,11 @@ def normalizer_node(state: AgentState) -> dict:
             vector += 1
         elif method == "unmatched":
             unmatched.append(name_raw)
+        # Flag the resolved ingredient as an active when its canonical INCI is a
+        # marker in the function taxonomy — lights up the UI's active chips. Only
+        # promotes to True; never clears an is_active already set by the source.
+        if inci and inci in markers:
+            is_active = True
         normalized.append(
             {
                 "name_raw": name_raw,

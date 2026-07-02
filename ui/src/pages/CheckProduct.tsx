@@ -254,6 +254,15 @@ export function CheckProduct() {
         <>
           <ScanResult result={result} />
 
+          {!currentUserId && result.status === "complete" && (
+            <div className="banner banner-nudge">
+              <span>{t("check.nudge.text")}</span>
+              <a href="#profile" className="nudge-link">
+                {t("check.nudge.link")}
+              </a>
+            </div>
+          )}
+
           {result.product && (
             <section className="card save-routine-card">
               {savedId ? (

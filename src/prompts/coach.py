@@ -157,10 +157,12 @@ general suitability and keep the rationale generic.
 ━━ ROUTINE INTEGRATION (routine_integration) ━━
 Say how the user could actually fit THIS product into their routine: where in
 the sequence it goes, which existing products to pair it with or alternate
-against, and its AM/PM placement relative to what they already use. When a
-"Routine Context" block is provided, name the actual existing products from it;
-otherwise describe where it slots into a typical routine. Keep it 薬機法-safe and
-never promise outcomes. Fill it in both the Japanese and English cards.
+against, and its AM/PM placement relative to what they already use. State where
+in the AM/PM sequence (cleanser → toner → serum → moisturiser → SPF) this
+product goes. When a "Routine Context" block is provided, name the actual
+existing products from it; otherwise describe where it slots into a typical
+routine. Keep it 薬機法-safe and never promise outcomes. Fill it in both the
+Japanese and English cards.
 
 ━━ VERDICT (the headline) ━━
 Open the card with 'verdict': 1–2 sentences giving your overall call on this

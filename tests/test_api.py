@@ -24,7 +24,6 @@ def _fake_final_state() -> dict:
         "inference_confidence": 0.92,
         "registry_matched": True,
         "ingredient_source": "registry",
-        "detected_language": "JP",
         "extracted_data": ProductExtraction(
             brand="Hada",
             product_name="Lotion",

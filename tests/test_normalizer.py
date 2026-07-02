@@ -161,12 +161,41 @@ def test_node_preserves_is_active_and_language(fake_index, patch_vector):
     patch_vector(None, 0.0)
     from src.state import Ingredient
 
+    # Glycerin is not a function-taxonomy marker, so an incoming is_active=True is
+    # carried through untouched (the marker rule only promotes, never clears).
     state = {"extracted_data": make_extraction(
         ingredients=[Ingredient(name_raw="グリセリン", is_active=True, source_language="EN")]
     )}
     item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
     assert item["is_active"] is True
     assert item["source_language"] == "EN"
+
+
+def test_node_flags_active_marker_ingredient(fake_index, patch_vector):
+    # Niacinamide is a marker in data/function_groups.json, so even when the
+    # source left is_active unset, the normalizer promotes it to True.
+    patch_vector({"inci": "Niacinamide"}, 0.95)
+    from src.state import Ingredient
+
+    state = {"extracted_data": make_extraction(
+        ingredients=[Ingredient(name_raw="ナイアシンアミド")]
+    )}
+    item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
+    assert item["name_standardized"] == "Niacinamide"
+    assert item["is_active"] is True
+
+
+def test_node_leaves_non_marker_is_active_unset(fake_index, patch_vector):
+    # Water resolves but is not an active marker → is_active stays None.
+    patch_vector(None, 0.0)
+    from src.state import Ingredient
+
+    state = {"extracted_data": make_extraction(
+        ingredients=[Ingredient(name_raw="Water")]
+    )}
+    item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
+    assert item["name_standardized"] == "Water"
+    assert item["is_active"] is None
 
 
 def test_node_empty_ingredient_is_neither_matched_nor_unmatched(fake_index, patch_vector):
