@@ -12,9 +12,10 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import FLASH_MODEL
+from src.messages import COACH_UNAVAILABLE
 from src.prompts.coach import COACH_SYSTEM_PROMPT
-from src.state import (AgentState, CoachResponse, RoutineFit, UserProfile,
-                       inci_names)
+from src.state import (AgentState, CoachResponse, Notice, RoutineFit,
+                       UserProfile, inci_names)
 
 # Ingredients that are contraindicated during pregnancy / breastfeeding.
 _PREGNANCY_FLAGGED_INCI = {
@@ -236,13 +237,7 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
 def coach_node(state: AgentState) -> dict:
     if state.get("safety_report") is None:
         logging.warning("Coach reached without safety_report — returning placeholder.")
-        return {
-            "coach_advice": (
-                "Safety audit data unavailable; "
-                "unable to generate personalised advice."
-            ),
-            "coach_cards": None,
-        }
+        return {"notice": Notice(**COACH_UNAVAILABLE), "coach_cards": None}
 
     profile: Optional[UserProfile] = state.get("user_profile")
     user_name = state.get("user_name")

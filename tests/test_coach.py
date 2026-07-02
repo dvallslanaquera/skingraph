@@ -70,7 +70,8 @@ def test_pregnancy_names_flagged_ingredient():
 # --------------------------------------------------------------------------- #
 def test_coach_node_placeholder_without_safety_report():
     result = coach.coach_node({"safety_report": None})
-    assert "unable to generate" in result["coach_advice"].lower()
+    assert "unable to generate" in result["notice"].en.lower()
+    assert result["notice"].ja  # bilingual: the Japanese side is filled too
     assert result["coach_cards"] is None
 
 
@@ -124,7 +125,7 @@ def test_coach_node_returns_structured_cards(mock_coach_llm):
     assert cards.japanese.timing == "PM"
     assert cards.recommendation_score == 3
     # Complete scans no longer emit a rendered text blob; that's the CLI's job.
-    assert "coach_advice" not in result
+    assert "notice" not in result
 
 
 def test_coach_node_prepends_deterministic_warnings(mock_coach_llm):

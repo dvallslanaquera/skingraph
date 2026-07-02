@@ -117,11 +117,11 @@ def _print_results(state):
     if state.get("web_sources"):
         print(f"WEB SRC : {', '.join(state['web_sources'])}")
 
-    advice = state.get("coach_advice")
+    notice = state.get("notice")
     if not state.get("is_ready_for_logic"):
-        # Graceful exit: retake, unsupported language, identity, or search miss.
-        if advice:
-            print(f"\nACTION NEEDED: {advice}")
+        # Graceful exit: retake, identity, or search miss. CLI prints English.
+        if notice:
+            print(f"\nACTION NEEDED: {notice.en}")
         print("=" * 60)
         return
 

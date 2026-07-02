@@ -21,7 +21,7 @@ from src.config import FLASH_MODEL, MIN_INGREDIENTS_FOR_AUDIT
 from src.messages import CONFIRM_IDENTITY, SEARCH_FAILED
 from src.nodes.scanner import image_message
 from src.prompts.websearch import SEARCH_PROMPT, VERIFY_PROMPT
-from src.state import AgentState, Ingredient, ProductExtraction
+from src.state import AgentState, Ingredient, Notice, ProductExtraction
 
 
 class ProductIdentity(BaseModel):
@@ -178,7 +178,10 @@ def confirm_identity_node(state: AgentState) -> dict:
     guess = f"{data.brand} — {data.product_name}" if data else "this product"
     return {
         "is_ready_for_logic": False,
-        "coach_advice": CONFIRM_IDENTITY["en"].format(guess=guess),
+        "notice": Notice(
+            en=CONFIRM_IDENTITY["en"].format(guess=guess),
+            ja=CONFIRM_IDENTITY["ja"].format(guess=guess),
+        ),
     }
 
 
@@ -188,5 +191,8 @@ def search_failed_node(state: AgentState) -> dict:
     name = f"{data.brand} — {data.product_name}" if data else "this product"
     return {
         "is_ready_for_logic": False,
-        "coach_advice": SEARCH_FAILED["en"].format(name=name),
+        "notice": Notice(
+            en=SEARCH_FAILED["en"].format(name=name),
+            ja=SEARCH_FAILED["ja"].format(name=name),
+        ),
     }

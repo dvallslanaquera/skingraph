@@ -2,7 +2,7 @@
 //
 // Works with or without a selected user; when a user is active the scan is
 // personalised and can optionally be saved to their routine.
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { ScanResponse } from "../api/types";
 import { PipelineSteps } from "../components/PipelineSteps";
@@ -34,6 +34,15 @@ export function CheckProduct() {
   // (capture="environment") so phone users can shoot the label directly.
   const inputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+
+  // Bring the live progress list into view when a scan starts — on phones the
+  // dropzone fills the screen and the 分析中 steps would sit below the fold.
+  const stepsRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (scanning) {
+      stepsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [scanning]);
 
   function chooseFile(f: File | null) {
     if (!f) return;
@@ -189,7 +198,7 @@ export function CheckProduct() {
         <div className="upload-actions">
           <button
             type="button"
-            className="btn btn-ghost btn-sm"
+            className="btn btn-primary btn-photo"
             onClick={() => cameraInputRef.current?.click()}
             disabled={scanning}
           >
@@ -233,10 +242,12 @@ export function CheckProduct() {
       {error && <div className="banner banner-error">{error}</div>}
 
       {scanning && (
-        <PipelineSteps
-          userName={currentUser?.name ?? undefined}
-          activeStep={pipelineStep}
-        />
+        <div ref={stepsRef}>
+          <PipelineSteps
+            userName={currentUser?.name ?? undefined}
+            activeStep={pipelineStep}
+          />
+        </div>
       )}
 
       {result && !scanning && (

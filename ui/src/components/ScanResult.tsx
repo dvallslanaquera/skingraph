@@ -118,10 +118,10 @@ export function ScanResult({ result }: { result: ScanResponse }) {
         </section>
       )}
 
-      {!card && result.coach_advice && (
+      {!card && result.notice && (
         <section className="card coach-card">
           <h2 className="card-title">{t("scan.coachTitle")}</h2>
-          <div className="coach-advice">{result.coach_advice}</div>
+          <div className="coach-advice">{result.notice[lang]}</div>
         </section>
       )}
 
@@ -143,29 +143,14 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             )}
           </div>
 
-          <div className="meta-row">
-            {result.model_used && (
-              <Meta label={t("scan.meta.source")} value={result.model_used} />
-            )}
-            {result.ingredient_source && (
-              <Meta
-                label={t("scan.meta.ingredientsVia")}
-                value={result.ingredient_source}
-              />
-            )}
-            {result.detected_language && (
+          {result.detected_language && (
+            <div className="meta-row">
               <Meta
                 label={t("scan.meta.language")}
                 value={result.detected_language}
               />
-            )}
-            {result.inference_confidence != null && (
-              <Meta
-                label={t("scan.meta.confidence")}
-                value={scorePct(result.inference_confidence)}
-              />
-            )}
-          </div>
+            </div>
+          )}
         </section>
       )}
 

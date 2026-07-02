@@ -51,6 +51,17 @@ class ProductExtraction(BaseModel):
     )
 
 
+class Notice(BaseModel):
+    """A bilingual user-facing message for graceful-exit paths.
+
+    Carries both languages so the UI can render the one matching its locale;
+    the CLI prints ``en``.
+    """
+
+    en: str
+    ja: str
+
+
 class SafetyAudit(BaseModel):
     ingredient_conflicts: List[str] = Field(
         default_factory=list,
@@ -354,10 +365,10 @@ class AgentState(TypedDict):
     safety_report: Optional[SafetyAudit]
 
     # final output
-    # Plain-text channel for graceful exits (retake / identity / search miss):
-    # a single sentence telling the user what to do. Complete scans carry their
+    # Bilingual channel for graceful exits (retake / identity / search miss):
+    # a short message telling the user what to do. Complete scans carry their
     # result in coach_cards instead.
-    coach_advice: str
+    notice: Optional[Notice]
     # The coach's structured bilingual output — the single source of truth the
     # API, the web UI, the CLI renderer, and shelf persistence all read from.
     coach_cards: Optional[CoachResponse]

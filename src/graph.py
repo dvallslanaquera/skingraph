@@ -17,7 +17,7 @@ from src.nodes.scanner import (classify_side_node, flash_scanner_node,
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
                                  verify_identity_node, web_search_node)
 from src.preprocess import assess_image_quality
-from src.state import AgentState
+from src.state import AgentState, Notice
 
 
 def quality_gate_node(state: AgentState) -> dict:
@@ -106,7 +106,7 @@ def retake_node(state: AgentState) -> dict:
     return {
         "retake_requested": True,
         "is_ready_for_logic": False,
-        "coach_advice": message["en"],
+        "notice": Notice(**message),
     }
 
 

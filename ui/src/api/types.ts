@@ -219,8 +219,9 @@ export interface ScanResponse {
   routine_fit?: RoutineFit | null;
   // The coach's structured bilingual card; null on graceful exits.
   coach?: CoachCards | null;
-  // Plain-text graceful-exit message (retake / identity / search).
-  coach_advice?: string | null;
+  // Bilingual graceful-exit message (retake / identity / search); render the
+  // language matching the UI locale.
+  notice?: { en: string; ja: string } | null;
   web_sources: string[];
   added_product_id?: string | null;
 }

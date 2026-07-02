@@ -83,14 +83,17 @@ def test_confirm_identity_node_includes_guess_and_stops():
     state = {"extracted_data": make_extraction(brand="Curel", product_name="Cream")}
     result = websearch.confirm_identity_node(state)
     assert result["is_ready_for_logic"] is False
-    assert "Curel" in result["coach_advice"] and "Cream" in result["coach_advice"]
+    # The guess is embedded in both language variants.
+    assert "Curel" in result["notice"].en and "Cream" in result["notice"].en
+    assert "Curel" in result["notice"].ja
 
 
 def test_search_failed_node_includes_name_and_stops():
     state = {"extracted_data": make_extraction(brand="Curel", product_name="Cream")}
     result = websearch.search_failed_node(state)
     assert result["is_ready_for_logic"] is False
-    assert "Curel" in result["coach_advice"]
+    assert "Curel" in result["notice"].en
+    assert "Curel" in result["notice"].ja
 
 
 # --------------------------------------------------------------------------- #

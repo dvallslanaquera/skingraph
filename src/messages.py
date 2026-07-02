@@ -1,8 +1,7 @@
 # Bilingual (en/ja) copy for the graceful-exit paths: the retake bounces from
 # graph.py and the identity/search exits from the websearch nodes. Every entry
-# carries both languages so the exits can be served in the UI language; today
-# the nodes consume only "en" (the ja side is wired up in the bilingual-notices
-# work, Phase 4.2).
+# carries both languages; the nodes wrap them in a state.Notice so the UI can
+# render the one matching its locale.
 
 # VLM-confidence retake: label unreadable after both scanners.
 RETAKE_DEFAULT = {
@@ -111,5 +110,15 @@ SEARCH_FAILED = {
         "製品を「{name}」と特定しましたが、信頼できる全成分リストを"
         "オンラインで見つけることができませんでした。背面ラベルの全成分表示を"
         "鮮明に撮り直していただけますか？"
+    ),
+}
+
+# Defensive coach exit: the coach node was reached without a safety report, so
+# no grounded advice can be generated (should not happen via the normal graph).
+COACH_UNAVAILABLE = {
+    "en": "Safety audit data unavailable; unable to generate personalised advice.",
+    "ja": (
+        "安全性監査データが取得できなかったため、パーソナライズされた"
+        "アドバイスを生成できませんでした。"
     ),
 }

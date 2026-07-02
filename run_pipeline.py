@@ -162,9 +162,9 @@ def main():
         logging.info("--- COACH ADVICE ---")
         for line in render_coach_cards(cards).splitlines():
             logging.info(line)
-    elif final_state.get("coach_advice"):
-        # Graceful exit: retake, unsupported language, identity, or search miss.
-        logging.warning(f"ACTION NEEDED: {final_state['coach_advice']}")
+    elif final_state.get("notice"):
+        # Graceful exit: retake, identity, or search miss. CLI prints English.
+        logging.warning(f"ACTION NEEDED: {final_state['notice'].en}")
 
     # Log un-registered products only when we proceeded with a usable list.
     if final_state.get("registry_matched") is False and ready:

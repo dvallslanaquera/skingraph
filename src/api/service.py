@@ -22,7 +22,7 @@ def _status_of(final_state: dict) -> ScanStatus:
         return "complete"
     if final_state.get("retake_requested"):
         return "retake_required"
-    if final_state.get("coach_advice"):  # confirm_identity / search_failed exits
+    if final_state.get("notice"):  # confirm_identity / search_failed exits
         return "action_needed"
     return "incomplete"
 
@@ -42,7 +42,7 @@ def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResp
         safety_report=final_state.get("safety_report"),
         routine_fit=final_state.get("routine_fit"),
         coach=final_state.get("coach_cards"),
-        coach_advice=final_state.get("coach_advice"),
+        notice=final_state.get("notice"),
         web_sources=final_state.get("web_sources") or [],
         added_product_id=added_product_id,
     )

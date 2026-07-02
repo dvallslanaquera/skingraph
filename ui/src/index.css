@@ -1049,6 +1049,21 @@ h3,
   margin-top: 12px;
 }
 
+/* The camera button is the primary action on phones — give it real presence. */
+.btn-photo {
+  padding: 12px 22px;
+  font-size: 15px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+}
+
+@media (max-width: 720px) {
+  .btn-photo {
+    flex: 1 1 100%;
+    text-align: center;
+    padding: 14px 22px;
+  }
+}
+
 .upload-actions-hint {
   font-size: 13px;
 }

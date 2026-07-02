@@ -9,7 +9,7 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from src.state import (CoachResponse, ProductExtraction, RoutineFit,
+from src.state import (CoachResponse, Notice, ProductExtraction, RoutineFit,
                        SafetyAudit, UserProfile)
 
 # --- /scan ------------------------------------------------------------------
@@ -17,7 +17,7 @@ from src.state import (CoachResponse, ProductExtraction, RoutineFit,
 # Where the final graph state landed, summarised for the client:
 #   complete        — a full recommendation card was produced.
 #   retake_required — the label couldn't be read; the user should retake.
-#   action_needed   — identity/ingredients unresolved; coach_advice says what to do.
+#   action_needed   — identity/ingredients unresolved; notice says what to do.
 #   incomplete      — the graph exited without advice (unexpected; inspect fields).
 ScanStatus = Literal["complete", "retake_required", "action_needed", "incomplete"]
 
@@ -66,9 +66,12 @@ class ScanResponse(BaseModel):
             "None on graceful exits."
         ),
     )
-    coach_advice: Optional[str] = Field(
+    notice: Optional[Notice] = Field(
         None,
-        description="Plain-text graceful-exit message (retake / identity / search).",
+        description=(
+            "Bilingual graceful-exit message (retake / identity / search); "
+            "the UI renders the language matching its locale."
+        ),
     )
     web_sources: List[str] = Field(default_factory=list)
 
