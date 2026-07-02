@@ -796,7 +796,7 @@ Both tiers reuse the existing `retake_required` exit and UX plumbing, so no clie
 
 ## 🖼️ Image Preprocessing Pipeline
 
-Every image passes through a 7-step deterministic preprocessing chain inside `preprocess_image()` ([src/nodes/scanner.py](src/nodes/scanner.py)) before being base64-encoded and sent to Gemini. The steps run in order and are designed to be safe on already-clean images (each has a guard that makes it a near-no-op when the input doesn't need correction).
+Every image passes through a 7-step deterministic preprocessing chain inside `preprocess_image()` ([src/preprocess.py](src/preprocess.py)) before being base64-encoded and sent to Gemini. The steps run in order and are designed to be safe on already-clean images (each has a guard that makes it a near-no-op when the input doesn't need correction).
 
 ### Step-by-step
 

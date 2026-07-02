@@ -15,6 +15,8 @@ def temp_db(tmp_path, monkeypatch):
     """Point the store at an isolated temp database for the duration of a test."""
     db = tmp_path / "test_users.db"
     monkeypatch.setattr(user_store, "USER_DB_PATH", str(db))
+    # init_db() runs once per process; re-arm it for the fresh database.
+    monkeypatch.setattr(user_store, "_initialized", False)
     return str(db)
 
 

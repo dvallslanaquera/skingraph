@@ -1,4 +1,5 @@
 from typing import List, Literal, Optional, Tuple, TypedDict
+from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
@@ -11,7 +12,7 @@ class Ingredient(BaseModel):
         None, description="standardized name of the ingredient"
     )
     is_active: Optional[bool] = Field(
-        None, description="whether the product is a quasi-drug or not"
+        None, description="whether this ingredient is an active (functional) ingredient"
     )
     source_language: str = Field(
         "JP", description="language of the ingredient name as extracted from the image"
@@ -426,6 +427,9 @@ def build_initial_state(
         "correction_feedback": None,
         "retake_requested": False,
         "is_ready_for_logic": False,
+        # Assigned here (not in the scanners) so every path — including front
+        # photos, which skip the scanners entirely — carries a trace id.
+        "trace_id": str(uuid4()),
         "user_profile": user_profile,
         "user_name": user_name,
         "routine_products": routine_products,

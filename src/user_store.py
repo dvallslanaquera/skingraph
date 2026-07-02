@@ -112,13 +112,33 @@ def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+# Flipped by init_db() after the first run so the DDL + PRAGMA migrations cost
+# nothing on subsequent connections. Tests reset it when repointing USER_DB_PATH.
+_initialized = False
+
+
+def init_db() -> None:
+    """Create the tables and apply column migrations, once per process."""
+    global _initialized
+    if _initialized:
+        return
+    conn = sqlite3.connect(USER_DB_PATH)
+    try:
+        conn.row_factory = sqlite3.Row
+        conn.execute(_SCHEMA)
+        _migrate_users(conn)
+        conn.execute(_ROUTINE_SCHEMA)
+        _migrate_routine(conn)
+        conn.commit()
+    finally:
+        conn.close()
+    _initialized = True
+
+
 def _connect() -> sqlite3.Connection:
+    init_db()
     conn = sqlite3.connect(USER_DB_PATH)
     conn.row_factory = sqlite3.Row
-    conn.execute(_SCHEMA)
-    _migrate_users(conn)
-    conn.execute(_ROUTINE_SCHEMA)
-    _migrate_routine(conn)
     return conn
 
 
@@ -137,12 +157,6 @@ def _coerce_budget(value) -> Optional[int]:
     if text.isdigit():
         return int(text)
     return _LEGACY_BUDGET_USD.get(text.lower())
-
-
-def init_db() -> None:
-    """Create the users table if it does not exist."""
-    with _connect() as conn:
-        conn.commit()
 
 
 def _row_to_profile(row: sqlite3.Row) -> UserProfile:
@@ -265,19 +279,9 @@ def delete_user(user_id: str) -> bool:
 # --- Routine ("shelf") of products a user currently uses --------------------
 
 
-def _row_keys(row: sqlite3.Row) -> set:
-    """Column names present on a row (new price/timing columns may be absent)."""
-    return set(row.keys())
-
-
 def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
-    keys = _row_keys(row)
-
-    def opt(name):
-        return row[name] if name in keys else None
-
-    notes_raw = opt("application_notes")
-    notes_ja_raw = opt("application_notes_ja")
+    # All columns are guaranteed present: init_db() applies the ALTER TABLE
+    # migrations before any query runs.
     return RoutineProduct(
         product_id=row["product_id"],
         brand=row["brand"] or "",
@@ -286,15 +290,19 @@ def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
         is_quasi_drug=(
             bool(row["is_quasi_drug"]) if row["is_quasi_drug"] is not None else None
         ),
-        timing=opt("timing"),
-        application_notes=json.loads(notes_raw) if notes_raw else [],
-        application_notes_ja=json.loads(notes_ja_raw) if notes_ja_raw else [],
-        price_usd=opt("price_usd"),
-        price_native=opt("price_native"),
-        price_currency=opt("price_currency"),
-        price_market=opt("price_market"),
-        months_supply=opt("months_supply"),
-        price_source=opt("price_source"),
+        timing=row["timing"],
+        application_notes=(
+            json.loads(row["application_notes"]) if row["application_notes"] else []
+        ),
+        application_notes_ja=(
+            json.loads(row["application_notes_ja"]) if row["application_notes_ja"] else []
+        ),
+        price_usd=row["price_usd"],
+        price_native=row["price_native"],
+        price_currency=row["price_currency"],
+        price_market=row["price_market"],
+        months_supply=row["months_supply"],
+        price_source=row["price_source"],
     )
 
 

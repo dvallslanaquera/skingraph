@@ -10,6 +10,7 @@ from PIL import Image
 
 from src.nodes import scanner
 from src.nodes.scanner import ImageSide
+from src.preprocess import assess_image_quality
 
 from tests.helpers import make_extraction
 
@@ -83,30 +84,30 @@ def _save(img, tmp_path, name="img.png") -> str:
 
 def test_quality_flags_near_black_frame(tmp_path):
     path = _save(Image.new("RGB", (64, 64), (2, 2, 2)), tmp_path)
-    assert scanner.assess_image_quality(path) == "too_dark"
+    assert assess_image_quality(path) == "too_dark"
 
 
 def test_quality_flags_blown_out_frame(tmp_path):
     path = _save(Image.new("RGB", (64, 64), (255, 255, 255)), tmp_path)
-    assert scanner.assess_image_quality(path) == "too_bright"
+    assert assess_image_quality(path) == "too_bright"
 
 
 def test_quality_flags_uniform_blank_frame(tmp_path):
     # Mid-grey: luminance is fine but there's zero contrast → no product.
     path = _save(Image.new("RGB", (64, 64), (128, 128, 128)), tmp_path)
-    assert scanner.assess_image_quality(path) == "blank"
+    assert assess_image_quality(path) == "blank"
 
 
 def test_quality_passes_a_normal_contrasty_image(tmp_path):
     # A gradient has plenty of spread and mid-range mean → worth a VLM call.
     path = _save(Image.linear_gradient("L").convert("RGB"), tmp_path)
-    assert scanner.assess_image_quality(path) is None
+    assert assess_image_quality(path) is None
 
 
 def test_quality_reports_unreadable_bytes(tmp_path):
     path = tmp_path / "broken.jpg"
     path.write_bytes(b"not really an image")
-    assert scanner.assess_image_quality(str(path)) == "unreadable"
+    assert assess_image_quality(str(path)) == "unreadable"
 
 
 # --------------------------------------------------------------------------- #
@@ -121,7 +122,6 @@ def test_flash_scanner_maps_extraction_to_state(mock_gemini):
     assert result["extracted_data"] is extraction
     assert result["inference_confidence"] == 0.88
     assert result["model_used"] == "flash"
-    assert result["trace_id"]  # a uuid string is attached
 
 
 def test_flash_scanner_threads_correction_feedback_into_prompt(mock_gemini):
@@ -156,4 +156,3 @@ def test_pro_scanner_tags_model_as_pro(mock_gemini):
     assert result["extracted_data"] is extraction
     assert result["inference_confidence"] == 0.95
     assert result["model_used"] == "pro"
-    assert result["trace_id"]

@@ -5,6 +5,7 @@
 import pytest
 
 from src import graph
+from src.messages import RETAKE_DEFAULT
 from src.config import (
     FLASH_ACCEPT_THRESHOLD,
     FLASH_ESCALATE_THRESHOLD,
@@ -234,7 +235,7 @@ def test_retake_node_flags_and_message():
     assert result["retake_requested"] is True
     assert result["is_ready_for_logic"] is False
     # No reason in state (pro-fail path) → the default "couldn't read" message.
-    assert result["coach_advice"] == graph._DEFAULT_RETAKE_MESSAGE
+    assert result["coach_advice"] == RETAKE_DEFAULT["en"]
 
 
 def test_retake_node_uses_tier1_pixel_reason():
@@ -252,7 +253,7 @@ def test_retake_node_ignores_valid_product_content():
     # A single-product frame that fell through to retake (both scanners failed)
     # must NOT be mistaken for an OOD rejection — it gets the default message.
     result = graph.retake_node({"image_content": "product"})
-    assert result["coach_advice"] == graph._DEFAULT_RETAKE_MESSAGE
+    assert result["coach_advice"] == RETAKE_DEFAULT["en"]
 
 
 def test_tag_language_node_normalises_case_and_whitespace():

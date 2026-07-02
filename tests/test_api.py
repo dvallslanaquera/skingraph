@@ -77,6 +77,8 @@ def _fake_stream():
 def client(tmp_path, monkeypatch):
     """TestClient with an isolated DB and a stubbed graph."""
     monkeypatch.setattr(user_store, "USER_DB_PATH", str(tmp_path / "api_users.db"))
+    # init_db() runs once per process; re-arm it for the fresh database.
+    monkeypatch.setattr(user_store, "_initialized", False)
     monkeypatch.setattr(
         service.graph_app,
         "invoke",

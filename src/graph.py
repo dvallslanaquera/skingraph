@@ -6,15 +6,17 @@ from langgraph.graph import END, StateGraph
 from src.config import (FLASH_ACCEPT_THRESHOLD, FLASH_ESCALATE_THRESHOLD,
                         IDENTITY_CONFIDENCE_THRESHOLD, MAX_CORRECTIONS,
                         MIN_INGREDIENTS_FOR_AUDIT)
+from src.messages import REJECTION_MESSAGES, RETAKE_DEFAULT
 from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
 from src.nodes.routine_advisor import routine_advisor_node
-from src.nodes.scanner import (assess_image_quality, classify_side_node,
-                               flash_scanner_node, pro_scanner_node)
+from src.nodes.scanner import (classify_side_node, flash_scanner_node,
+                               pro_scanner_node)
 from src.nodes.websearch import (confirm_identity_node, search_failed_node,
                                  verify_identity_node, web_search_node)
+from src.preprocess import assess_image_quality
 from src.state import AgentState
 
 
@@ -88,42 +90,6 @@ def correction_node(state: AgentState) -> dict:
     }
 
 
-# Graceful-exit messages for inputs we bounce back to the user. The default is
-# the VLM-confidence retake (label unreadable after both scanners); the rest are
-# keyed by the Tier-1 pixel verdict (image_quality_issue) or the Tier-2 content
-# verdict (image_content), so each rejection tells the user exactly what to fix.
-_DEFAULT_RETAKE_MESSAGE = (
-    "I couldn't read the label clearly. "
-    "Could you please retake the photo with less glare and flatter alignment?"
-)
-_REJECTION_MESSAGES = {
-    "too_dark": (
-        "This photo looks almost completely dark. Please retake it in good "
-        "lighting with the product label clearly visible."
-    ),
-    "too_bright": (
-        "This photo looks overexposed — the label is washed out. Please retake "
-        "it with less glare or direct light."
-    ),
-    "blank": (
-        "I couldn't find a product in this photo — it looks blank or badly out "
-        "of focus. Please retake it with the product label filling the frame."
-    ),
-    "unreadable": (
-        "I couldn't open this image. Please upload a standard photo (JPEG or "
-        "PNG) of the product label."
-    ),
-    "not_a_product": (
-        "I couldn't find a skincare product in this photo. Please take a clear "
-        "photo of a single product's label."
-    ),
-    "multiple_products": (
-        "I can see more than one product in this photo. Please photograph one "
-        "product at a time so I can analyse its label accurately."
-    ),
-}
-
-
 def retake_node(state: AgentState) -> dict:
     """Graceful exit for any unusable input: pixel-degenerate (Tier 1),
     non/multi-product (Tier 2), or unreadable after both scanners (confidence)."""
@@ -136,11 +102,11 @@ def retake_node(state: AgentState) -> dict:
     logging.warning(
         "Bouncing input back to user (reason: %s).", reason or "low_confidence"
     )
-    message = _REJECTION_MESSAGES.get(reason or "", _DEFAULT_RETAKE_MESSAGE)
+    message = REJECTION_MESSAGES.get(reason or "", RETAKE_DEFAULT)
     return {
         "retake_requested": True,
         "is_ready_for_logic": False,
-        "coach_advice": message,
+        "coach_advice": message["en"],
     }
 
 
