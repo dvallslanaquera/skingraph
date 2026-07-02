@@ -287,10 +287,9 @@ function AddProductPanel({
   const [showManual, setShowManual] = useState(false);
   // Streaming state: real pipeline step (1..5) and the coach card as it types in.
   const [pipelineStep, setPipelineStep] = useState(1);
-  const [coachText, setCoachText] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const { currentUser } = useUsers();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
 
   function chooseFile(f: File | null) {
     if (!f) return;
@@ -301,7 +300,6 @@ function AddProductPanel({
     setError(null);
     setResult(null);
     setPipelineStep(1);
-    setCoachText("");
     setFile(f);
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
@@ -314,7 +312,6 @@ function AddProductPanel({
     setResult(null);
     setError(null);
     setPipelineStep(1);
-    setCoachText("");
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return null;
@@ -328,13 +325,11 @@ function AddProductPanel({
     setError(null);
     setResult(null);
     setPipelineStep(1);
-    setCoachText("");
     try {
       const res = await api.scanStream(
-        { image: file, userId, addToRoutine: true, lang },
+        { image: file, userId, addToRoutine: true },
         {
           onStage: (step) => setPipelineStep((prev) => Math.max(prev, step)),
-          onCoachDelta: (text) => setCoachText((prev) => prev + text),
         },
       );
       setResult(res);
@@ -409,21 +404,10 @@ function AddProductPanel({
           )}
 
           {scanning && (
-            <>
-              <PipelineSteps
-                userName={currentUser?.name ?? undefined}
-                activeStep={pipelineStep}
-              />
-              {coachText && (
-                <section className="card coach-card">
-                  <h2 className="card-title">{t("scan.coachTitle")}</h2>
-                  <div className="coach-advice">
-                    {coachText}
-                    <span className="coach-caret">▍</span>
-                  </div>
-                </section>
-              )}
-            </>
+            <PipelineSteps
+              userName={currentUser?.name ?? undefined}
+              activeStep={pipelineStep}
+            />
           )}
 
           {result && !scanning && (

@@ -10,13 +10,14 @@
 # also return the price converted to USD (the dashboard totals in USD).
 import logging
 import re
-from typing import Any, List, Optional
+from typing import Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel
 
 from src.config import FLASH_MODEL
+from src.nodes.websearch import _text_of
 
 
 class PriceInfo(BaseModel):
@@ -55,20 +56,6 @@ SOURCE: <the url you used>
 If you cannot find a reliable price, reply with exactly:
 NOT_FOUND
 """.strip()
-
-
-def _text_of(response: Any) -> str:
-    """Flatten a chat response's content to a plain string (grounding-safe)."""
-    content = getattr(response, "content", response)
-    if isinstance(content, list):
-        parts: List[str] = []
-        for block in content:
-            if isinstance(block, dict):
-                parts.append(block.get("text", ""))
-            else:
-                parts.append(str(block))
-        return "\n".join(parts)
-    return str(content)
 
 
 def _num(value: str) -> Optional[float]:

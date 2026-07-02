@@ -142,22 +142,17 @@ async def scan_stream(
     add_to_routine: bool = Form(
         False, description="Save the scanned product to the user's routine (requires user_id)."
     ),
-    lang: Optional[str] = Form(
-        None, description="UI language for the streamed coach card: 'ja' or 'en'."
-    ),
 ) -> StreamingResponse:
     """Stream the pipeline as Server-Sent Events (see src.api.service.run_scan_stream).
 
-    Same inputs/outputs as /scan, but emits stage / partial / coach_delta frames
-    as each node finishes and a final `complete` frame. Keeps the connection
-    alive so the long pipeline can't exceed the platform's request ceiling.
+    Same inputs/outputs as /scan, but emits a `stage` frame as each node
+    finishes and a final `complete` frame. Keeps the connection alive so the
+    long pipeline can't exceed the platform's request ceiling.
     """
     if image_type not in (None, "", "front", "back"):
         raise HTTPException(422, "image_type must be 'front' or 'back'.")
     if add_to_routine and not user_id:
         raise HTTPException(422, "add_to_routine requires a user_id.")
-    if lang not in (None, "", "ja", "en"):
-        raise HTTPException(422, "lang must be 'ja' or 'en'.")
 
     contents = await image.read()
     if not contents:
@@ -180,7 +175,6 @@ async def scan_stream(
                 image_type=(image_type or None),
                 user_id=user_id,
                 add_to_routine=add_to_routine,
-                lang=(lang or None),
             ):
                 yield frame
         finally:

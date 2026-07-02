@@ -18,7 +18,9 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
 from src.config import FLASH_MODEL, MIN_INGREDIENTS_FOR_AUDIT
+from src.messages import CONFIRM_IDENTITY, SEARCH_FAILED
 from src.nodes.scanner import image_message
+from src.prompts.websearch import SEARCH_PROMPT, VERIFY_PROMPT
 from src.state import AgentState, Ingredient, ProductExtraction
 
 
@@ -35,39 +37,6 @@ class ProductIdentity(BaseModel):
     )
 
 
-_VERIFY_PROMPT = """
-Look at this product image and read ONLY the brand and the product name.
-Do NOT extract ingredients. Focus entirely on whether the brand and product
-name are legible and unambiguous.
-
-Return:
-- brand: the brand name (transliterate to English if needed)
-- product_name: the official product name (transliterate katakana if needed)
-- identity_confidence: 0.0-1.0 — how certain you are that BOTH are correct.
-  Use a value below 0.8 if either is blurry, partially hidden, ambiguous,
-  or you had to guess.
-""".strip()
-
-
-_SEARCH_PROMPT = """
-Find the official FULL ingredient list for this cosmetic product:
-
-  Brand: {brand}
-  Product: {product_name}
-
-Use web search. Prefer the brand's official site, an official retailer, or a
-reputable cosmetics ingredient database. Return the complete ingredient list
-EXACTLY as published, in label order.
-
-OUTPUT FORMAT (strict):
-- One ingredient per line. No numbering, no bullets, no commentary.
-- Use the INCI name where available; otherwise the name as published
-  (e.g. the Japanese 成分表示名称).
-- After the list, add ONE final line:  SOURCE: <the url you used>
-- If you cannot find a reliable full ingredient list, reply with exactly:
-  NOT_FOUND
-""".strip()
-
 # Strips leading bullets / numbering like "1. ", "・", "- ", "* ".
 _NOISE = re.compile(r"^[\s・\-\*•]*\d*[\.\)]?\s*")
 
@@ -79,7 +48,7 @@ def verify_identity_node(state: AgentState) -> dict:
         model=FLASH_MODEL, temperature=0.0, timeout=120, max_retries=3
     ).with_structured_output(ProductIdentity)
 
-    message = image_message(_VERIFY_PROMPT, state["image_path"])
+    message = image_message(VERIFY_PROMPT, state["image_path"])
     identity = cast(ProductIdentity, llm.invoke([message]))
     logging.info(
         "Identity: %s — %s (confidence %.2f)",
@@ -173,7 +142,7 @@ def web_search_node(state: AgentState) -> dict:
     logging.info("Web search for ingredients: %s — %s", brand, product)
 
     llm = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.0, timeout=120)
-    prompt = _SEARCH_PROMPT.format(brand=brand, product_name=product)
+    prompt = SEARCH_PROMPT.format(brand=brand, product_name=product)
     response = llm.invoke(
         [HumanMessage(content=prompt)], tools=[{"google_search": {}}]
     )
@@ -209,12 +178,7 @@ def confirm_identity_node(state: AgentState) -> dict:
     guess = f"{data.brand} — {data.product_name}" if data else "this product"
     return {
         "is_ready_for_logic": False,
-        "coach_advice": (
-            "I couldn't confidently read this product's name from the photo. "
-            f"My best guess is '{guess}'. Please confirm the exact brand and "
-            "product name, or retake a clearer photo of the front label, so I "
-            "can look up its ingredients accurately."
-        ),
+        "coach_advice": CONFIRM_IDENTITY["en"].format(guess=guess),
     }
 
 
@@ -224,9 +188,5 @@ def search_failed_node(state: AgentState) -> dict:
     name = f"{data.brand} — {data.product_name}" if data else "this product"
     return {
         "is_ready_for_logic": False,
-        "coach_advice": (
-            f"I identified the product as '{name}' but couldn't find a reliable "
-            "full ingredient list online. Could you retake a clear photo of the "
-            "ingredient list (全成分) on the back label?"
-        ),
+        "coach_advice": SEARCH_FAILED["en"].format(name=name),
     }

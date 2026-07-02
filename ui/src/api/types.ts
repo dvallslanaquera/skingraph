@@ -174,6 +174,36 @@ export interface RoutineFit {
   existing_products: string[];
 }
 
+// One complete coach recommendation card, written in a single language.
+export interface CoachRecommendation {
+  verdict: string;
+  product: string;
+  purpose: string;
+  warnings: string[];
+  timing: string; // "AM" | "PM" | "AM & PM"
+  frequency: string;
+  application_notes: string[];
+  recommendation_rationale: string;
+  routine_integration: string;
+}
+
+// LLM-phrased routine-fit notes (empty lists when no routine context).
+export interface CoachRoutineFit {
+  risks: string[];
+  redundancy: string[];
+  value_add: string[];
+}
+
+// The coach's structured bilingual output — mirrors CoachResponse in
+// src/state.py. recommendation_score is null for anonymous scans.
+export interface CoachCards {
+  recommendation_score?: number | null;
+  japanese: CoachRecommendation;
+  english: CoachRecommendation;
+  routine_japanese: CoachRoutineFit;
+  routine_english: CoachRoutineFit;
+}
+
 export interface ScanResponse {
   status: ScanStatus;
   trace_id?: string | null;
@@ -187,15 +217,10 @@ export interface ScanResponse {
   unmatched_ingredients: string[];
   safety_report?: SafetyAudit | null;
   routine_fit?: RoutineFit | null;
+  // The coach's structured bilingual card; null on graceful exits.
+  coach?: CoachCards | null;
+  // Plain-text graceful-exit message (retake / identity / search).
   coach_advice?: string | null;
-  // Single-language coach cards (shown per the active UI language).
-  coach_advice_ja?: string | null;
-  coach_advice_en?: string | null;
-  // 0–5 "leaf" recommendability for the current user; null for anonymous scans.
-  recommendation_score?: number | null;
-  recommendation_rationale_ja?: string | null;
-  recommendation_rationale_en?: string | null;
-  routine_recommendations: string[];
   web_sources: string[];
   added_product_id?: string | null;
 }

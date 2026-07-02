@@ -18,13 +18,11 @@ from src.user_store import (UserNotFoundError, load_user_context,
 
 
 def _status_of(final_state: dict) -> ScanStatus:
-    ready = final_state.get("is_ready_for_logic", False)
-    advice = final_state.get("coach_advice")
-    if ready and advice:
+    if final_state.get("is_ready_for_logic", False) and final_state.get("coach_cards"):
         return "complete"
     if final_state.get("retake_requested"):
         return "retake_required"
-    if advice:  # confirm_identity / search_failed graceful exits
+    if final_state.get("coach_advice"):  # confirm_identity / search_failed exits
         return "action_needed"
     return "incomplete"
 
@@ -43,13 +41,8 @@ def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResp
         unmatched_ingredients=final_state.get("unmatched_ingredients") or [],
         safety_report=final_state.get("safety_report"),
         routine_fit=final_state.get("routine_fit"),
+        coach=final_state.get("coach_cards"),
         coach_advice=final_state.get("coach_advice"),
-        coach_advice_ja=final_state.get("coach_advice_ja"),
-        coach_advice_en=final_state.get("coach_advice_en"),
-        recommendation_score=final_state.get("recommendation_score"),
-        recommendation_rationale_ja=final_state.get("recommendation_rationale_ja"),
-        recommendation_rationale_en=final_state.get("recommendation_rationale_en"),
-        routine_recommendations=final_state.get("routine_recommendations") or [],
         web_sources=final_state.get("web_sources") or [],
         added_product_id=added_product_id,
     )
@@ -101,13 +94,8 @@ def run_scan(
 # (the coach is the slowest step), the proxy drops it, and the browser reports a
 # generic "backend not running" network error. run_scan_stream() instead drives
 # the graph with graph_app.stream(...) and emits Server-Sent Events as each node
-# finishes, so bytes flow continuously (no idle proxy timeout) and the UI can show
-# real per-stage progress plus a typewriter reveal of the coach card.
-#
-# The graph's structured-output coach call cannot be token-streamed as prose (it
-# streams JSON, not the rendered card), so the coach card is revealed in small
-# slices once the coach node has produced it — a genuine streamed reveal without
-# compromising the bilingual structured card the app relies on.
+# finishes, so bytes flow continuously (no idle proxy timeout) and the UI can
+# show real per-stage progress before the final structured response arrives.
 
 # Graph node -> pipeline step (1..5) for the UI's stage indicator. Matches the
 # five pipeline.stepN i18n labels (scan / extract / safety / routine / recommend).
@@ -123,9 +111,6 @@ _NODE_STEP = {
 # Emit an SSE keepalive comment if no graph event arrives within this window, so
 # a long single-node VLM call can never trip an idle proxy timeout.
 _KEEPALIVE_S = 15
-# Coach typewriter reveal: card slice size (chars) and pacing delay (seconds).
-_COACH_CHUNK_CHARS = 6
-_COACH_CHUNK_DELAY = 0.02
 
 
 def _sse(event: dict) -> bytes:
@@ -133,29 +118,18 @@ def _sse(event: dict) -> bytes:
     return f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
 
 
-def _pick_advice(state: dict, lang: Optional[str]) -> Optional[str]:
-    """The coach card to typewriter, in the UI's language; falls back to the
-    combined bilingual blob for graceful-exit (retake / search-failed) messages,
-    which only populate coach_advice."""
-    if lang == "ja":
-        return state.get("coach_advice_ja") or state.get("coach_advice")
-    return state.get("coach_advice_en") or state.get("coach_advice")
-
-
 async def run_scan_stream(
     image_path: str,
     image_type: Optional[str] = None,
     user_id: Optional[str] = None,
     add_to_routine: bool = False,
-    lang: Optional[str] = None,
 ) -> AsyncIterator[bytes]:
     """Run the pipeline, yielding SSE frames as each node completes.
 
     Frames (one ``data:`` line each, JSON with an ``event`` field):
-      stage       — {node, step}              per node (drives real progress)
-      coach_delta — {text}                    typewriter slices of the coach card
-      complete    — {data: full ScanResponse} final
-      error       — {message}                 on any failure
+      stage    — {node, step}              per node (drives real progress)
+      complete — {data: full ScanResponse} final
+      error    — {message}                 on any failure
     """
     user_profile = user_name = routine_products = None
     if user_id:
@@ -222,15 +196,9 @@ async def run_scan_stream(
             elif mode == "values":  # full accumulated state after a superstep
                 last_state = data
 
-        # The graph finished. Reveal the coach card with a typewriter, persist to
-        # the routine if asked, then send the final ScanResponse (same shape as
-        # /scan). The coach is the last node, so its card lives on `last_state`.
-        advice = _pick_advice(last_state, lang)
-        if advice:
-            for i in range(0, len(advice), _COACH_CHUNK_CHARS):
-                yield _sse({"event": "coach_delta", "text": advice[i:i + _COACH_CHUNK_CHARS]})
-                await asyncio.sleep(_COACH_CHUNK_DELAY)
-
+        # The graph finished. Persist to the routine if asked, then send the
+        # final ScanResponse (same shape as /scan); the UI renders the coach
+        # card from it. The coach is the last node, so it lives on `last_state`.
         added_product_id = None
         if add_to_routine and user_id:
             try:

@@ -60,3 +60,22 @@
   was **not** deleted: it may be the authoring source of the ground truth and
   isn't something this refactor created. Recommend confirming it's redundant and
   then `git rm`-ing it, or moving it out of `data/`.
+  *Resolved 2026-07-02: confirmed redundant and removed (see below).*
+
+---
+
+# Repo hygiene pass — 2026-07-02
+
+- Deleted stray artifacts: `fe.js` (orphaned minified bundle), `raildeploys.txt`,
+  `svcs.json`, `data/golden_set/desktop.ini`, and `data/ground_truth.json.docx`
+  (closing **A6** — `ground_truth.json` is canonical).
+- Deleted the empty root `requirements.txt` and gitignored it: Docker and CI
+  regenerate it on the fly via `poetry export`, so a committed copy can only
+  mislead.
+- **`legacy/README.md` → [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — it is
+  the authoritative technical deep-dive, not legacy material; the folder name
+  said the opposite. All README links updated (JP + EN).
+- Extracted the LLM long-context benchmarks (`notebooks/`) into their own
+  repository — they compare GLM-5.2 vs Claude Opus 4.8 using this codebase as
+  the corpus, which is a separate project from SkinGraph itself. The extracted
+  copy takes the target-repo path via `TARGET_REPO_ROOT`.

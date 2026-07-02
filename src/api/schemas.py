@@ -9,7 +9,8 @@ from typing import List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
-from src.state import ProductExtraction, RoutineFit, SafetyAudit, UserProfile
+from src.state import (CoachResponse, ProductExtraction, RoutineFit,
+                       SafetyAudit, UserProfile)
 
 # --- /scan ------------------------------------------------------------------
 
@@ -57,28 +58,18 @@ class ScanResponse(BaseModel):
         None, description="Cross-product evaluation against the user's saved routine."
     )
 
-    coach_advice: Optional[str] = Field(
-        None, description="Combined bilingual card, or a graceful-exit message."
-    )
-    coach_advice_ja: Optional[str] = Field(
-        None, description="Japanese-only recommendation card (for the JA UI)."
-    )
-    coach_advice_en: Optional[str] = Field(
-        None, description="English-only recommendation card (for the EN UI)."
-    )
-    recommendation_score: Optional[int] = Field(
+    coach: Optional[CoachResponse] = Field(
         None,
-        ge=0,
-        le=5,
-        description="0–5 'leaf' recommendability for this user; None if anonymous.",
+        description=(
+            "The coach's structured bilingual recommendation: one card per "
+            "language (verdict, warnings, timing, ...) plus routine-fit notes. "
+            "None on graceful exits."
+        ),
     )
-    recommendation_rationale_ja: Optional[str] = Field(
-        None, description="Japanese one-sentence rationale for the score."
+    coach_advice: Optional[str] = Field(
+        None,
+        description="Plain-text graceful-exit message (retake / identity / search).",
     )
-    recommendation_rationale_en: Optional[str] = Field(
-        None, description="English one-sentence rationale for the score."
-    )
-    routine_recommendations: List[str] = Field(default_factory=list)
     web_sources: List[str] = Field(default_factory=list)
 
     added_product_id: Optional[str] = Field(
