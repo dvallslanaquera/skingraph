@@ -27,6 +27,7 @@ from starlette.concurrency import run_in_threadpool
 
 from src.api import schemas
 from src.api.service import run_followup, run_scan, run_scan_stream
+from src.config import APP_VERSION
 from src.observability import log_tracing_status
 from src.routine_dashboard import build_dashboard
 from src.state import RoutineProduct
@@ -60,7 +61,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="SkinGraph API",
-    version="0.1.0",
+    version=APP_VERSION,
     description="Extract, audit, and coach on Japanese skincare labels via a LangGraph pipeline.",
     lifespan=lifespan,
 )
@@ -84,7 +85,12 @@ Instrumentator().instrument(app).expose(app)
 
 @app.get("/health", tags=["system"])
 def health() -> dict:
-    return {"status": "ok"}
+    return {
+        "status": "ok",
+        "version": APP_VERSION,
+        # Railway injects the deployed commit; local/dev runs report "local".
+        "commit": os.getenv("RAILWAY_GIT_COMMIT_SHA") or os.getenv("GIT_COMMIT") or "local",
+    }
 
 
 # --- scan -------------------------------------------------------------------

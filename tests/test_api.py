@@ -105,7 +105,10 @@ def _make_user(client, name="Aiko", skin_type="dry") -> str:
 
 
 def test_health(client):
-    assert client.get("/health").json() == {"status": "ok"}
+    body = client.get("/health").json()
+    assert body["status"] == "ok"
+    assert body["version"]  # semver from src.config.APP_VERSION
+    assert body["commit"]  # deployed sha, or "local" outside Railway
 
 
 def test_user_crud_round_trip(client):
