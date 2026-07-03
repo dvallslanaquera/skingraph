@@ -1,5 +1,3 @@
-# 🌿 SkinGraph
-
 <div align="center">
 
 <img src="docs/logo.jpg" alt="SkinGraph Logo" width="100%" />
@@ -248,7 +246,6 @@ Built with ❤️ and matcha 🍵 by [David Valls](https://github.com/ShinBellat
 
 ## 📑 Table of Contents
 
-- [🌿 SkinGraph](#-skingraph)
 - [🌿 SkinGraph — スキンケアラベル分析パイプライン](#-skingraph--スキンケアラベル分析パイプライン)
   - [📑 目次](#-目次)
   - [🌟 ハイライト](#-ハイライト)
