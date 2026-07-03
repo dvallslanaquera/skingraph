@@ -7,13 +7,19 @@
 import asyncio
 import json
 import logging
-from collections.abc import AsyncIterator
+import time
+from collections.abc import AsyncIterator, Iterator
+from typing import Any
 
-from src.api.schemas import FollowupRequest, FollowupResponse, ScanResponse, ScanStatus
+from langchain_core.runnables import RunnableConfig
+
+from src import metrics
+from src.api.schemas import FollowupRequest, FollowupResponse, ScanResponse, ScanStatus, ScanUsage
 from src.followup import answer_followup
 from src.graph import app as graph_app
+from src.metrics import ScanUsageCallback
 from src.observability import scan_run_config
-from src.state import build_initial_state
+from src.state import AgentState, build_initial_state
 from src.user_store import load_user_context, save_scanned_product
 
 
@@ -34,7 +40,9 @@ def _detected_language(final_state: dict) -> str | None:
     return lang or None
 
 
-def _to_response(final_state: dict, added_product_id: str | None) -> ScanResponse:
+def _to_response(
+    final_state: dict, added_product_id: str | None, usage: ScanUsage | None = None
+) -> ScanResponse:
     return ScanResponse(
         status=_status_of(final_state),
         trace_id=final_state.get("trace_id"),
@@ -51,8 +59,47 @@ def _to_response(final_state: dict, added_product_id: str | None) -> ScanRespons
         coach=final_state.get("coach_cards"),
         notice=final_state.get("notice"),
         web_sources=final_state.get("web_sources") or [],
+        usage=usage,
         added_product_id=added_product_id,
     )
+
+
+def _usage_of(cb: ScanUsageCallback) -> ScanUsage | None:
+    """Fold the callback's per-model token counts into one response block."""
+    if not cb.usage_metadata:
+        return None
+    counts = cb.usage_metadata
+    return ScanUsage(
+        input_tokens=sum(u.get("input_tokens", 0) for u in counts.values()),
+        output_tokens=sum(u.get("output_tokens", 0) for u in counts.values()),
+        model_calls=cb.model_calls,
+        estimated_cost_usd=round(
+            sum(
+                metrics.estimate_cost_usd(m, u.get("input_tokens", 0), u.get("output_tokens", 0))
+                for m, u in counts.items()
+            ),
+            6,
+        ),
+    )
+
+
+def _drive_scan(initial_state: AgentState, config: RunnableConfig) -> Iterator[tuple[str, Any]]:
+    """Drive one graph run, yielding ("node", name) and ("state", full_state) events.
+
+    The single instrumented execution path shared by the blocking /scan and the
+    SSE /scan/stream: node wall-times are recorded here as the deltas between
+    consecutive "updates" frames (the graph runs its nodes sequentially).
+    """
+    started = time.perf_counter()
+    for mode, data in graph_app.stream(initial_state, config, stream_mode=["updates", "values"]):
+        if mode == "updates":  # {node_name: update_dict}
+            now = time.perf_counter()
+            for node_name in data:
+                metrics.observe_node(node_name, now - started)
+                yield ("node", node_name)
+            started = now
+        elif mode == "values":  # full accumulated state after a superstep
+            yield ("state", data)
 
 
 def run_scan(
@@ -71,27 +118,39 @@ def run_scan(
     if user_id:
         user_profile, user_name, routine_products = load_user_context(user_id)
 
-    final_state = graph_app.invoke(
-        build_initial_state(
-            image_path,
-            image_type,
-            user_profile=user_profile,
-            user_name=user_name,
-            routine_products=routine_products,
-        ),
-        scan_run_config(
-            entrypoint="api",
-            image_type=image_type,
-            user_id=user_id,
-            has_routine=bool(routine_products),
-        ),
+    initial_state = build_initial_state(
+        image_path,
+        image_type,
+        user_profile=user_profile,
+        user_name=user_name,
+        routine_products=routine_products,
     )
+    usage_cb = ScanUsageCallback()
+    config = scan_run_config(
+        entrypoint="api",
+        image_type=image_type,
+        user_id=user_id,
+        has_routine=bool(routine_products),
+        callbacks=[usage_cb],
+    )
+
+    final_state: dict = dict(initial_state)
+    for kind, payload in _drive_scan(initial_state, config):
+        if kind == "state":
+            final_state = payload
 
     added_product_id = None
     if add_to_routine and user_id:
         added_product_id = save_scanned_product(user_id, final_state)
 
-    return _to_response(final_state, added_product_id)
+    response = _to_response(final_state, added_product_id, _usage_of(usage_cb))
+    metrics.observe_scan(
+        status=response.status,
+        entrypoint="api",
+        final_state=final_state,
+        usage=usage_cb.usage_metadata,
+    )
+    return response
 
 
 def run_followup(req: FollowupRequest) -> FollowupResponse:
@@ -184,15 +243,17 @@ async def run_scan_stream(
         user_name=user_name,
         routine_products=routine_products,
     )
+    usage_cb = ScanUsageCallback()
     config = scan_run_config(
         entrypoint="api-stream",
         image_type=image_type,
         user_id=user_id,
         has_routine=bool(routine_products),
+        callbacks=[usage_cb],
     )
 
-    # The graph stream is synchronous and blocking (VLM calls per node), so it
-    # runs in a worker thread that pushes (mode, chunk) tuples onto an
+    # The graph stream is synchronous and blocking (VLM calls per node), so
+    # _drive_scan runs in a worker thread that pushes its events onto an
     # asyncio.Queue via the loop. The async generator below drains the queue with
     # a timeout so it can emit keepalive pings during long single-node calls.
     queue: asyncio.Queue = asyncio.Queue()
@@ -201,8 +262,8 @@ async def run_scan_stream(
 
     def _run() -> None:
         try:
-            for chunk in graph_app.stream(initial_state, config, stream_mode=["updates", "values"]):
-                loop.call_soon_threadsafe(queue.put_nowait, chunk)
+            for event in _drive_scan(initial_state, config):
+                loop.call_soon_threadsafe(queue.put_nowait, event)
         except BaseException as exc:  # noqa: BLE001 — surface it, never end silently
             loop.call_soon_threadsafe(queue.put_nowait, ("__error__", exc))
             return
@@ -211,10 +272,10 @@ async def run_scan_stream(
     task = asyncio.create_task(asyncio.to_thread(_run))
     last_state: dict = dict(initial_state)
     try:
-        # Drain per-node graph events, emitting a `stage` frame for progress. The
-        # full accumulated state arrives on `values`; we keep the latest to build
-        # the final response (intermediate states aren't serialised — the UI only
-        # needs progress, the coach reveal, and the final result).
+        # Drain per-node events, emitting a `stage` frame for progress. The full
+        # accumulated state arrives on "state" events; we keep the latest to
+        # build the final response (intermediate states aren't serialised — the
+        # UI only needs progress, the coach reveal, and the final result).
         while True:
             try:
                 item = await asyncio.wait_for(queue.get(), timeout=_KEEPALIVE_S)
@@ -224,16 +285,15 @@ async def run_scan_stream(
             if item is sentinel:
                 break
 
-            mode, data = item  # type: ignore[misc]
-            if mode == "__error__":
+            kind, data = item  # type: ignore[misc]
+            if kind == "__error__":
                 yield _sse({"event": "error", "message": str(data)})
                 return
-            if mode == "updates":  # {node_name: update_dict}
-                for node_name in data:
-                    step = _NODE_STEP.get(node_name)
-                    if step is not None:
-                        yield _sse({"event": "stage", "node": node_name, "step": step})
-            elif mode == "values":  # full accumulated state after a superstep
+            if kind == "node":
+                step = _NODE_STEP.get(data)
+                if step is not None:
+                    yield _sse({"event": "stage", "node": data, "step": step})
+            elif kind == "state":
                 last_state = data
 
         # The graph finished. Persist to the routine if asked, then send the
@@ -245,12 +305,14 @@ async def run_scan_stream(
                 added_product_id = save_scanned_product(user_id, last_state)
             except Exception:  # noqa: BLE001 — don't lose the result over a save failure
                 logging.exception("save_scanned_product failed during stream")
-        yield _sse(
-            {
-                "event": "complete",
-                "data": _to_response(last_state, added_product_id).model_dump(mode="json"),
-            }
+        response = _to_response(last_state, added_product_id, _usage_of(usage_cb))
+        metrics.observe_scan(
+            status=response.status,
+            entrypoint="api-stream",
+            final_state=last_state,
+            usage=usage_cb.usage_metadata,
         )
+        yield _sse({"event": "complete", "data": response.model_dump(mode="json")})
     except Exception as exc:  # noqa: BLE001 — a failure here must not end silently
         logging.exception("scan stream failed")
         yield _sse({"event": "error", "message": str(exc)})

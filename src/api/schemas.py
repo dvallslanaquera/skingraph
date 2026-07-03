@@ -30,6 +30,17 @@ class NormalizedIngredient(BaseModel):
     source_language: str | None = None
 
 
+class ScanUsage(BaseModel):
+    """Aggregated LLM usage (and its estimated cost) for one scan."""
+
+    input_tokens: int = 0
+    output_tokens: int = 0
+    model_calls: int = 0
+    estimated_cost_usd: float = Field(
+        0.0, description="Token usage priced at the models' list prices (USD)."
+    )
+
+
 class ScanResponse(BaseModel):
     """Serialised final graph state for a single scan."""
 
@@ -73,6 +84,14 @@ class ScanResponse(BaseModel):
         ),
     )
     web_sources: list[str] = Field(default_factory=list)
+
+    usage: ScanUsage | None = Field(
+        None,
+        description=(
+            "LLM usage for this scan: token totals across all model calls and "
+            "the estimated cost at list prices. None when no model was called."
+        ),
+    )
 
     added_product_id: str | None = Field(
         None, description="Set when add_to_routine saved this product to the shelf."

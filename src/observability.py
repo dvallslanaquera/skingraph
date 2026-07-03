@@ -52,12 +52,16 @@ def scan_run_config(
     image_type: str | None = None,
     user_id: str | None = None,
     has_routine: bool = False,
+    callbacks: list[Any] | None = None,
 ) -> RunnableConfig:
     """Build the LangGraph invoke config that names, tags, and annotates a scan.
 
     Passing the result as the second argument to ``app.invoke(state, config)``
     makes the trace identifiable in LangSmith (filter by entrypoint, label side,
     or whether the run was personalised). It does not enable or disable tracing.
+
+    ``callbacks`` (e.g. the usage/cost aggregator in src/metrics.py) propagate
+    to every LLM call inside the run.
     """
     tags: list[str] = [f"entry:{entrypoint}"]
     if image_type:
@@ -72,4 +76,7 @@ def scan_run_config(
         "personalised": bool(user_id),
         "has_routine": has_routine,
     }
-    return {"run_name": SCAN_RUN_NAME, "tags": tags, "metadata": metadata}
+    config: RunnableConfig = {"run_name": SCAN_RUN_NAME, "tags": tags, "metadata": metadata}
+    if callbacks:
+        config["callbacks"] = callbacks
+    return config
