@@ -6,6 +6,14 @@ MAX_CORRECTIONS = 2
 FLASH_MODEL = "gemini-3.1-flash-lite"
 PRO_MODEL = "gemini-3.1-pro-preview"
 
+# LLM list prices (USD per 1M tokens) for the cost-per-scan estimate, from the
+# Gemini API price list as of July 2026 (standard tier, ≤200K-token prompts).
+# Keyed by the model ids above; a model missing here estimates as $0.
+MODEL_PRICES_USD_PER_MTOK = {
+    FLASH_MODEL: {"input": 0.25, "output": 1.50},
+    PRO_MODEL: {"input": 2.00, "output": 12.00},
+}
+
 # --- Tier-1 image pre-flight (deterministic, no VLM) ------------------------
 # A cheap pixel-level gate that runs BEFORE any Gemini call. It bounces back
 # obviously unusable photos (near-black, blown-out, or near-uniform/blank) so we

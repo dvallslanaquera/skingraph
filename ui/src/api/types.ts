@@ -240,5 +240,14 @@ export interface ScanResponse {
   // language matching the UI locale.
   notice?: { en: string; ja: string } | null;
   web_sources: string[];
+  // Aggregated LLM usage for the scan (token totals + list-price cost estimate).
+  usage?: ScanUsage | null;
   added_product_id?: string | null;
+}
+
+export interface ScanUsage {
+  input_tokens: number;
+  output_tokens: number;
+  model_calls: number;
+  estimated_cost_usd: number;
 }

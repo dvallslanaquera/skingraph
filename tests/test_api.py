@@ -333,3 +333,56 @@ def test_followup_unknown_user_is_404(client):
 def test_followup_blank_question_is_422(client):
     assert client.post("/scan/followup", json=_followup_body(question="   ")).status_code == 422
     assert client.post("/scan/followup", json=_followup_body(question="")).status_code == 422
+
+
+# --- usage / cost tracking + Prometheus metrics --------------------------------
+
+
+class _FakeUsageCallback:
+    """Stands in for ScanUsageCallback: pretends two flash calls ran."""
+
+    def __init__(self):
+        self.usage_metadata = {
+            "gemini-3.1-flash-lite": {"input_tokens": 10_000, "output_tokens": 2_000}
+        }
+        self.model_calls = 2
+
+
+def test_scan_reports_usage_and_cost(client, monkeypatch):
+    monkeypatch.setattr(service, "ScanUsageCallback", _FakeUsageCallback)
+
+    body = client.post("/scan", files={"image": IMAGE}).json()
+
+    usage = body["usage"]
+    assert usage["input_tokens"] == 10_000
+    assert usage["output_tokens"] == 2_000
+    assert usage["model_calls"] == 2
+    # flash-lite list price: 10K in @ $0.25/M + 2K out @ $1.50/M.
+    assert usage["estimated_cost_usd"] == pytest.approx(0.0025 + 0.003)
+
+
+def test_scan_stream_reports_usage(client, monkeypatch):
+    monkeypatch.setattr(service, "ScanUsageCallback", _FakeUsageCallback)
+
+    resp = client.post("/scan/stream", files={"image": IMAGE})
+    complete = _sse_events(resp)[-1]["data"]
+
+    assert complete["usage"]["input_tokens"] == 10_000
+    assert complete["usage"]["model_calls"] == 2
+
+
+def test_scan_without_model_calls_has_no_usage(client):
+    # The stubbed graph never invokes an LLM, so the callback stays empty.
+    assert client.post("/scan", files={"image": IMAGE}).json()["usage"] is None
+
+
+def test_scan_increments_prometheus_metrics(client, monkeypatch):
+    monkeypatch.setattr(service, "ScanUsageCallback", _FakeUsageCallback)
+    client.post("/scan", files={"image": IMAGE})
+
+    metrics_text = client.get("/metrics").text
+    assert 'scans_total{entrypoint="api",status="complete"}' in metrics_text
+    assert 'scan_tokens_total{direction="input",model="gemini-3.1-flash-lite"}' in metrics_text
+    assert 'scan_cost_usd_total{model="gemini-3.1-flash-lite"}' in metrics_text
+    # Node timing comes from the stream loop both endpoints now share.
+    assert 'scan_node_duration_seconds_count{node="flash_scanner"}' in metrics_text
