@@ -3,6 +3,7 @@
 # Endpoints:
 #   GET    /health                       liveness probe
 #   POST   /scan                         run the pipeline on an uploaded photo
+#   POST   /scan/followup                answer one question about a completed scan
 #   POST   /users                        create a user profile
 #   GET    /users                        list users
 #   GET    /users/{user_id}              fetch one user's profile
@@ -27,7 +28,8 @@ from starlette.concurrency import run_in_threadpool
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from src.api import schemas
-from src.api.service import UserNotFoundError, run_scan, run_scan_stream
+from src.api.service import (UserNotFoundError, run_followup, run_scan,
+                             run_scan_stream)
 from src.observability import log_tracing_status
 from src.routine_dashboard import build_dashboard
 from src.state import RoutineProduct
@@ -193,6 +195,26 @@ async def scan_stream(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# --- scan follow-up -----------------------------------------------------------
+
+
+@app.post("/scan/followup", response_model=schemas.FollowupResponse, tags=["scan"])
+async def scan_followup(body: schemas.FollowupRequest) -> schemas.FollowupResponse:
+    """Answer ONE follow-up question about a completed scan.
+
+    Stateless: the request carries the grounding the client received from
+    /scan (product, ingredients, safety report, routine fit); nothing is
+    stored server-side and no image is re-scanned.
+    """
+    if not body.question.strip():
+        raise HTTPException(422, "question must not be blank.")
+    try:
+        # The LLM call blocks (~seconds); keep it off the event loop.
+        return await run_in_threadpool(run_followup, body)
+    except UserNotFoundError as exc:
+        raise HTTPException(404, str(exc))
 
 
 # --- users ------------------------------------------------------------------

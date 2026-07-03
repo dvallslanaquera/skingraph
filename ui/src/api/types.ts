@@ -204,6 +204,23 @@ export interface CoachCards {
   routine_english: CoachRoutineFit;
 }
 
+// One follow-up question about a completed scan, carrying back the grounding
+// the client already holds — mirrors FollowupRequest in src/api/schemas.py.
+export interface FollowupRequest {
+  brand: string;
+  product_name: string;
+  standardized_ingredients: NormalizedIngredient[];
+  safety_report?: SafetyAudit | null;
+  routine_fit?: RoutineFit | null;
+  question: string;
+  lang: "ja" | "en";
+  user_id?: string | null;
+}
+
+export interface FollowupResponse {
+  answer: string;
+}
+
 export interface ScanResponse {
   status: ScanStatus;
   trace_id?: string | null;

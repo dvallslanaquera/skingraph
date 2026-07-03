@@ -806,6 +806,54 @@ h3,
   white-space: nowrap;
 }
 
+/* ---- follow-up Q&A ------------------------------------------------------- */
+
+.followup-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.followup-q {
+  margin: 0;
+  font-weight: 600;
+  color: var(--text-soft);
+}
+
+.followup-q::before {
+  content: "Q. ";
+  color: var(--accent-strong);
+}
+
+.followup-a {
+  margin: 4px 0 0;
+  padding: 10px 13px;
+  background: var(--accent-soft);
+  border-radius: var(--radius-sm);
+  line-height: 1.65;
+}
+
+.followup-row {
+  display: flex;
+  gap: 8px;
+}
+
+.followup-input {
+  flex: 1;
+  font: inherit;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: inherit;
+}
+
+.followup-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ---- empty states ------------------------------------------------------- */
 
 .empty-state {

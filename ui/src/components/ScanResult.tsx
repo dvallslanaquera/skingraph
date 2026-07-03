@@ -1,6 +1,10 @@
 // Renders a completed ScanResponse: status, the coach's structured card,
-// product details, ingredients, safety findings, and routine fit.
+// product details, ingredients, safety findings, routine fit, and a stateless
+// follow-up Q&A thread (kept in component state only — nothing server-side).
+import { useState } from "react";
+import { ApiError, api } from "../api/client";
 import type { ScanResponse, ScanStatus } from "../api/types";
+import { useUsers } from "../context/UserContext";
 import { useI18n } from "../i18n";
 import { LeafScore } from "./LeafScore";
 import { Typewriter } from "./Typewriter";
@@ -305,7 +309,87 @@ export function ScanResult({ result }: { result: ScanResponse }) {
           </ul>
         </section>
       )}
+
+      {result.status === "complete" && <FollowupChat result={result} />}
     </div>
+  );
+}
+
+// Stateless follow-up Q&A: each question travels with the scan grounding the
+// client already holds; the thread lives only in this component's state.
+function FollowupChat({ result }: { result: ScanResponse }) {
+  const { t, lang } = useI18n();
+  const { currentUserId } = useUsers();
+
+  const [thread, setThread] = useState<{ q: string; a: string }[]>([]);
+  const [question, setQuestion] = useState("");
+  const [asking, setAsking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function ask() {
+    const q = question.trim();
+    if (!q || asking) return;
+    setAsking(true);
+    setError(null);
+    try {
+      const res = await api.followup({
+        brand: result.product?.brand ?? "",
+        product_name: result.product?.product_name ?? "",
+        standardized_ingredients: result.standardized_ingredients,
+        safety_report: result.safety_report,
+        routine_fit: result.routine_fit,
+        question: q,
+        lang,
+        user_id: currentUserId ?? undefined,
+      });
+      setThread((prev) => [...prev, { q, a: res.answer }]);
+      setQuestion("");
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : String(e));
+    } finally {
+      setAsking(false);
+    }
+  }
+
+  return (
+    <section className="card followup-card">
+      <h2 className="card-title">{t("scan.followup.title")}</h2>
+
+      {thread.length > 0 && (
+        <div className="followup-thread">
+          {thread.map((turn, i) => (
+            <div key={i} className="followup-turn">
+              <p className="followup-q">{turn.q}</p>
+              <p className="followup-a">{turn.a}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {error && <div className="banner banner-error">{error}</div>}
+
+      <div className="followup-row">
+        <input
+          type="text"
+          className="followup-input"
+          value={question}
+          maxLength={500}
+          placeholder={t("scan.followup.placeholder")}
+          onChange={(e) => setQuestion(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") void ask();
+          }}
+          disabled={asking}
+        />
+        <button
+          className="btn btn-primary"
+          onClick={() => void ask()}
+          disabled={asking || !question.trim()}
+        >
+          {asking ? t("scan.followup.thinking") : t("scan.followup.send")}
+        </button>
+      </div>
+    </section>
   );
 }
 

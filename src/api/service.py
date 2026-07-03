@@ -9,7 +9,9 @@ import json
 import logging
 from typing import AsyncIterator, Optional
 
-from src.api.schemas import ScanResponse, ScanStatus
+from src.api.schemas import (FollowupRequest, FollowupResponse, ScanResponse,
+                             ScanStatus)
+from src.followup import answer_followup
 from src.graph import app as graph_app
 from src.observability import scan_run_config
 from src.state import build_initial_state
@@ -92,6 +94,34 @@ def run_scan(
         added_product_id = save_scanned_product(user_id, final_state)
 
     return _to_response(final_state, added_product_id)
+
+
+def run_followup(req: FollowupRequest) -> FollowupResponse:
+    """Answer one follow-up question about a completed scan.
+
+    Stateless: the request carries the grounding the client already received
+    from /scan. When ``user_id`` is given, the profile and saved routine are
+    reloaded so the answer stays personalised. Raises UserNotFoundError.
+    """
+    profile = user_name = routine_products = None
+    if req.user_id:
+        profile, user_name, routine_products = load_user_context(req.user_id)
+
+    answer = answer_followup(
+        brand=req.brand,
+        product_name=req.product_name,
+        standardized_ingredients=[
+            i.model_dump() for i in req.standardized_ingredients
+        ],
+        safety_report=req.safety_report,
+        routine_fit=req.routine_fit,
+        question=req.question,
+        lang=req.lang,
+        profile=profile,
+        user_name=user_name,
+        routine_products=routine_products,
+    )
+    return FollowupResponse(answer=answer)
 
 
 # --- streaming scan ----------------------------------------------------------

@@ -80,6 +80,33 @@ class ScanResponse(BaseModel):
     )
 
 
+# --- /scan/followup -----------------------------------------------------------
+
+
+class FollowupRequest(BaseModel):
+    """One follow-up question about a completed scan, plus its grounding.
+
+    Stateless: the client sends back the scan results it already holds (product
+    identity, verified ingredients, safety report, routine fit) so the server
+    needs no conversation store and never re-scans.
+    """
+
+    brand: str = ""
+    product_name: str = ""
+    standardized_ingredients: List[NormalizedIngredient] = Field(default_factory=list)
+    safety_report: Optional[SafetyAudit] = None
+    routine_fit: Optional[RoutineFit] = None
+    question: str = Field(min_length=1, max_length=500)
+    lang: Literal["ja", "en"] = "ja"
+    user_id: Optional[str] = Field(
+        None, description="Saved user id; reloads their profile + routine."
+    )
+
+
+class FollowupResponse(BaseModel):
+    answer: str = Field(description="The grounded answer, in the requested language.")
+
+
 # --- users ------------------------------------------------------------------
 
 

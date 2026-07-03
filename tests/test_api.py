@@ -278,3 +278,68 @@ def test_scan_stream_validation_errors(client):
         client.post("/scan/stream", files={"image": ("e.jpg", b"", "image/jpeg")}).status_code
         == 400
     )
+
+
+# --- /scan/followup -----------------------------------------------------------
+
+
+def _followup_body(**overrides) -> dict:
+    body = {
+        "brand": "Hada",
+        "product_name": "Lotion",
+        "standardized_ingredients": [
+            {"name_raw": "水", "name_standardized": "Water"}
+        ],
+        "question": "Can I use this with vitamin C?",
+        "lang": "en",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_followup_returns_answer(client, monkeypatch):
+    captured = {}
+
+    def fake_answer(**kwargs):
+        captured.update(kwargs)
+        return "A grounded answer."
+
+    monkeypatch.setattr(service, "answer_followup", fake_answer)
+    resp = client.post("/scan/followup", json=_followup_body())
+
+    assert resp.status_code == 200
+    assert resp.json() == {"answer": "A grounded answer."}
+    # The scan grounding travelled through to the answer builder.
+    assert captured["brand"] == "Hada"
+    assert captured["standardized_ingredients"][0]["name_standardized"] == "Water"
+    assert captured["lang"] == "en"
+
+
+def test_followup_loads_user_context(client, monkeypatch):
+    uid = _make_user(client)
+    captured = {}
+
+    def fake_answer(**kwargs):
+        captured.update(kwargs)
+        return "ok"
+
+    monkeypatch.setattr(service, "answer_followup", fake_answer)
+    resp = client.post("/scan/followup", json=_followup_body(user_id=uid))
+
+    assert resp.status_code == 200
+    assert captured["profile"] is not None
+    assert captured["profile"].skin_type == "dry"
+
+
+def test_followup_unknown_user_is_404(client):
+    resp = client.post("/scan/followup", json=_followup_body(user_id="nope"))
+    assert resp.status_code == 404
+
+
+def test_followup_blank_question_is_422(client):
+    assert client.post(
+        "/scan/followup", json=_followup_body(question="   ")
+    ).status_code == 422
+    assert client.post(
+        "/scan/followup", json=_followup_body(question="")
+    ).status_code == 422

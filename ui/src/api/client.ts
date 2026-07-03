@@ -3,6 +3,8 @@
 // Base URL comes from VITE_API_BASE_URL (see .env.example); defaults to the
 // local uvicorn / docker-compose port.
 import type {
+  FollowupRequest,
+  FollowupResponse,
   RoutineDashboard,
   RoutineProduct,
   RoutineProductRequest,
@@ -149,6 +151,16 @@ export const api = {
     if (opts.userId) form.append("user_id", opts.userId);
     form.append("add_to_routine", String(Boolean(opts.addToRoutine)));
     return request("/scan", { method: "POST", body: form });
+  },
+
+  // One follow-up question about a completed scan; stateless (the grounding the
+  // client already holds travels with the question).
+  followup(body: FollowupRequest): Promise<FollowupResponse> {
+    return request("/scan/followup", {
+      method: "POST",
+      headers: jsonHeaders,
+      body: JSON.stringify(body),
+    });
   },
 
   // Streaming variant of scan(): POSTs the photo to /scan/stream and consumes the
