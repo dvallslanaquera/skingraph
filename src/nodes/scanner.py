@@ -1,7 +1,7 @@
 # Vision scanner nodes: the Tier-2 content/side classifier, the lightweight
 # flash scanner, and the pro expert fallback for challenging pictures.
 import logging
-from typing import Any, Dict, Literal, cast
+from typing import Any, Literal, cast
 
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -21,9 +21,7 @@ class ImageSide(BaseModel):
             "or several distinct products sharing one frame."
         ),
     )
-    side: Literal["front", "back"] = Field(
-        description="Which side of the product the photo shows."
-    )
+    side: Literal["front", "back"] = Field(description="Which side of the product the photo shows.")
     confidence: float = Field(
         description="0.0-1.0 overall confidence in the content + side classification."
     )
@@ -67,7 +65,7 @@ def image_message(text: str, image_path: str) -> HumanMessage:
     )
 
 
-def classify_side_node(state: AgentState) -> Dict[str, Any]:
+def classify_side_node(state: AgentState) -> dict[str, Any]:
     """Classify the photo's content (Tier 2) and which side it shows.
 
     In one VLM call this both decides front vs back AND flags out-of-distribution
@@ -90,7 +88,7 @@ def classify_side_node(state: AgentState) -> Dict[str, Any]:
         result.side,
         result.confidence,
     )
-    out: Dict[str, Any] = {
+    out: dict[str, Any] = {
         "image_type": result.side,
         "image_content": result.content,
     }
@@ -120,13 +118,9 @@ def classify_side_node(state: AgentState) -> Dict[str, Any]:
 
 # Both scanners share everything but the model, prompt, and the model tag they
 # record — so they delegate to one core and only differ in those three inputs.
-def _run_scanner(
-    state: AgentState, *, model: str, prompt: str, model_tag: str
-) -> Dict[str, Any]:
+def _run_scanner(state: AgentState, *, model: str, prompt: str, model_tag: str) -> dict[str, Any]:
     llm = build_vlm(model, ProductExtraction)
-    extracted = cast(
-        ProductExtraction, llm.invoke([image_message(prompt, state["image_path"])])
-    )
+    extracted = cast(ProductExtraction, llm.invoke([image_message(prompt, state["image_path"])]))
     logging.info(
         "%s scan completed with confidence %.2f",
         model_tag,
@@ -141,7 +135,7 @@ def _run_scanner(
 
 # Lightweight scanner (Flash Gemini). On a correction retry, the deterministic
 # feedback from the correction node is appended to the system prompt.
-def flash_scanner_node(state: AgentState) -> Dict[str, Any]:
+def flash_scanner_node(state: AgentState) -> dict[str, Any]:
     logging.info("Starting lightweight flash scan using %s...", FLASH_MODEL)
     prompt = SCANNER_SYSTEM_PROMPT
     if state.get("correction_attempts", 0) > 0:
@@ -153,7 +147,7 @@ def flash_scanner_node(state: AgentState) -> Dict[str, Any]:
 
 
 # Heavyweight model (aka expert fallback) for visually difficult labels.
-def pro_scanner_node(state: AgentState) -> Dict[str, Any]:
+def pro_scanner_node(state: AgentState) -> dict[str, Any]:
     logging.info("Starting heavyweight pro scan using %s...", PRO_MODEL)
     prompt = (
         SCANNER_SYSTEM_PROMPT

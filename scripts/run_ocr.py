@@ -20,6 +20,7 @@ Usage:
 
 First run downloads model weights (hundreds of MB, slow once, then cached).
 """
+
 import argparse
 import sys
 from pathlib import Path
@@ -52,14 +53,12 @@ def dewarp_cylinder(img: np.ndarray, focal_ratio: float = 1.0) -> np.ndarray:
     map_x = np.tile(x_src, (h, 1))
     map_y = np.tile(np.arange(h, dtype=np.float32).reshape(-1, 1), (1, w))
 
-    return cv2.remap(img, map_x, map_y,
-                     interpolation=cv2.INTER_CUBIC,
-                     borderMode=cv2.BORDER_REPLICATE)
+    return cv2.remap(
+        img, map_x, map_y, interpolation=cv2.INTER_CUBIC, borderMode=cv2.BORDER_REPLICATE
+    )
 
 
-def apply_clahe(img: np.ndarray,
-                clip_limit: float = 2.0,
-                tile_size: int = 8) -> np.ndarray:
+def apply_clahe(img: np.ndarray, clip_limit: float = 2.0, tile_size: int = 8) -> np.ndarray:
     """Enhance contrast in the L channel of LAB colorspace.
 
     Operates only on luminance so hue and saturation are preserved.
@@ -67,8 +66,7 @@ def apply_clahe(img: np.ndarray,
     """
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     l_ch, a_ch, b_ch = cv2.split(lab)
-    clahe = cv2.createCLAHE(clipLimit=clip_limit,
-                             tileGridSize=(tile_size, tile_size))
+    clahe = cv2.createCLAHE(clipLimit=clip_limit, tileGridSize=(tile_size, tile_size))
     l_ch = clahe.apply(l_ch)
     return cv2.cvtColor(cv2.merge([l_ch, a_ch, b_ch]), cv2.COLOR_LAB2BGR)
 
@@ -92,15 +90,20 @@ def extract_text(results) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run YomiToku OCR on golden images.")
     parser.add_argument(
-        "--id", action="append", dest="ids",
+        "--id",
+        action="append",
+        dest="ids",
         help="Golden-set id(s) to process (default: prod_001, prod_002). Repeatable.",
     )
     parser.add_argument(
-        "--device", default="cpu", choices=["cpu", "cuda"],
+        "--device",
+        default="cpu",
+        choices=["cpu", "cuda"],
         help="Inference device (default: cpu).",
     )
     parser.add_argument(
-        "--no-preprocess", action="store_true",
+        "--no-preprocess",
+        action="store_true",
         help="Skip CLAHE + dewarping (raw baseline for comparison).",
     )
     return parser.parse_args()
@@ -119,7 +122,8 @@ def main() -> None:
 
     print(
         f"Loading YomiToku DocumentAnalyzer on device={args.device} "
-        "(first run downloads weights)...", flush=True
+        "(first run downloads weights)...",
+        flush=True,
     )
     analyzer = DocumentAnalyzer(visualize=False, device=args.device)
 
@@ -155,8 +159,7 @@ def main() -> None:
 
         print("\n" + "=" * 70)
         print(f"  {stem}  [{preprocess_tag}]  ->  {out_path}")
-        print(f"  words detected: {total_words}  |  "
-              f"mean rec confidence: {mean_conf:.3f}")
+        print(f"  words detected: {total_words}  |  mean rec confidence: {mean_conf:.3f}")
         print("=" * 70)
         print(text)
 

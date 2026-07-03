@@ -9,10 +9,16 @@ from unittest.mock import MagicMock
 import pytest
 
 from src.nodes import coach
-from src.state import (CoachResponse, CrossConflict, Recommendation,
-                       RoutineFit, RoutineFitCard, RoutineProduct, SafetyAudit,
-                       UserProfile)
-
+from src.state import (
+    CoachResponse,
+    CrossConflict,
+    Recommendation,
+    RoutineFit,
+    RoutineFitCard,
+    RoutineProduct,
+    SafetyAudit,
+    UserProfile,
+)
 from tests.helpers import make_extraction, std_ingredients
 
 
@@ -56,7 +62,9 @@ def test_pacing_flag_fires_when_shelf_already_has_strong_active():
         "standardized_ingredients": std_ingredients(("レチノール", "Retinol")),
         "routine_products": [
             RoutineProduct(
-                product_id="p1", brand="B", product_name="Peel",
+                product_id="p1",
+                brand="B",
+                product_name="Peel",
                 ingredients=["Salicylic Acid"],  # a BHA already on the shelf
             )
         ],
@@ -73,9 +81,7 @@ def test_no_pacing_flag_without_shelf_strong_active_or_sensitivity():
 
 def test_no_pacing_flag_when_product_has_no_strong_active():
     state = {"standardized_ingredients": std_ingredients(("水", "Water"))}
-    ja, en = coach._introduction_pacing_flags(
-        state, UserProfile(skin_type="sensitive")
-    )
+    ja, en = coach._introduction_pacing_flags(state, UserProfile(skin_type="sensitive"))
     assert ja == [] and en == []
 
 
@@ -136,14 +142,20 @@ def _response(score=3) -> CoachResponse:
         recommendation_score=score,
         japanese=Recommendation(
             verdict="乾燥肌の方にうれしい保湿アイテムです。",
-            product="Brand — Product", purpose="うるおいを与える",
-            warnings=[], timing="PM", frequency="週2〜3回",
+            product="Brand — Product",
+            purpose="うるおいを与える",
+            warnings=[],
+            timing="PM",
+            frequency="週2〜3回",
             recommendation_rationale="保湿の目標に合っています。",
         ),
         english=Recommendation(
             verdict="A nice hydrating pick for your dry skin.",
-            product="Brand — Product", purpose="Provides moisture",
-            warnings=[], timing="PM", frequency="2–3 times per week",
+            product="Brand — Product",
+            purpose="Provides moisture",
+            warnings=[],
+            timing="PM",
+            frequency="2–3 times per week",
             recommendation_rationale="Fits your hydration goal.",
         ),
     )

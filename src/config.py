@@ -12,9 +12,9 @@ PRO_MODEL = "gemini-3.1-pro-preview"
 # neither pay for a VLM call nor let the structured-output scanner hallucinate a
 # product from an image that has none. Thresholds are deliberately permissive —
 # they only fire on degenerate frames, not on merely dark or low-contrast labels.
-MIN_MEAN_LUMINANCE = 18.0    # mean grey < this ⇒ near-black frame
-MAX_MEAN_LUMINANCE = 240.0   # mean grey > this ⇒ blown-out / blank-white frame
-MIN_LUMINANCE_STDDEV = 6.0   # contrast spread < this ⇒ near-uniform (no product)
+MIN_MEAN_LUMINANCE = 18.0  # mean grey < this ⇒ near-black frame
+MAX_MEAN_LUMINANCE = 240.0  # mean grey > this ⇒ blown-out / blank-white frame
+MIN_LUMINANCE_STDDEV = 6.0  # contrast spread < this ⇒ near-uniform (no product)
 
 # Qdrant vector retrieval (embedded/local mode) — replaces the rapidfuzz scans
 # for both product registry lookup and ingredient normalization. The store is
@@ -41,8 +41,8 @@ EMBEDDING_CACHE_DIR = os.getenv("FASTEMBED_CACHE_DIR") or None
 PRODUCT_COLLECTION = "products"
 INGREDIENT_COLLECTION = "ingredients"
 # Cosine-similarity gates (0..1) for vector hits. Tune against the eval harness.
-PRODUCT_MATCH_THRESHOLD = 0.86   # normal product retrieval
-PRODUCT_EARLY_THRESHOLD = 0.93   # high-confidence early short-circuit
+PRODUCT_MATCH_THRESHOLD = 0.86  # normal product retrieval
+PRODUCT_EARLY_THRESHOLD = 0.93  # high-confidence early short-circuit
 INGREDIENT_MATCH_THRESHOLD = 0.86  # normalizer's semantic tier (after exact lookup)
 
 # Normalizer: seeds the ingredient vector index; tier-1 exact lookup still uses it.

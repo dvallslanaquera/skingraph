@@ -10,6 +10,7 @@ The JSON files become *seed data*: the runtime retrieval mechanism is Qdrant,
 not a per-call JSON scan. The embedded store is single-writer, so don't run this
 while the pipeline is running (both open the same on-disk path).
 """
+
 import json
 import logging
 import os
@@ -21,8 +22,11 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from qdrant_client.models import PointStruct  # noqa: E402
 
 from src import vectorstore  # noqa: E402
-from src.config import (INGREDIENT_COLLECTION, INGREDIENT_MASTER_PATH,  # noqa: E402
-                        PRODUCT_COLLECTION)
+from src.config import (  # noqa: E402
+    INGREDIENT_COLLECTION,
+    INGREDIENT_MASTER_PATH,
+    PRODUCT_COLLECTION,
+)
 
 logging.basicConfig(level=logging.INFO)
 
@@ -31,14 +35,13 @@ REGISTRY_PATH = "data/registry.json"
 
 def build_products() -> int:
     """One point per registry product; payload carries the curated ingredients."""
-    with open(REGISTRY_PATH, "r", encoding="utf-8") as f:
+    with open(REGISTRY_PATH, encoding="utf-8") as f:
         products = json.load(f)["products"]
 
     texts = [f"{p['brand']} {p['product_name']}" for p in products]
     vectors = vectorstore.embed_passages(texts)
     points = [
-        PointStruct(id=i, vector=vectors[i], payload=products[i])
-        for i in range(len(products))
+        PointStruct(id=i, vector=vectors[i], payload=products[i]) for i in range(len(products))
     ]
     vectorstore.rebuild_collection(PRODUCT_COLLECTION, points)
     return len(points)
@@ -46,7 +49,7 @@ def build_products() -> int:
 
 def build_ingredients() -> int:
     """One point per INCI synonym/form; payload maps back to the canonical INCI."""
-    with open(INGREDIENT_MASTER_PATH, "r", encoding="utf-8") as f:
+    with open(INGREDIENT_MASTER_PATH, encoding="utf-8") as f:
         master = json.load(f)
 
     forms = []  # (text_form, canonical_inci)

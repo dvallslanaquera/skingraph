@@ -7,7 +7,6 @@
 import json
 import sqlite3
 from datetime import datetime, timezone
-from typing import List, Optional, Tuple
 from uuid import uuid4
 
 from src.config import USER_DB_PATH
@@ -20,6 +19,7 @@ class UserNotFoundError(Exception):
     def __init__(self, user_id: str):
         self.user_id = user_id
         super().__init__(f"No user found with id: {user_id}")
+
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS users (
@@ -58,6 +58,7 @@ def _migrate_users(conn: sqlite3.Connection) -> None:
     for column, ddl in _USER_COLUMNS_ADDED.items():
         if column not in existing:
             conn.execute(f"ALTER TABLE users ADD COLUMN {column} {ddl}")
+
 
 # Per-user "shelf" of products the user currently uses. ingredients is stored as
 # a JSON list of canonical INCI names so a saved product can be re-audited
@@ -147,7 +148,7 @@ def _connect() -> sqlite3.Connection:
 _LEGACY_BUDGET_USD = {"budget": 25, "mid-range": 75, "premium": 200}
 
 
-def _coerce_budget(value) -> Optional[int]:
+def _coerce_budget(value) -> int | None:
     """Read a budget column (int, numeric str, or legacy category) as USD int."""
     if value is None or value == "":
         return None
@@ -168,9 +169,7 @@ def _row_to_profile(row: sqlite3.Row) -> UserProfile:
         skin_undertone=row["skin_undertone"],
         goals=json.loads(row["goals"]) if row["goals"] else [],
         is_pregnant=bool(row["is_pregnant"]),
-        skin_conditions=(
-            json.loads(row["skin_conditions"]) if row["skin_conditions"] else []
-        ),
+        skin_conditions=(json.loads(row["skin_conditions"]) if row["skin_conditions"] else []),
         sun_damage_history=row["sun_damage_history"],
         routine_time=row["routine_time"],
         consider_devices=bool(row["consider_devices"]),
@@ -180,8 +179,8 @@ def _row_to_profile(row: sqlite3.Row) -> UserProfile:
 
 def save_user(
     profile: UserProfile,
-    name: Optional[str] = None,
-    user_id: Optional[str] = None,
+    name: str | None = None,
+    user_id: str | None = None,
 ) -> str:
     """Insert a new profile or update an existing one. Returns the user_id.
 
@@ -232,39 +231,31 @@ def save_user(
     return user_id
 
 
-def get_user(user_id: str) -> Optional[UserProfile]:
+def get_user(user_id: str) -> UserProfile | None:
     """Load a profile by id, or None if it does not exist."""
     with _connect() as conn:
-        row = conn.execute(
-            "SELECT * FROM users WHERE user_id = ?", (user_id,)
-        ).fetchone()
+        row = conn.execute("SELECT * FROM users WHERE user_id = ?", (user_id,)).fetchone()
     return _row_to_profile(row) if row else None
 
 
-def get_user_name(user_id: str) -> Optional[str]:
+def get_user_name(user_id: str) -> str | None:
     """Return the stored display name for a user id, or None."""
     with _connect() as conn:
-        row = conn.execute(
-            "SELECT name FROM users WHERE user_id = ?", (user_id,)
-        ).fetchone()
+        row = conn.execute("SELECT name FROM users WHERE user_id = ?", (user_id,)).fetchone()
     return row["name"] if row else None
 
 
-def list_users() -> List[Tuple[str, Optional[str]]]:
+def list_users() -> list[tuple[str, str | None]]:
     """Return (user_id, name) pairs, most recently updated first."""
     with _connect() as conn:
-        rows = conn.execute(
-            "SELECT user_id, name FROM users ORDER BY updated_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT user_id, name FROM users ORDER BY updated_at DESC").fetchall()
     return [(r["user_id"], r["name"]) for r in rows]
 
 
-def list_users_with_profiles() -> List[Tuple[str, Optional[str], UserProfile]]:
+def list_users_with_profiles() -> list[tuple[str, str | None, UserProfile]]:
     """Return (user_id, name, profile) tuples, most recently updated first."""
     with _connect() as conn:
-        rows = conn.execute(
-            "SELECT * FROM users ORDER BY updated_at DESC"
-        ).fetchall()
+        rows = conn.execute("SELECT * FROM users ORDER BY updated_at DESC").fetchall()
     return [(r["user_id"], r["name"], _row_to_profile(r)) for r in rows]
 
 
@@ -287,9 +278,7 @@ def _row_to_routine_product(row: sqlite3.Row) -> RoutineProduct:
         brand=row["brand"] or "",
         product_name=row["product_name"] or "",
         ingredients=json.loads(row["ingredients"]) if row["ingredients"] else [],
-        is_quasi_drug=(
-            bool(row["is_quasi_drug"]) if row["is_quasi_drug"] is not None else None
-        ),
+        is_quasi_drug=(bool(row["is_quasi_drug"]) if row["is_quasi_drug"] is not None else None),
         timing=row["timing"],
         application_notes=(
             json.loads(row["application_notes"]) if row["application_notes"] else []
@@ -310,18 +299,18 @@ def add_routine_product(
     user_id: str,
     brand: str,
     product_name: str,
-    ingredients: List[str],
-    is_quasi_drug: Optional[bool] = None,
+    ingredients: list[str],
+    is_quasi_drug: bool | None = None,
     *,
-    timing: Optional[str] = None,
-    application_notes: Optional[List[str]] = None,
-    application_notes_ja: Optional[List[str]] = None,
-    price_usd: Optional[float] = None,
-    price_native: Optional[float] = None,
-    price_currency: Optional[str] = None,
-    price_market: Optional[str] = None,
-    months_supply: Optional[float] = None,
-    price_source: Optional[str] = None,
+    timing: str | None = None,
+    application_notes: list[str] | None = None,
+    application_notes_ja: list[str] | None = None,
+    price_usd: float | None = None,
+    price_native: float | None = None,
+    price_currency: str | None = None,
+    price_market: str | None = None,
+    months_supply: float | None = None,
+    price_source: str | None = None,
 ) -> str:
     """Save a product into the user's routine. Returns its product_id.
 
@@ -372,7 +361,7 @@ def add_routine_product(
     return product_id
 
 
-def get_routine(user_id: str) -> List[RoutineProduct]:
+def get_routine(user_id: str) -> list[RoutineProduct]:
     """Return the user's saved routine products, most recently added first."""
     with _connect() as conn:
         rows = conn.execute(
@@ -385,9 +374,7 @@ def get_routine(user_id: str) -> List[RoutineProduct]:
 def remove_routine_product(product_id: str) -> bool:
     """Delete a routine product by id. Returns True if a row was removed."""
     with _connect() as conn:
-        cur = conn.execute(
-            "DELETE FROM routine_products WHERE product_id = ?", (product_id,)
-        )
+        cur = conn.execute("DELETE FROM routine_products WHERE product_id = ?", (product_id,))
         conn.commit()
         return cur.rowcount > 0
 
@@ -397,7 +384,7 @@ def remove_routine_product(product_id: str) -> bool:
 
 def load_user_context(
     user_id: str,
-) -> Tuple[UserProfile, Optional[str], List[RoutineProduct]]:
+) -> tuple[UserProfile, str | None, list[RoutineProduct]]:
     """Load a saved user's (profile, name, routine), or raise UserNotFoundError.
 
     Single source of truth for the "run as a saved user" lookup shared by the
@@ -409,7 +396,7 @@ def load_user_context(
     return profile, get_user_name(user_id), get_routine(user_id)
 
 
-def save_scanned_product(user_id: str, final_state: dict) -> Optional[str]:
+def save_scanned_product(user_id: str, final_state: dict) -> str | None:
     """Persist a scanned product to the user's shelf; return its product_id.
 
     Returns None (saves nothing) when the scan didn't yield a usable product, so

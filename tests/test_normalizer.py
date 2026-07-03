@@ -7,7 +7,6 @@ import pytest
 
 from src.config import INGREDIENT_MATCH_THRESHOLD
 from src.nodes import normalizer
-
 from tests.helpers import make_extraction, std_ingredients
 
 
@@ -51,9 +50,7 @@ def patch_vector(monkeypatch):
     """Patch the tier-2 semantic search with a fixed (payload, score)."""
 
     def set_result(payload, score):
-        monkeypatch.setattr(
-            normalizer, "search_ingredient", lambda name: (payload, score)
-        )
+        monkeypatch.setattr(normalizer, "search_ingredient", lambda name: (payload, score))
 
     return set_result
 
@@ -109,10 +106,12 @@ def test_select_input_prefers_registry_list_over_extraction():
 
 
 def test_select_input_falls_back_to_extraction():
-    state = {"extracted_data": make_extraction(
-        ingredients=None,
-        n_ingredients=2,
-    )}
+    state = {
+        "extracted_data": make_extraction(
+            ingredients=None,
+            n_ingredients=2,
+        )
+    }
     selected = normalizer._select_input(state)
     assert len(selected) == 2
 
@@ -149,9 +148,9 @@ def test_node_uses_vector_tier_when_exact_misses(fake_index, patch_vector):
     patch_vector({"inci": "Niacinamide"}, 0.95)
     from src.state import Ingredient
 
-    state = {"extracted_data": make_extraction(
-        ingredients=[Ingredient(name_raw="ナイアシンアミド")]
-    )}
+    state = {
+        "extracted_data": make_extraction(ingredients=[Ingredient(name_raw="ナイアシンアミド")])
+    }
     result = normalizer.normalizer_node(state)
     assert result["standardized_ingredients"][0]["name_standardized"] == "Niacinamide"
     assert result["unmatched_ingredients"] == []
@@ -163,9 +162,11 @@ def test_node_preserves_is_active_and_language(fake_index, patch_vector):
 
     # Glycerin is not a function-taxonomy marker, so an incoming is_active=True is
     # carried through untouched (the marker rule only promotes, never clears).
-    state = {"extracted_data": make_extraction(
-        ingredients=[Ingredient(name_raw="グリセリン", is_active=True, source_language="EN")]
-    )}
+    state = {
+        "extracted_data": make_extraction(
+            ingredients=[Ingredient(name_raw="グリセリン", is_active=True, source_language="EN")]
+        )
+    }
     item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
     assert item["is_active"] is True
     assert item["source_language"] == "EN"
@@ -177,9 +178,9 @@ def test_node_flags_active_marker_ingredient(fake_index, patch_vector):
     patch_vector({"inci": "Niacinamide"}, 0.95)
     from src.state import Ingredient
 
-    state = {"extracted_data": make_extraction(
-        ingredients=[Ingredient(name_raw="ナイアシンアミド")]
-    )}
+    state = {
+        "extracted_data": make_extraction(ingredients=[Ingredient(name_raw="ナイアシンアミド")])
+    }
     item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
     assert item["name_standardized"] == "Niacinamide"
     assert item["is_active"] is True
@@ -190,9 +191,7 @@ def test_node_leaves_non_marker_is_active_unset(fake_index, patch_vector):
     patch_vector(None, 0.0)
     from src.state import Ingredient
 
-    state = {"extracted_data": make_extraction(
-        ingredients=[Ingredient(name_raw="Water")]
-    )}
+    state = {"extracted_data": make_extraction(ingredients=[Ingredient(name_raw="Water")])}
     item = normalizer.normalizer_node(state)["standardized_ingredients"][0]
     assert item["name_standardized"] == "Water"
     assert item["is_active"] is None
@@ -202,9 +201,7 @@ def test_node_empty_ingredient_is_neither_matched_nor_unmatched(fake_index, patc
     patch_vector(None, 0.0)
     from src.state import Ingredient
 
-    state = {"extracted_data": make_extraction(
-        ingredients=[Ingredient(name_raw="   ")]
-    )}
+    state = {"extracted_data": make_extraction(ingredients=[Ingredient(name_raw="   ")])}
     result = normalizer.normalizer_node(state)
     assert result["standardized_ingredients"][0]["name_standardized"] is None
     # An empty/whitespace name is not surfaced as an unmatched ingredient.

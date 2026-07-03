@@ -5,7 +5,6 @@
 import pytest
 
 from src import graph
-from src.messages import RETAKE_DEFAULT
 from src.config import (
     FLASH_ACCEPT_THRESHOLD,
     FLASH_ESCALATE_THRESHOLD,
@@ -13,7 +12,7 @@ from src.config import (
     MAX_CORRECTIONS,
     MIN_INGREDIENTS_FOR_AUDIT,
 )
-
+from src.messages import RETAKE_DEFAULT
 from tests.helpers import make_extraction
 
 
@@ -190,9 +189,7 @@ def test_post_registry_router_miss_too_few_but_confident_searches():
 def test_post_registry_router_miss_too_few_and_low_confidence_confirms():
     state = {
         "registry_matched": False,
-        "extracted_data": make_extraction(
-            MIN_INGREDIENTS_FOR_AUDIT - 1, extraction_confidence=0.5
-        ),
+        "extracted_data": make_extraction(MIN_INGREDIENTS_FOR_AUDIT - 1, extraction_confidence=0.5),
     }
     assert graph.post_registry_router(state) == "uncertain"
 

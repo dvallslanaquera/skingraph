@@ -13,7 +13,7 @@
 #      "LangGraph" entries.
 import logging
 import os
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 from langchain_core.runnables import RunnableConfig
 
@@ -37,11 +37,7 @@ def tracing_enabled() -> bool:
 def log_tracing_status() -> None:
     """Log whether LangSmith tracing is active so it's visible at startup."""
     if tracing_enabled():
-        project = (
-            os.getenv("LANGCHAIN_PROJECT")
-            or os.getenv("LANGSMITH_PROJECT")
-            or "default"
-        )
+        project = os.getenv("LANGCHAIN_PROJECT") or os.getenv("LANGSMITH_PROJECT") or "default"
         logging.info("LangSmith tracing ENABLED → project '%s'.", project)
     else:
         logging.info(
@@ -53,8 +49,8 @@ def log_tracing_status() -> None:
 def scan_run_config(
     *,
     entrypoint: str,
-    image_type: Optional[str] = None,
-    user_id: Optional[str] = None,
+    image_type: str | None = None,
+    user_id: str | None = None,
     has_routine: bool = False,
 ) -> RunnableConfig:
     """Build the LangGraph invoke config that names, tags, and annotates a scan.
@@ -63,14 +59,14 @@ def scan_run_config(
     makes the trace identifiable in LangSmith (filter by entrypoint, label side,
     or whether the run was personalised). It does not enable or disable tracing.
     """
-    tags: List[str] = [f"entry:{entrypoint}"]
+    tags: list[str] = [f"entry:{entrypoint}"]
     if image_type:
         tags.append(f"side:{image_type}")
     tags.append("personalised" if user_id else "anonymous")
     if has_routine:
         tags.append("with-routine")
 
-    metadata: Dict[str, Any] = {
+    metadata: dict[str, Any] = {
         "entrypoint": entrypoint,
         "image_type": image_type or "auto",
         "personalised": bool(user_id),

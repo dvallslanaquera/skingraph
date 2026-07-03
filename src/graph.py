@@ -3,19 +3,21 @@ import logging
 
 from langgraph.graph import END, StateGraph
 
-from src.config import (FLASH_ACCEPT_THRESHOLD, FLASH_ESCALATE_THRESHOLD,
-                        IDENTITY_CONFIDENCE_THRESHOLD, MAX_CORRECTIONS,
-                        MIN_INGREDIENTS_FOR_AUDIT)
+from src.config import (
+    FLASH_ACCEPT_THRESHOLD,
+    FLASH_ESCALATE_THRESHOLD,
+    IDENTITY_CONFIDENCE_THRESHOLD,
+    MAX_CORRECTIONS,
+    MIN_INGREDIENTS_FOR_AUDIT,
+)
 from src.messages import REJECTION_MESSAGES, RETAKE_DEFAULT
 from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
 from src.nodes.normalizer import normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
 from src.nodes.routine_advisor import routine_advisor_node
-from src.nodes.scanner import (classify_side_node, flash_scanner_node,
-                               pro_scanner_node)
-from src.nodes.websearch import (confirm_identity_node, search_failed_node,
-                                 web_search_node)
+from src.nodes.scanner import classify_side_node, flash_scanner_node, pro_scanner_node
+from src.nodes.websearch import confirm_identity_node, search_failed_node, web_search_node
 from src.preprocess import assess_image_quality
 from src.state import AgentState, Notice
 
@@ -103,9 +105,7 @@ def retake_node(state: AgentState) -> dict:
         "multiple_products",
     ):
         reason = state.get("image_content")
-    logging.warning(
-        "Bouncing input back to user (reason: %s).", reason or "low_confidence"
-    )
+    logging.warning("Bouncing input back to user (reason: %s).", reason or "low_confidence")
     message = REJECTION_MESSAGES.get(reason or "", RETAKE_DEFAULT)
     return {
         "retake_requested": True,

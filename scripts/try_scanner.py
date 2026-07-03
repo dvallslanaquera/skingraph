@@ -6,6 +6,7 @@ Runs the Flash and Pro scanners against a single golden-set image and prints the
 extracted JSON. Needs GOOGLE_API_KEY in .env. Not a pytest test — the automated,
 fully-mocked coverage lives in tests/test_scanner.py.
 """
+
 import os
 import sys
 

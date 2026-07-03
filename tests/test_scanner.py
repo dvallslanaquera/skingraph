@@ -11,7 +11,6 @@ from PIL import Image
 from src.nodes import scanner
 from src.nodes.scanner import ImageSide
 from src.preprocess import assess_image_quality
-
 from tests.helpers import make_extraction
 
 

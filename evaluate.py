@@ -16,7 +16,6 @@ import logging
 import os
 import sys
 import unicodedata
-from typing import Optional
 
 from dotenv import load_dotenv
 from rapidfuzz import fuzz, process
@@ -42,7 +41,7 @@ def normalize(text: str) -> str:
 
 
 # Ledger index for the translation-normalization layer, loaded once.
-_NORM_INDEX: Optional[dict] = None
+_NORM_INDEX: dict | None = None
 
 
 def canonical_inci(ingredient: Ingredient) -> str:
@@ -90,16 +89,10 @@ def score_ingredients(extracted: list[str], truth: list[str], threshold: int) ->
 
     recall = len(matched_truth_idx) / len(truth_n) if truth_n else 0.0
     precision = len(matched_extracted_idx) / len(extracted_n) if extracted_n else 0.0
-    f1 = (
-        2 * precision * recall / (precision + recall)
-        if (precision + recall)
-        else 0.0
-    )
+    f1 = 2 * precision * recall / (precision + recall) if (precision + recall) else 0.0
 
     missed = [truth[i] for i in range(len(truth)) if i not in matched_truth_idx]
-    hallucinated = [
-        extracted[i] for i in range(len(extracted)) if i not in matched_extracted_idx
-    ]
+    hallucinated = [extracted[i] for i in range(len(extracted)) if i not in matched_extracted_idx]
     return {
         "precision": round(precision, 3),
         "recall": round(recall, 3),
@@ -111,7 +104,7 @@ def score_ingredients(extracted: list[str], truth: list[str], threshold: int) ->
     }
 
 
-def run_scanner(model: str, image_path: str) -> Optional[ProductExtraction]:
+def run_scanner(model: str, image_path: str) -> ProductExtraction | None:
     state = {
         "image_path": image_path,
         "image_type": "back",
@@ -124,7 +117,7 @@ def run_scanner(model: str, image_path: str) -> Optional[ProductExtraction]:
     return result.get("extracted_data")
 
 
-def evaluate_one(model: str, entry: dict, threshold: int) -> Optional[dict]:
+def evaluate_one(model: str, entry: dict, threshold: int) -> dict | None:
     gt = entry["ground_truth"]
     file_name = entry["metadata"]["file_name"]
     image_path = os.path.join(GOLDEN_SET_DIR, file_name)
@@ -185,12 +178,16 @@ def print_report(results: list[dict]) -> None:
             f"({ing['extracted_count']} extracted / {ing['truth_count']} truth)"
         )
         if ing["missed"]:
-            print(f"    missed ({len(ing['missed'])}): {', '.join(ing['missed'][:10])}"
-                  + (" ..." if len(ing["missed"]) > 10 else ""))
+            print(
+                f"    missed ({len(ing['missed'])}): {', '.join(ing['missed'][:10])}"
+                + (" ..." if len(ing["missed"]) > 10 else "")
+            )
         if ing["hallucinated"]:
-            print(f"    extra  ({len(ing['hallucinated'])}): "
-                  f"{', '.join(ing['hallucinated'][:10])}"
-                  + (" ..." if len(ing["hallucinated"]) > 10 else ""))
+            print(
+                f"    extra  ({len(ing['hallucinated'])}): "
+                f"{', '.join(ing['hallucinated'][:10])}"
+                + (" ..." if len(ing["hallucinated"]) > 10 else "")
+            )
 
     for r in errored:
         print(f"\n[{r['id']}]  model={r['model']}  ERROR: {r['error']}")
@@ -217,19 +214,27 @@ def parse_args() -> argparse.Namespace:
         description="Score scanner extraction against data/ground_truth.json."
     )
     parser.add_argument(
-        "--model", choices=["flash", "pro", "both"], default="flash",
+        "--model",
+        choices=["flash", "pro", "both"],
+        default="flash",
         help="Which scanner to evaluate (default: flash).",
     )
     parser.add_argument(
-        "--threshold", type=int, default=INGREDIENT_MATCH_THRESHOLD,
+        "--threshold",
+        type=int,
+        default=INGREDIENT_MATCH_THRESHOLD,
         help=f"Fuzzy match cutoff for ingredients (default: {INGREDIENT_MATCH_THRESHOLD}).",
     )
     parser.add_argument(
-        "--id", action="append", dest="ids",
+        "--id",
+        action="append",
+        dest="ids",
         help="Only evaluate these ground-truth id(s). Repeatable.",
     )
     parser.add_argument(
-        "--save", metavar="PATH", help="Write full results as JSON to PATH.",
+        "--save",
+        metavar="PATH",
+        help="Write full results as JSON to PATH.",
     )
     return parser.parse_args()
 
@@ -243,7 +248,7 @@ def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
     args = parse_args()
 
-    with open(GROUND_TRUTH_PATH, "r", encoding="utf-8") as f:
+    with open(GROUND_TRUTH_PATH, encoding="utf-8") as f:
         entries = json.load(f)
 
     if args.ids:

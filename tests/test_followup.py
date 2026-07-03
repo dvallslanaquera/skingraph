@@ -9,7 +9,6 @@ import pytest
 
 from src import followup
 from src.state import SafetyAudit, UserProfile
-
 from tests.helpers import std_ingredients
 
 
@@ -21,9 +20,7 @@ def mock_followup_llm(monkeypatch):
         invoke = MagicMock(return_value=MagicMock(content=answer))
         chat = MagicMock()
         chat.invoke = invoke
-        monkeypatch.setattr(
-            followup, "ChatGoogleGenerativeAI", MagicMock(return_value=chat)
-        )
+        monkeypatch.setattr(followup, "ChatGoogleGenerativeAI", MagicMock(return_value=chat))
         return invoke
 
     return install
@@ -67,10 +64,10 @@ def test_prompt_carries_the_scan_grounding(mock_followup_llm):
     _ask(question="Is this OK for daily use?")
 
     human = _human_prompt(invoke)
-    assert "Hada — Lotion" in human               # product identity
-    assert "Water" in human                        # verified INCI list
-    assert "Safety score: 0.90" in human           # audit findings
-    assert "Is this OK for daily use?" in human    # the question itself
+    assert "Hada — Lotion" in human  # product identity
+    assert "Water" in human  # verified INCI list
+    assert "Safety score: 0.90" in human  # audit findings
+    assert "Is this OK for daily use?" in human  # the question itself
     assert "entirely in English" in human
 
 

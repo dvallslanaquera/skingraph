@@ -1,6 +1,5 @@
 # Plain factory helpers shared across the suite (kept out of conftest so they
 # can be imported directly without relying on pytest's plugin machinery).
-from typing import List, Optional
 
 from src.state import Ingredient, ProductExtraction
 
@@ -13,7 +12,7 @@ def make_extraction(
     source_language: str = "JP",
     extraction_confidence: float = 0.9,
     system_status: str = "SUCCESS",
-    ingredients: Optional[List[Ingredient]] = None,
+    ingredients: list[Ingredient] | None = None,
     **overrides,
 ) -> ProductExtraction:
     """Build a ProductExtraction with `n_ingredients` placeholder ingredients.
@@ -36,7 +35,7 @@ def make_extraction(
     )
 
 
-def std_ingredients(*pairs) -> List[dict]:
+def std_ingredients(*pairs) -> list[dict]:
     """Build a normalizer-shaped list from (name_raw, name_standardized) pairs.
 
     `name_standardized` may be None to represent an unmapped ingredient.

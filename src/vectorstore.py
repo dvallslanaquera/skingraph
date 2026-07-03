@@ -15,16 +15,22 @@
 # holds the same on-disk path open.
 import logging
 import threading
-from typing import Any, List, Optional, Tuple
+from typing import Any
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, VectorParams
 
-from src.config import (EMBEDDING_CACHE_DIR, EMBEDDING_DIM, EMBEDDING_MODEL,
-                        EMBEDDING_ONNX_FILE, INGREDIENT_COLLECTION,
-                        PRODUCT_COLLECTION, QDRANT_PATH)
+from src.config import (
+    EMBEDDING_CACHE_DIR,
+    EMBEDDING_DIM,
+    EMBEDDING_MODEL,
+    EMBEDDING_ONNX_FILE,
+    INGREDIENT_COLLECTION,
+    PRODUCT_COLLECTION,
+    QDRANT_PATH,
+)
 
-_client: Optional[QdrantClient] = None
+_client: QdrantClient | None = None
 _client_lock = threading.Lock()
 _model: Any = None
 _model_lock = threading.Lock()
@@ -79,21 +85,19 @@ def get_model():
 
                 _register_model()
                 logging.info("Loading embedding model (ONNX): %s", EMBEDDING_MODEL)
-                _model = TextEmbedding(
-                    EMBEDDING_MODEL, cache_dir=EMBEDDING_CACHE_DIR, threads=1
-                )
+                _model = TextEmbedding(EMBEDDING_MODEL, cache_dir=EMBEDDING_CACHE_DIR, threads=1)
     return _model
 
 
 # multilingual-e5 is trained with asymmetric "query:" / "passage:" prefixes;
 # using them improves retrieval quality noticeably. (Custom fastembed models
 # don't auto-prefix, so we add them here — the same convention indexing uses.)
-def embed_query(text: str) -> List[float]:
+def embed_query(text: str) -> list[float]:
     vec = next(iter(get_model().embed([f"query: {text}"])))
     return vec.tolist()
 
 
-def embed_passages(texts: List[str]) -> List[List[float]]:
+def embed_passages(texts: list[str]) -> list[list[float]]:
     vecs = get_model().embed([f"passage: {t}" for t in texts])
     return [v.tolist() for v in vecs]
 
@@ -103,14 +107,12 @@ def ensure_collection(name: str) -> None:
     if not client.collection_exists(name):
         client.create_collection(
             collection_name=name,
-            vectors_config=VectorParams(
-                size=EMBEDDING_DIM, distance=Distance.COSINE
-            ),
+            vectors_config=VectorParams(size=EMBEDDING_DIM, distance=Distance.COSINE),
         )
         logging.info("Created Qdrant collection: %s", name)
 
 
-def rebuild_collection(name: str, points: List[PointStruct]) -> None:
+def rebuild_collection(name: str, points: list[PointStruct]) -> None:
     """Drop and recreate a collection, then upsert all points (index build)."""
     client = get_client()
     if client.collection_exists(name):
@@ -121,7 +123,7 @@ def rebuild_collection(name: str, points: List[PointStruct]) -> None:
     logging.info("Rebuilt collection '%s' with %d point(s).", name, len(points))
 
 
-def _search_one(collection: str, query: str) -> Tuple[Optional[dict], float]:
+def _search_one(collection: str, query: str) -> tuple[dict | None, float]:
     """Return the single best (payload, cosine_score) for a query, or (None, 0)."""
     client = get_client()
     result = client.query_points(
@@ -136,11 +138,11 @@ def _search_one(collection: str, query: str) -> Tuple[Optional[dict], float]:
     return points[0].payload, float(points[0].score)
 
 
-def search_product(query: str) -> Tuple[Optional[dict], float]:
+def search_product(query: str) -> tuple[dict | None, float]:
     """Best product match for a "{brand} {product_name}" query."""
     return _search_one(PRODUCT_COLLECTION, query)
 
 
-def search_ingredient(query: str) -> Tuple[Optional[dict], float]:
+def search_ingredient(query: str) -> tuple[dict | None, float]:
     """Best ingredient-form match for a raw label ingredient name."""
     return _search_one(INGREDIENT_COLLECTION, query)

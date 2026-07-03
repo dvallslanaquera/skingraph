@@ -8,7 +8,6 @@ import pytest
 from src import conflicts
 from src.nodes import routine_advisor
 from src.state import RoutineProduct, UserProfile
-
 from tests.helpers import std_ingredients
 
 CONFLICTS = {
@@ -97,7 +96,7 @@ def test_cross_product_conflict_detected(advisor_data):
 def test_conflict_attributed_to_correct_shelf_product(advisor_data):
     shelf = [
         _product("Hydra", "Mist", "Sodium Hyaluronate"),  # no conflict
-        _product("Acme", "Peel", "Lactic Acid"),           # AHA → conflicts
+        _product("Acme", "Peel", "Lactic Acid"),  # AHA → conflicts
     ]
     fit = _run(["Retinol"], routine=shelf)
     assert [c.with_product for c in fit.conflicts] == ["Acme — Peel"]
@@ -122,7 +121,7 @@ def test_redundancy_two_vitamin_c_products(advisor_data):
 
 def test_no_redundancy_for_distinct_functions(advisor_data):
     shelf = [_product("Hydra", "Mist", "Sodium Hyaluronate")]  # Hydration
-    fit = _run(["Niacinamide"], routine=shelf)                  # Niacinamide
+    fit = _run(["Niacinamide"], routine=shelf)  # Niacinamide
     assert fit.redundancy == []
 
 
@@ -154,8 +153,10 @@ def test_no_value_add_without_matching_goal(advisor_data):
 # existing products surfaced for the coach
 # --------------------------------------------------------------------------- #
 def test_existing_products_listed(advisor_data):
-    shelf = [_product("Hydra", "Mist", "Sodium Hyaluronate"),
-             _product("Acme", "Peel", "Glycolic Acid")]
+    shelf = [
+        _product("Hydra", "Mist", "Sodium Hyaluronate"),
+        _product("Acme", "Peel", "Glycolic Acid"),
+    ]
     fit = _run(["Niacinamide"], routine=shelf, goals=["brightening"])
     assert fit.existing_products == ["Hydra — Mist", "Acme — Peel"]
 

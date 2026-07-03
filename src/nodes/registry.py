@@ -46,11 +46,7 @@ def _run_registry_match(state: AgentState, threshold: float) -> dict:
             "standardized_ingredients": standardized,
         }
 
-    best = (
-        f"{payload.get('brand')} {payload.get('product_name')}"
-        if payload
-        else "none"
-    )
+    best = f"{payload.get('brand')} {payload.get('product_name')}" if payload else "none"
     logging.info("No registry match (best: %s at %.3f cosine)", best, score)
     return {
         "is_ready_for_logic": False,

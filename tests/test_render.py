@@ -1,6 +1,5 @@
 # Tests for the CLI text renderers over the coach's structured cards.
-from src.render import (render_coach_cards, render_recommendation,
-                        render_routine_fit)
+from src.render import render_coach_cards, render_recommendation, render_routine_fit
 from src.state import CoachResponse, Recommendation, RoutineFitCard
 
 

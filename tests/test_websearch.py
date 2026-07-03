@@ -9,7 +9,6 @@ import pytest
 
 from src.config import MIN_INGREDIENTS_FOR_AUDIT
 from src.nodes import websearch
-
 from tests.helpers import make_extraction
 
 
@@ -105,9 +104,7 @@ def mock_search_llm(monkeypatch):
         resp = MagicMock(content=content, response_metadata={})
         chat = MagicMock()
         chat.invoke = MagicMock(return_value=resp)
-        monkeypatch.setattr(
-            websearch, "ChatGoogleGenerativeAI", MagicMock(return_value=chat)
-        )
+        monkeypatch.setattr(websearch, "ChatGoogleGenerativeAI", MagicMock(return_value=chat))
 
     return install
 

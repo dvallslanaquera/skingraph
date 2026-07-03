@@ -5,27 +5,25 @@
 import json
 import logging
 import unicodedata
-from typing import Dict, List, Optional, Set, Tuple
 
-from src.config import (FUNCTION_GROUPS_PATH, INGREDIENT_MASTER_PATH,
-                        INGREDIENT_MATCH_THRESHOLD)
+from src.config import FUNCTION_GROUPS_PATH, INGREDIENT_MASTER_PATH, INGREDIENT_MATCH_THRESHOLD
 from src.state import AgentState
 from src.vectorstore import search_ingredient
 
 # Built once on first call, then reused across invocations.
-_INDEX_CACHE: Optional[Dict[str, str]] = None
+_INDEX_CACHE: dict[str, str] | None = None
 # Flat set of canonical INCI names that are functional "actives" — every marker
 # across all function categories. Built once, mirroring _INDEX_CACHE.
-_ACTIVE_MARKERS_CACHE: Optional[Set[str]] = None
+_ACTIVE_MARKERS_CACHE: set[str] | None = None
 
 
-def _active_markers() -> Set[str]:
+def _active_markers() -> set[str]:
     """The flat set of active-ingredient markers from the function taxonomy."""
     global _ACTIVE_MARKERS_CACHE
     if _ACTIVE_MARKERS_CACHE is None:
-        with open(FUNCTION_GROUPS_PATH, "r", encoding="utf-8") as f:
+        with open(FUNCTION_GROUPS_PATH, encoding="utf-8") as f:
             data = json.load(f)
-        markers: Set[str] = set()
+        markers: set[str] = set()
         for name, members in data.items():
             if not name.startswith("_"):
                 markers.update(members)
@@ -42,13 +40,13 @@ def _normalize(text: str) -> str:
     return "".join(unicodedata.normalize("NFKC", text).lower().split())
 
 
-def _load_index() -> Dict[str, str]:
+def _load_index() -> dict[str, str]:
     """Build an inverted {normalized synonym -> canonical INCI} lookup table."""
     global _INDEX_CACHE
     if _INDEX_CACHE is None:
-        with open(INGREDIENT_MASTER_PATH, "r", encoding="utf-8") as f:
+        with open(INGREDIENT_MASTER_PATH, encoding="utf-8") as f:
             master = json.load(f)
-        index: Dict[str, str] = {}
+        index: dict[str, str] = {}
         for inci, synonyms in master.items():
             index[_normalize(inci)] = inci
             for synonym in synonyms:
@@ -62,7 +60,7 @@ def _load_index() -> Dict[str, str]:
     return _INDEX_CACHE
 
 
-def _resolve(raw_name: str, index: Dict[str, str]) -> Tuple[Optional[str], str]:
+def _resolve(raw_name: str, index: dict[str, str]) -> tuple[str | None, str]:
     """Resolve one raw name to (inci_or_None, method).
 
     Tier 1 is an exact normalized-dict lookup (free, deterministic, handles the
@@ -80,7 +78,7 @@ def _resolve(raw_name: str, index: Dict[str, str]) -> Tuple[Optional[str], str]:
     return None, "unmatched"
 
 
-def _select_input(state: AgentState) -> List[Tuple[str, Optional[bool], str]]:
+def _select_input(state: AgentState) -> list[tuple[str, bool | None, str]]:
     """Pick the ingredient source: verified registry list, else VLM extraction.
 
     Returns tuples of (name_raw, is_active, source_language).
@@ -93,10 +91,7 @@ def _select_input(state: AgentState) -> List[Tuple[str, Optional[bool], str]]:
         ]
     extracted = state.get("extracted_data")
     if extracted:
-        return [
-            (ing.name_raw, ing.is_active, ing.source_language)
-            for ing in extracted.ingredients
-        ]
+        return [(ing.name_raw, ing.is_active, ing.source_language) for ing in extracted.ingredients]
     return []
 
 
@@ -105,8 +100,8 @@ def normalizer_node(state: AgentState) -> dict:
     markers = _active_markers()
     raw_items = _select_input(state)
 
-    normalized: List[dict] = []
-    unmatched: List[str] = []
+    normalized: list[dict] = []
+    unmatched: list[str] = []
     exact = vector = 0
     for name_raw, is_active, lang in raw_items:
         inci, method = _resolve(name_raw, index)

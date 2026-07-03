@@ -8,7 +8,6 @@
 # LLM. Prices/timing/notes are read straight off the stored RoutineProduct rows
 # (populated at scan-save time); timing falls back to a deterministic guess when a
 # product was added manually and has none.
-from typing import Dict, List, Optional, Set
 
 from src.config import DEFAULT_MONTHS_SUPPLY, GOAL_COVERAGE
 from src.nodes.routine_advisor import present_function_categories
@@ -32,7 +31,7 @@ _STEP_RANK = {
 _DEFAULT_STEP = 2.5
 
 
-def infer_timing(categories: Set[str]) -> str:
+def infer_timing(categories: set[str]) -> str:
     """Deterministic AM/PM guess for a product with no stored timing.
 
     Photosensitising / exfoliating actives lean PM; sunscreens are AM; everything
@@ -45,7 +44,7 @@ def infer_timing(categories: Set[str]) -> str:
     return "AM & PM"
 
 
-def _step_rank(categories: Set[str]) -> float:
+def _step_rank(categories: set[str]) -> float:
     """Lowest (earliest) application-step rank among a product's categories."""
     ranks = [_STEP_RANK[c] for c in categories if c in _STEP_RANK]
     return min(ranks) if ranks else _DEFAULT_STEP
@@ -57,14 +56,14 @@ def _amortized_months(product: RoutineProduct) -> float:
     return months if months > 0 else DEFAULT_MONTHS_SUPPLY
 
 
-def _monthly_cost(product: RoutineProduct) -> Optional[float]:
+def _monthly_cost(product: RoutineProduct) -> float | None:
     """Amortized monthly USD cost for one product, or None when unpriced."""
     if product.price_usd is None:
         return None
     return round(product.price_usd / _amortized_months(product), 2)
 
 
-def _monthly_cost_native(product: RoutineProduct) -> Optional[float]:
+def _monthly_cost_native(product: RoutineProduct) -> float | None:
     """Amortized monthly cost in the product's native currency, or None.
 
     Used to show yen prices in the Japanese view: the price lookup targets the
@@ -75,7 +74,7 @@ def _monthly_cost_native(product: RoutineProduct) -> Optional[float]:
     return round(product.price_native / _amortized_months(product), 2)
 
 
-def _localized_notes(product: RoutineProduct, lang: str) -> List[str]:
+def _localized_notes(product: RoutineProduct, lang: str) -> list[str]:
     """How-to-apply notes in the requested UI language.
 
     Products saved before notes were stored per language only have the English
@@ -109,27 +108,23 @@ def _product_card(product: RoutineProduct, lang: str) -> dict:
     }
 
 
-def _goal_coverage(
-    goals: List[str], routine_categories: Set[str]
-) -> List[dict]:
+def _goal_coverage(goals: list[str], routine_categories: set[str]) -> list[dict]:
     """Per-goal coverage: which present categories address each stated goal.
 
     ``covered`` is None for goals we have no mapping for (shown as "not assessed").
     """
-    out: List[dict] = []
+    out: list[dict] = []
     for goal in goals:
         cats = GOAL_COVERAGE.get(goal.strip().lower())
         if cats is None:
             out.append({"goal": goal, "covered": None, "addressed_by": []})
             continue
         addressed_by = [c for c in cats if c in routine_categories]
-        out.append(
-            {"goal": goal, "covered": bool(addressed_by), "addressed_by": addressed_by}
-        )
+        out.append({"goal": goal, "covered": bool(addressed_by), "addressed_by": addressed_by})
     return out
 
 
-def _leaf_score(goal_coverage: List[dict]) -> int:
+def _leaf_score(goal_coverage: list[dict]) -> int:
     """0–5 leaves: share of assessable goals the routine covers, scaled to 5."""
     assessable = [g for g in goal_coverage if g["covered"] is not None]
     if not assessable:
@@ -138,7 +133,7 @@ def _leaf_score(goal_coverage: List[dict]) -> int:
     return round(5 * covered / len(assessable))
 
 
-def build_dashboard(user_id: str, lang: str = "en") -> Optional[dict]:
+def build_dashboard(user_id: str, lang: str = "en") -> dict | None:
     """Assemble the routine dashboard for a user, or None if the user is unknown.
 
     ``lang`` ("en" | "ja") selects the language of each product's how-to-apply
@@ -153,7 +148,7 @@ def build_dashboard(user_id: str, lang: str = "en") -> Optional[dict]:
     # Within the page, list products in application order (cleanser → … → SPF).
     cards.sort(key=lambda c: c["_step"])
 
-    routine_categories: Set[str] = set()
+    routine_categories: set[str] = set()
     for product in routine:
         routine_categories |= set(present_function_categories(set(product.ingredients)))
 

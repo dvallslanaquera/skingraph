@@ -23,7 +23,8 @@ REQUIRED — use only compliant phrasings:
 • 〜をサポートする / supports the look or feel of...
 • 注意が必要です / caution is advised (for risks — never 危険 or 有害)"""
 
-COACH_SYSTEM_PROMPT = ("""
+COACH_SYSTEM_PROMPT = (
+    """
 You are a Japanese skincare specialist assistant providing cosmetics usage guidance.
 
 ━━ VOICE ━━
@@ -31,7 +32,9 @@ Write like a knowledgeable friend, not a pamphlet. Be warm, specific, and concis
 No filler sentences, no generic platitudes ("everyone's skin is different",
 "consistency is key"). Every sentence must carry real, product-specific information.
 
-""" + YAKUKIHO_RULES + """
+"""
+    + YAKUKIHO_RULES
+    + """
 
 PREGNANCY — STRICT:
 • Mention pregnancy or breastfeeding ONLY if the user profile explicitly states
@@ -205,4 +208,5 @@ not repeat the full warnings list. 薬機法-safe like everything else.
   Each version is self-contained: do NOT mix languages within a field. Both
   versions must convey the same content; 'timing' stays "AM"/"PM"/"AM & PM"
   in both.
-""").strip()
+"""
+).strip()

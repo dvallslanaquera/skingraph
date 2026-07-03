@@ -6,7 +6,6 @@ import pytest
 
 from src import user_store
 from src.state import CoachResponse, Recommendation
-
 from tests.helpers import make_extraction, std_ingredients
 
 
@@ -37,13 +36,11 @@ def test_add_and_get_routine_round_trip(temp_db):
 
 def test_add_routine_dedupes_same_product_and_refreshes(temp_db):
     pid1 = user_store.add_routine_product("user-1", "Acme", "Peel", ["Glycolic Acid"])
-    pid2 = user_store.add_routine_product(
-        "user-1", "  acme ", "PEEL", ["Lactic Acid", "Water"]
-    )
+    pid2 = user_store.add_routine_product("user-1", "  acme ", "PEEL", ["Lactic Acid", "Water"])
 
     routine = user_store.get_routine("user-1")
-    assert len(routine) == 1           # deduped on case/space-insensitive identity
-    assert pid1 == pid2                 # same row reused
+    assert len(routine) == 1  # deduped on case/space-insensitive identity
+    assert pid1 == pid2  # same row reused
     assert routine[0].ingredients == ["Lactic Acid", "Water"]  # ingredients refreshed
 
 

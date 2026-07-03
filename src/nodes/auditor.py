@@ -8,32 +8,31 @@
 # call — every finding is traceable to a row in the data files.
 import json
 import logging
-from typing import Dict, List, Optional, Set
 
-from src.conflicts import load_conflict_matrix
-from src.state import AgentState, SafetyAudit, inci_names
 from src.config import (
-    IRRITANT_REGISTRY_PATH,
     CONFLICT_PENALTY,
     IRRITANT_PENALTY,
+    IRRITANT_REGISTRY_PATH,
 )
+from src.conflicts import load_conflict_matrix
+from src.state import AgentState, SafetyAudit, inci_names
 
 # Loaded once on first call, then reused across invocations.
-_IRRITANTS_CACHE: Optional[Dict[str, dict]] = None
+_IRRITANTS_CACHE: dict[str, dict] | None = None
 
 
-def _load_irritants() -> Dict[str, dict]:
+def _load_irritants() -> dict[str, dict]:
     """Load the irritant registry, keyed by canonical INCI name."""
     global _IRRITANTS_CACHE
     if _IRRITANTS_CACHE is None:
-        with open(IRRITANT_REGISTRY_PATH, "r", encoding="utf-8") as f:
+        with open(IRRITANT_REGISTRY_PATH, encoding="utf-8") as f:
             rows = json.load(f)
         _IRRITANTS_CACHE = {row["ingredient"]: row for row in rows}
         logging.info("Auditor: loaded %d irritant entry(ies).", len(_IRRITANTS_CACHE))
     return _IRRITANTS_CACHE
 
 
-def _present_inci(state: AgentState) -> Set[str]:
+def _present_inci(state: AgentState) -> set[str]:
     """Collect the canonical INCI keys present on the product.
 
     The normalizer writes dict entries with a ``name_standardized`` field that
@@ -50,9 +49,9 @@ def auditor_node(state: AgentState) -> dict:
     irritants = _load_irritants()
 
     score = 1.0
-    ingredient_conflicts: List[str] = []
-    risk_ingredients: List[str] = []
-    warnings: List[str] = []
+    ingredient_conflicts: list[str] = []
+    risk_ingredients: list[str] = []
+    warnings: list[str] = []
 
     # Pass 1: group conflicts — fire when an ingredient from each group is present.
     groups = conflicts.get("groups", {})

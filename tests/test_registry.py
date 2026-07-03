@@ -10,7 +10,6 @@ from src.config import (
     PRODUCT_MATCH_THRESHOLD,
 )
 from src.nodes import registry
-
 from tests.helpers import make_extraction
 
 

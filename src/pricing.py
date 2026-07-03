@@ -10,7 +10,6 @@
 # also return the price converted to USD (the dashboard totals in USD).
 import logging
 import re
-from typing import Optional
 
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -23,12 +22,12 @@ from src.nodes.websearch import _text_of
 class PriceInfo(BaseModel):
     """A single product's looked-up price, normalised for the dashboard."""
 
-    price_usd: Optional[float] = None
-    price_native: Optional[float] = None
-    currency: Optional[str] = None
-    market: Optional[str] = None
-    months_supply: Optional[float] = None
-    source: Optional[str] = None
+    price_usd: float | None = None
+    price_native: float | None = None
+    currency: str | None = None
+    market: str | None = None
+    months_supply: float | None = None
+    source: str | None = None
 
 
 _PRICE_PROMPT = """
@@ -58,7 +57,7 @@ NOT_FOUND
 """.strip()
 
 
-def _num(value: str) -> Optional[float]:
+def _num(value: str) -> float | None:
     """Parse a numeric token, tolerating currency symbols and separators."""
     cleaned = re.sub(r"[^\d.]", "", value.replace(",", ""))
     if not cleaned or cleaned == ".":
@@ -69,7 +68,7 @@ def _num(value: str) -> Optional[float]:
         return None
 
 
-def _parse_price(text: str) -> Optional[PriceInfo]:
+def _parse_price(text: str) -> PriceInfo | None:
     """Parse the grounded answer's strict key/value lines into a PriceInfo."""
     fields: dict = {}
     for raw in text.splitlines():
@@ -105,7 +104,7 @@ def _parse_price(text: str) -> Optional[PriceInfo]:
     return info
 
 
-def lookup_price(brand: str, product_name: str) -> Optional[PriceInfo]:
+def lookup_price(brand: str, product_name: str) -> PriceInfo | None:
     """Look up a product's price via grounded web search; None if not found.
 
     Best-effort: callers wrap this so any LLM/network failure degrades to "no
@@ -114,9 +113,7 @@ def lookup_price(brand: str, product_name: str) -> Optional[PriceInfo]:
     logging.info("Price lookup: %s — %s", brand, product_name)
     llm = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.0, timeout=120)
     prompt = _PRICE_PROMPT.format(brand=brand, product_name=product_name)
-    response = llm.invoke(
-        [HumanMessage(content=prompt)], tools=[{"google_search": {}}]
-    )
+    response = llm.invoke([HumanMessage(content=prompt)], tools=[{"google_search": {}}])
     info = _parse_price(_text_of(response))
     if info is None:
         logging.info("Price lookup found nothing for %s — %s", brand, product_name)

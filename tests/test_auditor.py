@@ -9,7 +9,6 @@ import pytest
 from src import conflicts
 from src.config import CONFLICT_PENALTY, IRRITANT_PENALTY
 from src.nodes import auditor
-
 from tests.helpers import std_ingredients
 
 CONFLICTS = {
@@ -57,11 +56,7 @@ def _audit(*inci_names, unmatched=None):
 # _present_inci
 # --------------------------------------------------------------------------- #
 def test_present_inci_skips_unmapped():
-    state = {
-        "standardized_ingredients": std_ingredients(
-            ("レチノール", "Retinol"), ("謎", None)
-        )
-    }
+    state = {"standardized_ingredients": std_ingredients(("レチノール", "Retinol"), ("謎", None))}
     assert auditor._present_inci(state) == {"Retinol"}
 
 
@@ -133,8 +128,7 @@ def test_risk_ingredients_reported_in_sorted_order(audit_data):
 def test_score_is_clamped_to_zero(monkeypatch):
     # Ten high-severity irritants → 1.5 of penalty, clamped to 0.0 (never negative).
     irritants = {
-        f"Bad{i}": {"ingredient": f"Bad{i}", "level": "high", "reason": "x"}
-        for i in range(10)
+        f"Bad{i}": {"ingredient": f"Bad{i}", "level": "high", "reason": "x"} for i in range(10)
     }
     monkeypatch.setattr(conflicts, "_CONFLICTS_CACHE", {"groups": {}, "rules": []})
     monkeypatch.setattr(auditor, "_IRRITANTS_CACHE", irritants)
