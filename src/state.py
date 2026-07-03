@@ -1,4 +1,4 @@
-from typing import List, Literal, Optional, Tuple, TypedDict
+from typing import Literal, TypedDict, cast
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
@@ -8,10 +8,8 @@ class Ingredient(BaseModel):
     name_raw: str = Field(
         ..., description="original name of the ingredient as extracted from the image"
     )
-    name_standardized: Optional[str] = Field(
-        None, description="standardized name of the ingredient"
-    )
-    is_active: Optional[bool] = Field(
+    name_standardized: str | None = Field(None, description="standardized name of the ingredient")
+    is_active: bool | None = Field(
         None, description="whether this ingredient is an active (functional) ingredient"
     )
     source_language: str = Field(
@@ -20,19 +18,15 @@ class Ingredient(BaseModel):
 
 
 class ProductExtraction(BaseModel):
-    brand: str = Field(
-        ..., description="brand of the product as extracted from the image"
-    )
-    product_name: str = Field(
-        ..., description="name of the product as extracted from the image"
-    )
-    jan_code: Optional[str] = Field(
+    brand: str = Field(..., description="brand of the product as extracted from the image")
+    product_name: str = Field(..., description="name of the product as extracted from the image")
+    jan_code: str | None = Field(
         None, description="JAN code of the product as extracted from the image"
     )
     ingredients: list[Ingredient] = Field(
         ..., description="list of ingredients extracted from the image"
     )
-    is_quasi_drug: Optional[bool] = Field(
+    is_quasi_drug: bool | None = Field(
         None, description="whether the product is a quasi-drug or not"
     )
     source_language: str = Field(
@@ -63,15 +57,15 @@ class Notice(BaseModel):
 
 
 class SafetyAudit(BaseModel):
-    ingredient_conflicts: List[str] = Field(
+    ingredient_conflicts: list[str] = Field(
         default_factory=list,
         description="pairwise ingredient conflicts found, e.g. 'Retinol + Ascorbic Acid: ...'",
     )
-    risk_ingredients: List[str] = Field(
+    risk_ingredients: list[str] = Field(
         default_factory=list,
         description="individual INCI names flagged as irritant, sensitizer, or regulated",
     )
-    warnings: List[str] = Field(
+    warnings: list[str] = Field(
         default_factory=list,
         description="human-readable, severity-tagged warning lines for the coach node",
     )
@@ -82,34 +76,34 @@ class SafetyAudit(BaseModel):
 
 
 class UserProfile(BaseModel):
-    skin_type: Optional[Literal["dry", "oily", "combination", "normal", "sensitive"]] = None
-    age: Optional[int] = None
+    skin_type: Literal["dry", "oily", "combination", "normal", "sensitive"] | None = None
+    age: int | None = None
     # "male" | "female" | "other" (non-binary / prefer not to disclose). Kept as a
     # free str (not a Literal) so older profiles and any future values still load.
-    gender: Optional[str] = None
+    gender: str | None = None
     # Fitzpatrick phototype I–VI as an int 1–6, with the undertone palette the user
     # picked it from (Asian skins skew warm/olive, others cooler/pink at the same
     # phototype) — both feed the coach's sun-sensitivity guidance.
-    fitzpatrick: Optional[int] = Field(
+    fitzpatrick: int | None = Field(
         None, ge=1, le=6, description="Fitzpatrick phototype, 1 (I) to 6 (VI)"
     )
-    skin_undertone: Optional[Literal["asian", "non_asian"]] = None
-    goals: List[str] = Field(
+    skin_undertone: Literal["asian", "non_asian"] | None = None
+    goals: list[str] = Field(
         default_factory=list,
         description="skin concerns, e.g. fine lines, hyperpigmentation, acne, redness",
     )
     is_pregnant: bool = False
-    skin_conditions: List[str] = Field(
+    skin_conditions: list[str] = Field(
         default_factory=list,
         description="e.g. eczema, rosacea, acne, psoriasis, hyperpigmentation",
     )
-    sun_damage_history: Optional[Literal["none", "mild", "moderate", "severe"]] = None
-    routine_time: Optional[Literal["minimal", "moderate", "extensive"]] = None
+    sun_damage_history: Literal["none", "mild", "moderate", "severe"] | None = None
+    routine_time: Literal["minimal", "moderate", "extensive"] | None = None
     # When True, the coach may also suggest devices / at-home treatments (LED masks,
     # at-home IPL, microneedle stamps, gua sha, etc.) on top of topical products.
     consider_devices: bool = False
     # Monthly skincare budget in USD. 0 means no spend; 250 is treated as "$250+".
-    budget: Optional[int] = Field(None, ge=0, description="monthly budget in USD")
+    budget: int | None = Field(None, ge=0, description="monthly budget in USD")
 
 
 class RoutineProduct(BaseModel):
@@ -128,48 +122,40 @@ class RoutineProduct(BaseModel):
     product_id: str = Field(..., description="stable id of the saved product")
     brand: str = Field(..., description="brand of the saved product")
     product_name: str = Field(..., description="name of the saved product")
-    ingredients: List[str] = Field(
+    ingredients: list[str] = Field(
         default_factory=list,
         description="canonical INCI names of the saved product",
     )
-    is_quasi_drug: Optional[bool] = Field(
+    is_quasi_drug: bool | None = Field(
         None, description="whether the saved product is a quasi-drug"
     )
     # When to use the product: "AM" | "PM" | "AM & PM". None until classified.
-    timing: Optional[str] = Field(
-        None, description="best time to use: 'AM', 'PM', or 'AM & PM'"
-    )
+    timing: str | None = Field(None, description="best time to use: 'AM', 'PM', or 'AM & PM'")
     # Short application/sequencing cautions (e.g. "apply to completely dry skin",
     # "wait ~1 min before the next layer"), from the coach card. Stored per language
     # so the routine dashboard can show notes in the user's UI language; the legacy
     # ``application_notes`` field is the English copy (older rows only have this one).
-    application_notes: List[str] = Field(
+    application_notes: list[str] = Field(
         default_factory=list,
         description="how-to-apply / sequencing notes for this product (English)",
     )
-    application_notes_ja: List[str] = Field(
+    application_notes_ja: list[str] = Field(
         default_factory=list,
         description="Japanese how-to-apply / sequencing notes for this product",
     )
     # Amortizable price info, looked up once at add-time (best-effort).
-    price_usd: Optional[float] = Field(
-        None, description="unit price converted to USD"
-    )
-    price_native: Optional[float] = Field(
-        None, description="unit price in its native market currency"
-    )
-    price_currency: Optional[str] = Field(
+    price_usd: float | None = Field(None, description="unit price converted to USD")
+    price_native: float | None = Field(None, description="unit price in its native market currency")
+    price_currency: str | None = Field(
         None, description="native currency code, e.g. JPY, USD, EUR, KRW"
     )
-    price_market: Optional[str] = Field(
+    price_market: str | None = Field(
         None, description="market the price came from: 'JP' or the origin code"
     )
-    months_supply: Optional[float] = Field(
+    months_supply: float | None = Field(
         None, description="estimated months one unit lasts for a daily user"
     )
-    price_source: Optional[str] = Field(
-        None, description="URL the price was sourced from"
-    )
+    price_source: str | None = Field(None, description="URL the price was sourced from")
 
 
 class CrossConflict(BaseModel):
@@ -179,7 +165,7 @@ class CrossConflict(BaseModel):
         ..., description="the existing routine product the new one conflicts with"
     )
     severity: str = Field("medium", description="high | medium | low")
-    groups: Tuple[str, str] = Field(
+    groups: tuple[str, str] = Field(
         ..., description="the two conflicting active groups (new side, existing side)"
     )
     reason: str = Field(..., description="why the two groups conflict (from the matrix)")
@@ -192,19 +178,19 @@ class RoutineFit(BaseModel):
     into 薬機法-safe bilingual prose. Empty lists mean "nothing to report".
     """
 
-    conflicts: List[CrossConflict] = Field(
+    conflicts: list[CrossConflict] = Field(
         default_factory=list,
         description="cross-product active conflicts with existing routine products",
     )
-    redundancy: List[str] = Field(
+    redundancy: list[str] = Field(
         default_factory=list,
         description="roles the new product duplicates from the existing routine",
     )
-    value_add: List[str] = Field(
+    value_add: list[str] = Field(
         default_factory=list,
         description="unmet user goals the new product would help target",
     )
-    existing_products: List[str] = Field(
+    existing_products: list[str] = Field(
         default_factory=list,
         description="'Brand — Product' labels of the current routine, for context",
     )
@@ -231,7 +217,7 @@ class Recommendation(BaseModel):
         default="",
         description="ONE sentence describing what this product is intended for.",
     )
-    warnings: List[str] = Field(
+    warnings: list[str] = Field(
         default_factory=list,
         description=(
             "User-tailored cautions, one concern per item, ordered by importance "
@@ -248,7 +234,7 @@ class Recommendation(BaseModel):
         default="",
         description="How often to use, e.g. 'Daily' or '2–3 times per week'.",
     )
-    application_notes: List[str] = Field(
+    application_notes: list[str] = Field(
         default_factory=list,
         description=(
             "Short how-to-apply / sequencing cautions, one per item, e.g. "
@@ -284,18 +270,18 @@ class RoutineFitCard(BaseModel):
     Populated only when a Routine Context block is provided; otherwise empty.
     """
 
-    risks: List[str] = Field(
+    risks: list[str] = Field(
         default_factory=list,
         description=(
             "One line per cross-product conflict from the routine context, "
             "naming the existing product. Empty if none."
         ),
     )
-    redundancy: List[str] = Field(
+    redundancy: list[str] = Field(
         default_factory=list,
         description="Gentle notes that the product overlaps an existing one.",
     )
-    value_add: List[str] = Field(
+    value_add: list[str] = Field(
         default_factory=list,
         description="How the product helps an otherwise-uncovered user goal.",
     )
@@ -310,7 +296,7 @@ class CoachResponse(BaseModel):
     scans, where a personal fit score has no meaning.
     """
 
-    recommendation_score: Optional[int] = Field(
+    recommendation_score: int | None = Field(
         default=None,
         ge=0,
         le=5,
@@ -325,9 +311,7 @@ class CoachResponse(BaseModel):
     japanese: Recommendation = Field(
         description="The card written ONLY in Japanese (敬体, 薬機法-compliant)."
     )
-    english: Recommendation = Field(
-        description="The same card written ONLY in English."
-    )
+    english: Recommendation = Field(description="The same card written ONLY in English.")
     routine_japanese: RoutineFitCard = Field(
         default_factory=RoutineFitCard,
         description="Routine-fit notes in Japanese; empty if no routine context.",
@@ -343,63 +327,64 @@ class AgentState(TypedDict):
     # input data
     image_path: str
     # None on input → the classify_side node auto-detects front vs back.
-    image_type: Optional[Literal["front", "back"]]
+    image_type: Literal["front", "back"] | None
 
     # input gating
     # Tier-1 pixel pre-flight verdict (set by the image-quality gate): None when
     # the frame passed, else a reason code ("too_dark" | "too_bright" | "blank" |
     # "unreadable") used to craft the retake message.
-    image_quality_issue: Optional[str]
+    image_quality_issue: str | None
     # Tier-2 content classification from the side/content classifier: "product",
     # "not_a_product", or "multiple_products". Non-product / multi-product frames
     # are rejected before extraction so the scanner never fabricates a product.
-    image_content: Optional[str]
+    image_content: str | None
 
     # extraction state
-    extracted_data: Optional[ProductExtraction]
+    extracted_data: ProductExtraction | None
     model_used: Literal["flash", "pro", "database", "web"]
     inference_confidence: float
 
-    # processed data
-    standardized_ingredients: List[Ingredient]
-    safety_report: Optional[SafetyAudit]
+    # processed data — normalizer rows are plain dicts
+    # ({name_raw, name_standardized, is_active, source_language}), not Ingredient models.
+    standardized_ingredients: list[dict]
+    safety_report: SafetyAudit | None
 
     # final output
     # Bilingual channel for graceful exits (retake / identity / search miss):
     # a short message telling the user what to do. Complete scans carry their
     # result in coach_cards instead.
-    notice: Optional[Notice]
+    notice: Notice | None
     # The coach's structured bilingual output — the single source of truth the
     # API, the web UI, the CLI renderer, and shelf persistence all read from.
-    coach_cards: Optional[CoachResponse]
+    coach_cards: CoachResponse | None
 
     # system flags
     is_ready_for_logic: bool
     retake_requested: bool
     correction_attempts: int
-    correction_feedback: Optional[str]
-    trace_id: Optional[str]
+    correction_feedback: str | None
+    trace_id: str | None
 
     # registry + normalization
-    registry_matched: Optional[bool]
-    unmatched_ingredients: Optional[List[str]]
+    registry_matched: bool | None
+    unmatched_ingredients: list[str] | None
 
     # web-search fallback (last resort when registry + photo both lack a list)
-    identity_confidence: Optional[float]
-    ingredient_source: Optional[str]  # "registry" | "label" | "web"
-    web_sources: Optional[List[str]]
+    identity_confidence: float | None
+    ingredient_source: str | None  # "registry" | "label" | "web"
+    web_sources: list[str] | None
 
     # personalised coaching
-    user_profile: Optional[UserProfile]
-    user_name: Optional[str]
+    user_profile: UserProfile | None
+    user_name: str | None
 
     # routine memory: the user's saved "shelf" (loaded at entry) and the
     # deterministic cross-product evaluation of the new scan against it.
-    routine_products: Optional[List[RoutineProduct]]
-    routine_fit: Optional[RoutineFit]
+    routine_products: list[RoutineProduct] | None
+    routine_fit: RoutineFit | None
 
 
-def inci_names(standardized: Optional[List[dict]]) -> List[str]:
+def inci_names(standardized: list[dict] | None) -> list[str]:
     """Canonical INCI names from a normalizer-shaped ingredient list.
 
     Each normalizer row carries a ``name_standardized`` field that is the INCI
@@ -407,38 +392,40 @@ def inci_names(standardized: Optional[List[dict]]) -> List[str]:
     so callers always see auditable canonical names. Order is preserved.
     """
     return [
-        item["name_standardized"]
-        for item in (standardized or [])
-        if item.get("name_standardized")
+        item["name_standardized"] for item in (standardized or []) if item.get("name_standardized")
     ]
 
 
 def build_initial_state(
     image_path: str,
-    image_type: Optional[str] = None,
+    image_type: str | None = None,
     *,
-    user_profile: Optional[UserProfile] = None,
-    user_name: Optional[str] = None,
-    routine_products: Optional[List[RoutineProduct]] = None,
-) -> dict:
+    user_profile: UserProfile | None = None,
+    user_name: str | None = None,
+    routine_products: list[RoutineProduct] | None = None,
+) -> AgentState:
     """Assemble the graph's initial state with all flags at their defaults.
 
     Single source of truth for the entry-point dict so the CLI, the API service,
     and the interactive scripts can't drift on which keys the graph expects.
+    Deliberately partial: the graph fills the remaining AgentState keys.
     """
-    return {
-        "image_path": image_path,
-        "image_type": image_type,
-        "extracted_data": None,
-        "inference_confidence": 0.0,
-        "correction_attempts": 0,
-        "correction_feedback": None,
-        "retake_requested": False,
-        "is_ready_for_logic": False,
-        # Assigned here (not in the scanners) so every path — including front
-        # photos, which skip the scanners entirely — carries a trace id.
-        "trace_id": str(uuid4()),
-        "user_profile": user_profile,
-        "user_name": user_name,
-        "routine_products": routine_products,
-    }
+    return cast(
+        AgentState,
+        {
+            "image_path": image_path,
+            "image_type": image_type,
+            "extracted_data": None,
+            "inference_confidence": 0.0,
+            "correction_attempts": 0,
+            "correction_feedback": None,
+            "retake_requested": False,
+            "is_ready_for_logic": False,
+            # Assigned here (not in the scanners) so every path — including front
+            # photos, which skip the scanners entirely — carries a trace id.
+            "trace_id": str(uuid4()),
+            "user_profile": user_profile,
+            "user_name": user_name,
+            "routine_products": routine_products,
+        },
+    )

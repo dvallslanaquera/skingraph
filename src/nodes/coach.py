@@ -6,7 +6,7 @@
 #   (b) restricts the model to only discussing ingredients that are actually
 #       present in the product — no invented benefits.
 import logging
-from typing import List, Optional, Tuple, cast
+from typing import cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -15,8 +15,7 @@ from src.config import FLASH_MODEL
 from src.messages import COACH_UNAVAILABLE
 from src.nodes.routine_advisor import present_function_categories
 from src.prompts.coach import COACH_SYSTEM_PROMPT
-from src.state import (AgentState, CoachResponse, Notice, RoutineFit,
-                       UserProfile, inci_names)
+from src.state import AgentState, CoachResponse, Notice, RoutineFit, UserProfile, inci_names
 
 # Ingredients that are contraindicated during pregnancy / breastfeeding.
 _PREGNANCY_FLAGGED_INCI = {
@@ -57,7 +56,7 @@ _STRONG_ACTIVE_CATEGORIES = {"Retinoids", "AHA", "BHA"}
 
 
 def _product_context(state: AgentState) -> str:
-    lines: List[str] = []
+    lines: list[str] = []
 
     data = state.get("extracted_data")
     if data:
@@ -90,7 +89,7 @@ def _product_context(state: AgentState) -> str:
     return "\n".join(lines)
 
 
-def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
+def _user_context(profile: UserProfile | None, name: str | None) -> str:
     if profile is None:
         return (
             "User profile: not provided — "
@@ -125,9 +124,7 @@ def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
     if profile.goals:
         lines.append(f"  Goals: {', '.join(profile.goals)}")
     if profile.is_pregnant:
-        lines.append(
-            "  PREGNANT OR BREASTFEEDING — apply all pregnancy safety restrictions"
-        )
+        lines.append("  PREGNANT OR BREASTFEEDING — apply all pregnancy safety restrictions")
     if profile.skin_conditions:
         lines.append(f"  Skin conditions: {', '.join(profile.skin_conditions)}")
     if profile.sun_damage_history and profile.sun_damage_history != "none":
@@ -147,26 +144,27 @@ def _user_context(profile: Optional[UserProfile], name: Optional[str]) -> str:
     return "\n".join(lines)
 
 
-def _has_routine_findings(fit: Optional[RoutineFit]) -> bool:
+def _has_routine_findings(fit: RoutineFit | None) -> bool:
     return bool(fit and (fit.conflicts or fit.redundancy or fit.value_add))
 
 
-def _routine_context(fit: Optional[RoutineFit]) -> str:
+def _routine_context(fit: RoutineFit | None) -> str:
     """Grounding block describing the new product vs the user's saved routine.
 
     Returns "" when there is nothing to report, so the coach can omit the whole
     Routine Fit section (and tell the model to leave the routine cards empty).
     """
-    if not _has_routine_findings(fit):
+    if fit is None or not _has_routine_findings(fit):
         return ""
 
-    lines = ["## Routine Context (the user's CURRENT routine — ground every routine line in these findings ONLY)"]
+    lines = [
+        "## Routine Context (the user's CURRENT routine — "
+        "ground every routine line in these findings ONLY)"
+    ]
     if fit.existing_products:
         lines.append("Current products: " + "; ".join(fit.existing_products))
     if fit.conflicts:
-        lines.append(
-            "Cross-product CONFLICTS (surface EVERY one as a risk line, both languages):"
-        )
+        lines.append("Cross-product CONFLICTS (surface EVERY one as a risk line, both languages):")
         for c in fit.conflicts:
             lines.append(
                 f"  • [{c.severity.upper()}] new product's {c.groups[0]} vs "
@@ -182,8 +180,8 @@ def _routine_context(fit: Optional[RoutineFit]) -> str:
 
 
 def _pregnancy_cautions(
-    state: AgentState, profile: Optional[UserProfile]
-) -> Tuple[List[str], List[str]]:
+    state: AgentState, profile: UserProfile | None
+) -> tuple[list[str], list[str]]:
     """Deterministic pregnancy flags as (japanese, english) caution lists."""
     if profile is None or not profile.is_pregnant:
         return [], []
@@ -200,20 +198,18 @@ def _pregnancy_cautions(
             "pregnancy and breastfeeding. Please consult a doctor before use."
         ]
         return ja, en
-    return [consult], [
-        "If you are pregnant or breastfeeding, please consult a doctor before use."
-    ]
+    return [consult], ["If you are pregnant or breastfeeding, please consult a doctor before use."]
 
 
-def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
+def _dehydration_sun_flags(state: AgentState) -> tuple[list[str], list[str]]:
     """Deterministic dehydration + sun-damage cautions as (japanese, english).
 
     These are the safety-critical warnings the user specifically asked for, so
     they are derived from the ingredient list rather than left to the model.
     """
     present = set(inci_names(state.get("standardized_ingredients")))
-    ja: List[str] = []
-    en: List[str] = []
+    ja: list[str] = []
+    en: list[str] = []
 
     drying = sorted(present & _DRYING_INCI)
     if drying:
@@ -240,8 +236,8 @@ def _dehydration_sun_flags(state: AgentState) -> Tuple[List[str], List[str]]:
 
 
 def _introduction_pacing_flags(
-    state: AgentState, profile: Optional[UserProfile]
-) -> Tuple[List[str], List[str]]:
+    state: AgentState, profile: UserProfile | None
+) -> tuple[list[str], list[str]]:
     """Deterministic 'one active at a time + patch-test' caution.
 
     Fires when the new product introduces a strong active (retinoid / AHA / BHA)
@@ -250,15 +246,14 @@ def _introduction_pacing_flags(
     adjacent (same rationale as the pregnancy / sun flags), so it is computed in
     code, not left to the model.
     """
-    new_cats = set(present_function_categories(
-        set(inci_names(state.get("standardized_ingredients")))
-    ))
+    new_cats = set(
+        present_function_categories(set(inci_names(state.get("standardized_ingredients"))))
+    )
     if not (new_cats & _STRONG_ACTIVE_CATEGORIES):
         return [], []
 
     shelf_has_strong = any(
-        set(present_function_categories(set(p.ingredients)))
-        & _STRONG_ACTIVE_CATEGORIES
+        set(present_function_categories(set(p.ingredients))) & _STRONG_ACTIVE_CATEGORIES
         for p in (state.get("routine_products") or [])
     )
     is_sensitive = bool(profile and profile.skin_type == "sensitive")
@@ -281,7 +276,7 @@ def coach_node(state: AgentState) -> dict:
         logging.warning("Coach reached without safety_report — returning placeholder.")
         return {"notice": Notice(**COACH_UNAVAILABLE), "coach_cards": None}
 
-    profile: Optional[UserProfile] = state.get("user_profile")
+    profile: UserProfile | None = state.get("user_profile")
     user_name = state.get("user_name")
     preg_ja, preg_en = _pregnancy_cautions(state, profile)
     sun_ja, sun_en = _dehydration_sun_flags(state)
@@ -289,7 +284,7 @@ def coach_node(state: AgentState) -> dict:
     extra_ja = preg_ja + sun_ja + pace_ja
     extra_en = preg_en + sun_en + pace_en
 
-    routine_fit: Optional[RoutineFit] = state.get("routine_fit")
+    routine_fit: RoutineFit | None = state.get("routine_fit")
     routine_context = _routine_context(routine_fit)
 
     human_prompt = (
@@ -317,9 +312,7 @@ def coach_node(state: AgentState) -> dict:
     # indefinitely. The coach's structured-output call is the slowest step, so an
     # unbounded call here is what tipped the old single-shot /scan past the
     # platform's request ceiling.
-    model = ChatGoogleGenerativeAI(
-        model=FLASH_MODEL, temperature=0.2, timeout=120, max_retries=3
-    )
+    model = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2, timeout=120, max_retries=3)
     response: CoachResponse = cast(
         CoachResponse,
         model.with_structured_output(CoachResponse).invoke(
@@ -347,7 +340,7 @@ def coach_node(state: AgentState) -> dict:
     report = state["safety_report"]
     logging.info(
         "Coach: score=%.2f, timing=%s, frequency=%s, %d warning(s).",
-        report.safety_score,
+        report.safety_score if report else 0.0,
         en.timing,
         en.frequency,
         len(en.warnings),

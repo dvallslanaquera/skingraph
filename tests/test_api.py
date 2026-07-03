@@ -11,8 +11,7 @@ from fastapi.testclient import TestClient
 from src import user_store
 from src.api import service
 from src.api.main import app
-from src.state import (CoachResponse, Ingredient, ProductExtraction,
-                       Recommendation, SafetyAudit)
+from src.state import CoachResponse, Ingredient, ProductExtraction, Recommendation, SafetyAudit
 
 
 def _fake_final_state() -> dict:
@@ -186,19 +185,14 @@ def test_scan_without_user_does_not_save(client):
 
 def test_scan_validation_errors(client):
     assert (
-        client.post("/scan", files={"image": IMAGE}, data={"image_type": "side"}).status_code
-        == 422
+        client.post("/scan", files={"image": IMAGE}, data={"image_type": "side"}).status_code == 422
     )
     assert (
         client.post("/scan", files={"image": IMAGE}, data={"add_to_routine": "true"}).status_code
         == 422
     )
-    assert (
-        client.post("/scan", files={"image": IMAGE}, data={"user_id": "nope"}).status_code == 404
-    )
-    assert (
-        client.post("/scan", files={"image": ("e.jpg", b"", "image/jpeg")}).status_code == 400
-    )
+    assert client.post("/scan", files={"image": IMAGE}, data={"user_id": "nope"}).status_code == 404
+    assert client.post("/scan", files={"image": ("e.jpg", b"", "image/jpeg")}).status_code == 400
 
 
 # --- /scan/stream (SSE) ------------------------------------------------------
@@ -209,7 +203,7 @@ def _sse_events(resp) -> list[dict]:
     events = []
     for line in resp.text.splitlines():
         if line.startswith("data: "):
-            events.append(json.loads(line[len("data: "):]))
+            events.append(json.loads(line[len("data: ") :]))
     return events
 
 
@@ -220,8 +214,8 @@ def test_scan_stream_emits_stages_then_complete(client):
 
     events = _sse_events(resp)
     kinds = [e["event"] for e in events]
-    assert "stage" in kinds           # real per-node progress
-    assert kinds[-1] == "complete"     # final full ScanResponse last
+    assert "stage" in kinds  # real per-node progress
+    assert kinds[-1] == "complete"  # final full ScanResponse last
 
     complete = events[-1]["data"]
     assert complete["status"] == "complete"
@@ -271,7 +265,9 @@ def test_scan_stream_validation_errors(client):
         == 422
     )
     assert (
-        client.post("/scan/stream", files={"image": IMAGE}, data={"add_to_routine": "true"}).status_code
+        client.post(
+            "/scan/stream", files={"image": IMAGE}, data={"add_to_routine": "true"}
+        ).status_code
         == 422
     )
     assert (
@@ -287,9 +283,7 @@ def _followup_body(**overrides) -> dict:
     body = {
         "brand": "Hada",
         "product_name": "Lotion",
-        "standardized_ingredients": [
-            {"name_raw": "水", "name_standardized": "Water"}
-        ],
+        "standardized_ingredients": [{"name_raw": "水", "name_standardized": "Water"}],
         "question": "Can I use this with vitamin C?",
         "lang": "en",
     }
@@ -337,9 +331,5 @@ def test_followup_unknown_user_is_404(client):
 
 
 def test_followup_blank_question_is_422(client):
-    assert client.post(
-        "/scan/followup", json=_followup_body(question="   ")
-    ).status_code == 422
-    assert client.post(
-        "/scan/followup", json=_followup_body(question="")
-    ).status_code == 422
+    assert client.post("/scan/followup", json=_followup_body(question="   ")).status_code == 422
+    assert client.post("/scan/followup", json=_followup_body(question="")).status_code == 422

@@ -12,8 +12,7 @@ from src.graph import app
 from src.observability import log_tracing_status, scan_run_config
 from src.render import render_coach_cards
 from src.state import UserProfile, build_initial_state
-from src.user_store import (UserNotFoundError, load_user_context,
-                            save_scanned_product, save_user)
+from src.user_store import UserNotFoundError, load_user_context, save_scanned_product, save_user
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -21,12 +20,35 @@ logging.basicConfig(level=logging.INFO)
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run the skincare coach pipeline on an image.")
-    parser.add_argument("image_path", help="Path to the product image (e.g. data/golden_set/prod_001.jpg)")
-    parser.add_argument("--image-type", choices=["front", "back"], default=None, help="Override the side of the product label; omit to auto-detect from the image")
-    parser.add_argument("--user-profile", default=None, help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)")
-    parser.add_argument("--user-id", default=None, help="Load a saved user profile from the database by id")
-    parser.add_argument("--save-user", nargs="?", const="", default=None, help="Save the --user-profile to the database (optionally with a name) and print its id")
-    parser.add_argument("--add-to-routine", action="store_true", help="After a successful scan, save this product into the user's routine (requires --user-id)")
+    parser.add_argument(
+        "image_path", help="Path to the product image (e.g. data/golden_set/prod_001.jpg)"
+    )
+    parser.add_argument(
+        "--image-type",
+        choices=["front", "back"],
+        default=None,
+        help="Override the side of the product label; omit to auto-detect from the image",
+    )
+    parser.add_argument(
+        "--user-profile",
+        default=None,
+        help="Path to a user profile JSON file (e.g. data/user_profile_sample.json)",
+    )
+    parser.add_argument(
+        "--user-id", default=None, help="Load a saved user profile from the database by id"
+    )
+    parser.add_argument(
+        "--save-user",
+        nargs="?",
+        const="",
+        default=None,
+        help="Save the --user-profile to the database (optionally with a name) and print its id",
+    )
+    parser.add_argument(
+        "--add-to-routine",
+        action="store_true",
+        help="After a successful scan, save this product to the user's routine (needs --user-id)",
+    )
     return parser.parse_args()
 
 
@@ -38,24 +60,28 @@ def record_registry_candidate(final_state: dict) -> None:
 
     candidates = []
     if os.path.exists(REGISTRY_CANDIDATES_PATH):
-        with open(REGISTRY_CANDIDATES_PATH, "r", encoding="utf-8") as f:
+        with open(REGISTRY_CANDIDATES_PATH, encoding="utf-8") as f:
             candidates = json.load(f)
 
     key = (data.brand.strip().lower(), data.product_name.strip().lower())
     for existing in candidates:
-        seen = (existing.get("brand", "").strip().lower(),
-                existing.get("product_name", "").strip().lower())
+        seen = (
+            existing.get("brand", "").strip().lower(),
+            existing.get("product_name", "").strip().lower(),
+        )
         if seen == key:
             return  # already logged
 
-    candidates.append({
-        "brand": data.brand,
-        "product_name": data.product_name,
-        "jan_code": data.jan_code,
-        "source_language": (data.source_language or "").strip().upper() or None,
-        "ingredients_raw": [ing.name_raw for ing in data.ingredients],
-        "trace_id": final_state.get("trace_id"),
-    })
+    candidates.append(
+        {
+            "brand": data.brand,
+            "product_name": data.product_name,
+            "jan_code": data.jan_code,
+            "source_language": (data.source_language or "").strip().upper() or None,
+            "ingredients_raw": [ing.name_raw for ing in data.ingredients],
+            "trace_id": final_state.get("trace_id"),
+        }
+    )
     with open(REGISTRY_CANDIDATES_PATH, "w", encoding="utf-8") as f:
         json.dump(candidates, f, ensure_ascii=False, indent=2)
 
@@ -78,9 +104,7 @@ def main():
     routine_products = None
     if args.user_id:
         try:
-            user_profile, user_name, routine_products = load_user_context(
-                args.user_id
-            )
+            user_profile, user_name, routine_products = load_user_context(args.user_id)
         except UserNotFoundError as exc:
             logging.error(str(exc))
             sys.exit(1)
@@ -90,7 +114,7 @@ def main():
             len(routine_products),
         )
     elif args.user_profile:
-        with open(args.user_profile, "r", encoding="utf-8") as f:
+        with open(args.user_profile, encoding="utf-8") as f:
             user_profile = UserProfile.model_validate(json.load(f))
         logging.info("Loaded user profile: %s", args.user_profile)
         if args.save_user is not None:
@@ -143,7 +167,9 @@ def main():
 
     unmatched = final_state.get("unmatched_ingredients")
     if unmatched:
-        logging.warning(f"{len(unmatched)} ingredient(s) had no INCI mapping: {', '.join(unmatched)}")
+        logging.warning(
+            f"{len(unmatched)} ingredient(s) had no INCI mapping: {', '.join(unmatched)}"
+        )
 
     report = final_state.get("safety_report")
     if report is not None:
@@ -184,12 +210,12 @@ def main():
             data = final_state["extracted_data"]
             logging.info(
                 "Added to routine: %s - %s [product_id=%s]",
-                data.brand, data.product_name, product_id,
+                data.brand,
+                data.product_name,
+                product_id,
             )
         else:
-            logging.warning(
-                "--add-to-routine skipped: no usable product from this scan."
-            )
+            logging.warning("--add-to-routine skipped: no usable product from this scan.")
 
 
 if __name__ == "__main__":

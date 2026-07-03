@@ -7,16 +7,14 @@
 import asyncio
 import json
 import logging
-from typing import AsyncIterator, Optional
+from collections.abc import AsyncIterator
 
-from src.api.schemas import (FollowupRequest, FollowupResponse, ScanResponse,
-                             ScanStatus)
+from src.api.schemas import FollowupRequest, FollowupResponse, ScanResponse, ScanStatus
 from src.followup import answer_followup
 from src.graph import app as graph_app
 from src.observability import scan_run_config
 from src.state import build_initial_state
-from src.user_store import (UserNotFoundError, load_user_context,
-                            save_scanned_product)
+from src.user_store import load_user_context, save_scanned_product
 
 
 def _status_of(final_state: dict) -> ScanStatus:
@@ -29,14 +27,14 @@ def _status_of(final_state: dict) -> ScanStatus:
     return "incomplete"
 
 
-def _detected_language(final_state: dict) -> Optional[str]:
+def _detected_language(final_state: dict) -> str | None:
     """The label language, read straight off the extraction (uppercased)."""
     data = final_state.get("extracted_data")
     lang = (data.source_language or "").strip().upper() if data else ""
     return lang or None
 
 
-def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResponse:
+def _to_response(final_state: dict, added_product_id: str | None) -> ScanResponse:
     return ScanResponse(
         status=_status_of(final_state),
         trace_id=final_state.get("trace_id"),
@@ -59,8 +57,8 @@ def _to_response(final_state: dict, added_product_id: Optional[str]) -> ScanResp
 
 def run_scan(
     image_path: str,
-    image_type: Optional[str] = None,
-    user_id: Optional[str] = None,
+    image_type: str | None = None,
+    user_id: str | None = None,
     add_to_routine: bool = False,
 ) -> ScanResponse:
     """Run the full pipeline on an image and return a serialisable result.
@@ -110,9 +108,7 @@ def run_followup(req: FollowupRequest) -> FollowupResponse:
     answer = answer_followup(
         brand=req.brand,
         product_name=req.product_name,
-        standardized_ingredients=[
-            i.model_dump() for i in req.standardized_ingredients
-        ],
+        standardized_ingredients=[i.model_dump() for i in req.standardized_ingredients],
         safety_report=req.safety_report,
         routine_fit=req.routine_fit,
         question=req.question,
@@ -137,12 +133,21 @@ def run_followup(req: FollowupRequest) -> FollowupResponse:
 # Graph node -> pipeline step (1..5) for the UI's stage indicator. Matches the
 # five pipeline.stepN i18n labels (scan / extract / safety / routine / recommend).
 _NODE_STEP = {
-    "image_quality_gate": 1, "classify_side": 1, "flash_scanner": 1,
-    "early_registry_check": 1, "correction": 1, "pro_scanner": 1,
-    "web_search": 1, "confirm_identity": 1,
-    "search_failed": 1, "retake_request": 1,
-    "registry_lookup": 2, "normalizer": 2,
-    "auditor": 3, "routine_advisor": 4, "coach": 5,
+    "image_quality_gate": 1,
+    "classify_side": 1,
+    "flash_scanner": 1,
+    "early_registry_check": 1,
+    "correction": 1,
+    "pro_scanner": 1,
+    "web_search": 1,
+    "confirm_identity": 1,
+    "search_failed": 1,
+    "retake_request": 1,
+    "registry_lookup": 2,
+    "normalizer": 2,
+    "auditor": 3,
+    "routine_advisor": 4,
+    "coach": 5,
 }
 
 # Emit an SSE keepalive comment if no graph event arrives within this window, so
@@ -152,13 +157,13 @@ _KEEPALIVE_S = 15
 
 def _sse(event: dict) -> bytes:
     """Serialise one SSE ``data:`` frame (UTF-8, JSON payload, no ASCII escaping)."""
-    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode("utf-8")
+    return f"data: {json.dumps(event, ensure_ascii=False)}\n\n".encode()
 
 
 async def run_scan_stream(
     image_path: str,
-    image_type: Optional[str] = None,
-    user_id: Optional[str] = None,
+    image_type: str | None = None,
+    user_id: str | None = None,
     add_to_routine: bool = False,
 ) -> AsyncIterator[bytes]:
     """Run the pipeline, yielding SSE frames as each node completes.
@@ -196,9 +201,7 @@ async def run_scan_stream(
 
     def _run() -> None:
         try:
-            for chunk in graph_app.stream(
-                initial_state, config, stream_mode=["updates", "values"]
-            ):
+            for chunk in graph_app.stream(initial_state, config, stream_mode=["updates", "values"]):
                 loop.call_soon_threadsafe(queue.put_nowait, chunk)
         except BaseException as exc:  # noqa: BLE001 — surface it, never end silently
             loop.call_soon_threadsafe(queue.put_nowait, ("__error__", exc))
@@ -206,7 +209,7 @@ async def run_scan_stream(
         loop.call_soon_threadsafe(queue.put_nowait, sentinel)
 
     task = asyncio.create_task(asyncio.to_thread(_run))
-    last_state: dict = initial_state
+    last_state: dict = dict(initial_state)
     try:
         # Drain per-node graph events, emitting a `stage` frame for progress. The
         # full accumulated state arrives on `values`; we keep the latest to build
@@ -242,10 +245,12 @@ async def run_scan_stream(
                 added_product_id = save_scanned_product(user_id, last_state)
             except Exception:  # noqa: BLE001 — don't lose the result over a save failure
                 logging.exception("save_scanned_product failed during stream")
-        yield _sse({
-            "event": "complete",
-            "data": _to_response(last_state, added_product_id).model_dump(mode="json"),
-        })
+        yield _sse(
+            {
+                "event": "complete",
+                "data": _to_response(last_state, added_product_id).model_dump(mode="json"),
+            }
+        )
     except Exception as exc:  # noqa: BLE001 — a failure here must not end silently
         logging.exception("scan stream failed")
         yield _sse({"event": "error", "message": str(exc)})
@@ -254,5 +259,5 @@ async def run_scan_stream(
             task.cancel()
             try:
                 await task
-            except BaseException:  # noqa: BLE001 — task is being torn down
+            except BaseException:  # noqa: BLE001, S110 — task is being torn down
                 pass

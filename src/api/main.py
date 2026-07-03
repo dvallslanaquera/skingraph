@@ -17,25 +17,31 @@ import logging
 import os
 import tempfile
 from contextlib import asynccontextmanager
-from typing import List, Optional
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
+from prometheus_fastapi_instrumentator import Instrumentator
 from starlette.concurrency import run_in_threadpool
 
-from prometheus_fastapi_instrumentator import Instrumentator
-
 from src.api import schemas
-from src.api.service import (UserNotFoundError, run_followup, run_scan,
-                             run_scan_stream)
+from src.api.service import run_followup, run_scan, run_scan_stream
 from src.observability import log_tracing_status
 from src.routine_dashboard import build_dashboard
 from src.state import RoutineProduct
-from src.user_store import (add_routine_product, delete_user, get_routine,
-                            get_user, get_user_name, init_db, list_users,
-                            remove_routine_product, save_user)
+from src.user_store import (
+    UserNotFoundError,
+    add_routine_product,
+    delete_user,
+    get_routine,
+    get_user,
+    get_user_name,
+    init_db,
+    list_users,
+    remove_routine_product,
+    save_user,
+)
 
 load_dotenv()
 logging.basicConfig(level=logging.INFO)
@@ -87,10 +93,10 @@ def health() -> dict:
 @app.post("/scan", response_model=schemas.ScanResponse, tags=["scan"])
 async def scan(
     image: UploadFile = File(..., description="Product label photo (front or back)."),
-    image_type: Optional[str] = Form(
+    image_type: str | None = Form(
         None, description="Override side detection: 'front' or 'back'. Omit to auto-detect."
     ),
-    user_id: Optional[str] = Form(
+    user_id: str | None = Form(
         None, description="Saved user id; loads their profile + routine for personalisation."
     ),
     add_to_routine: bool = Form(
@@ -124,7 +130,7 @@ async def scan(
             add_to_routine=add_to_routine,
         )
     except UserNotFoundError as exc:
-        raise HTTPException(404, str(exc))
+        raise HTTPException(404, str(exc)) from exc
     finally:
         os.unlink(tmp.name)
 
@@ -135,10 +141,10 @@ async def scan(
 @app.post("/scan/stream", tags=["scan"])
 async def scan_stream(
     image: UploadFile = File(..., description="Product label photo (front or back)."),
-    image_type: Optional[str] = Form(
+    image_type: str | None = Form(
         None, description="Override side detection: 'front' or 'back'. Omit to auto-detect."
     ),
-    user_id: Optional[str] = Form(
+    user_id: str | None = Form(
         None, description="Saved user id; loads their profile + routine for personalisation."
     ),
     add_to_routine: bool = Form(
@@ -214,7 +220,7 @@ async def scan_followup(body: schemas.FollowupRequest) -> schemas.FollowupRespon
         # The LLM call blocks (~seconds); keep it off the event loop.
         return await run_in_threadpool(run_followup, body)
     except UserNotFoundError as exc:
-        raise HTTPException(404, str(exc))
+        raise HTTPException(404, str(exc)) from exc
 
 
 # --- users ------------------------------------------------------------------
@@ -226,8 +232,8 @@ def create_user(body: schemas.UserUpsertRequest) -> schemas.UserCreateResponse:
     return schemas.UserCreateResponse(user_id=user_id)
 
 
-@app.get("/users", response_model=List[schemas.UserSummary], tags=["users"])
-def list_all_users() -> List[schemas.UserSummary]:
+@app.get("/users", response_model=list[schemas.UserSummary], tags=["users"])
+def list_all_users() -> list[schemas.UserSummary]:
     return [schemas.UserSummary(user_id=uid, name=name) for uid, name in list_users()]
 
 
@@ -257,8 +263,8 @@ def remove_user(user_id: str) -> Response:
 # --- routine ("shelf") ------------------------------------------------------
 
 
-@app.get("/users/{user_id}/routine", response_model=List[RoutineProduct], tags=["routine"])
-def read_routine(user_id: str) -> List[RoutineProduct]:
+@app.get("/users/{user_id}/routine", response_model=list[RoutineProduct], tags=["routine"])
+def read_routine(user_id: str) -> list[RoutineProduct]:
     if get_user(user_id) is None:
         raise HTTPException(404, f"No user found with id: {user_id}")
     return get_routine(user_id)
@@ -288,9 +294,7 @@ def add_routine(
 )
 def read_routine_dashboard(
     user_id: str,
-    lang: str = Query(
-        "en", description="UI language for per-product notes: 'ja' or 'en'."
-    ),
+    lang: str = Query("en", description="UI language for per-product notes: 'ja' or 'en'."),
 ) -> schemas.RoutineDashboard:
     if lang not in ("ja", "en"):
         raise HTTPException(422, "lang must be 'ja' or 'en'.")

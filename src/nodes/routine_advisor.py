@@ -12,25 +12,22 @@
 #      user goal the existing routine does not cover yet.
 import json
 import logging
-from typing import Dict, List, Optional, Set
 
-from src.conflicts import cross_conflicts, present_groups
 from src.config import FUNCTION_GROUPS_PATH, GOAL_TO_FUNCTION
+from src.conflicts import cross_conflicts, present_groups
 from src.state import AgentState, CrossConflict, RoutineFit, RoutineProduct
 
 # Loaded once on first call, then reused across invocations.
-_FUNCTION_GROUPS_CACHE: Optional[Dict[str, List[str]]] = None
+_FUNCTION_GROUPS_CACHE: dict[str, list[str]] | None = None
 
 
-def _load_function_groups() -> Dict[str, List[str]]:
+def _load_function_groups() -> dict[str, list[str]]:
     """Load the function/active taxonomy, dropping the leading _comment key."""
     global _FUNCTION_GROUPS_CACHE
     if _FUNCTION_GROUPS_CACHE is None:
-        with open(FUNCTION_GROUPS_PATH, "r", encoding="utf-8") as f:
+        with open(FUNCTION_GROUPS_PATH, encoding="utf-8") as f:
             data = json.load(f)
-        _FUNCTION_GROUPS_CACHE = {
-            k: v for k, v in data.items() if not k.startswith("_")
-        }
+        _FUNCTION_GROUPS_CACHE = {k: v for k, v in data.items() if not k.startswith("_")}
         logging.info(
             "Routine advisor: loaded %d function category(ies).",
             len(_FUNCTION_GROUPS_CACHE),
@@ -38,12 +35,12 @@ def _load_function_groups() -> Dict[str, List[str]]:
     return _FUNCTION_GROUPS_CACHE
 
 
-def present_function_categories(inci: Set[str]) -> Dict[str, List[str]]:
+def present_function_categories(inci: set[str]) -> dict[str, list[str]]:
     """Function categories present in ``inci``, mapped to their member hits.
 
     Only categories with at least one present marker are returned.
     """
-    result: Dict[str, List[str]] = {}
+    result: dict[str, list[str]] = {}
     for name, markers in _load_function_groups().items():
         hits = [m for m in markers if m in inci]
         if hits:
@@ -51,9 +48,9 @@ def present_function_categories(inci: Set[str]) -> Dict[str, List[str]]:
     return result
 
 
-def _inci_set(ingredients) -> Set[str]:
+def _inci_set(ingredients) -> set[str]:
     """Canonical INCI set from either state dicts or a RoutineProduct list."""
-    out: Set[str] = set()
+    out: set[str] = set()
     for item in ingredients or []:
         if isinstance(item, str):
             out.add(item)
@@ -69,7 +66,7 @@ def _label(product: RoutineProduct) -> str:
 
 
 def routine_advisor_node(state: AgentState) -> dict:
-    routine: List[RoutineProduct] = state.get("routine_products") or []
+    routine: list[RoutineProduct] = state.get("routine_products") or []
     if not routine:
         # No shelf to compare against — nothing to report. Coach skips the section.
         return {"routine_fit": RoutineFit()}
@@ -78,9 +75,9 @@ def routine_advisor_node(state: AgentState) -> dict:
     new_conflict_groups = present_groups(new_inci)
     new_func_cats = present_function_categories(new_inci)
 
-    conflicts: List[CrossConflict] = []
-    redundancy: List[str] = []
-    shelf_categories: Set[str] = set()
+    conflicts: list[CrossConflict] = []
+    redundancy: list[str] = []
+    shelf_categories: set[str] = set()
 
     for product in routine:
         label = _label(product)
@@ -104,14 +101,13 @@ def routine_advisor_node(state: AgentState) -> dict:
         shelf_categories |= set(ex_func_cats)
         shared = sorted(set(new_func_cats) & set(ex_func_cats))
         if shared:
-            redundancy.append(
-                f"Overlaps with {label} — both provide {', '.join(shared)}."
-            )
+            redundancy.append(f"Overlaps with {label} — both provide {', '.join(shared)}.")
 
     # 3. Value-add: categories the new product introduces that serve a stated
     #    goal and are absent from the entire shelf.
-    value_add: List[str] = []
-    goals = state.get("user_profile").goals if state.get("user_profile") else []
+    value_add: list[str] = []
+    profile = state.get("user_profile")
+    goals = profile.goals if profile else []
     for goal in goals:
         for category in GOAL_TO_FUNCTION.get(goal.strip().lower(), []):
             if category in new_func_cats and category not in shelf_categories:
@@ -127,8 +123,7 @@ def routine_advisor_node(state: AgentState) -> dict:
         existing_products=[_label(p) for p in routine],
     )
     logging.info(
-        "Routine advisor: %d shelf product(s), %d conflict(s), %d redundancy, "
-        "%d value-add.",
+        "Routine advisor: %d shelf product(s), %d conflict(s), %d redundancy, %d value-add.",
         len(routine),
         len(conflicts),
         len(redundancy),

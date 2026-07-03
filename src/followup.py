@@ -8,19 +8,32 @@
 # model only phrases them.
 import logging
 import re
-from typing import List, Optional
+from typing import cast
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 from src.config import FLASH_MODEL
-from src.nodes.coach import (_PREGNANCY_FLAGGED_INCI, _dehydration_sun_flags,
-                             _introduction_pacing_flags, _pregnancy_cautions,
-                             _product_context, _routine_context, _user_context)
+from src.nodes.coach import (
+    _PREGNANCY_FLAGGED_INCI,
+    _dehydration_sun_flags,
+    _introduction_pacing_flags,
+    _pregnancy_cautions,
+    _product_context,
+    _routine_context,
+    _user_context,
+)
 from src.nodes.websearch import _text_of
 from src.prompts.followup import FOLLOWUP_SYSTEM_PROMPT
-from src.state import (ProductExtraction, RoutineFit, RoutineProduct,
-                       SafetyAudit, UserProfile, inci_names)
+from src.state import (
+    AgentState,
+    ProductExtraction,
+    RoutineFit,
+    RoutineProduct,
+    SafetyAudit,
+    UserProfile,
+    inci_names,
+)
 
 # The question mentions pregnancy/breastfeeding → surface the deterministic
 # pregnancy analysis even when the profile doesn't state a pregnancy.
@@ -30,11 +43,11 @@ _PREGNANCY_QUESTION = re.compile(
 
 
 def _deterministic_findings(
-    state: dict,
-    profile: Optional[UserProfile],
+    state: AgentState,
+    profile: UserProfile | None,
     question: str,
     lang: str,
-) -> List[str]:
+) -> list[str]:
     """The system-computed safety findings relevant to this product + question.
 
     Reuses the coach's deterministic helpers so the follow-up can never drift
@@ -43,9 +56,7 @@ def _deterministic_findings(
     preg_ja, preg_en = _pregnancy_cautions(state, profile)
     sun_ja, sun_en = _dehydration_sun_flags(state)
     pace_ja, pace_en = _introduction_pacing_flags(state, profile)
-    findings = list(
-        (preg_ja + sun_ja + pace_ja) if lang == "ja" else (preg_en + sun_en + pace_en)
-    )
+    findings = list((preg_ja + sun_ja + pace_ja) if lang == "ja" else (preg_en + sun_en + pace_en))
 
     # Asked about pregnancy but the profile doesn't state one → the pregnancy
     # helper stayed silent, so add the deterministic analysis for the question.
@@ -76,31 +87,34 @@ def answer_followup(
     *,
     brand: str,
     product_name: str,
-    standardized_ingredients: List[dict],
-    safety_report: Optional[SafetyAudit],
-    routine_fit: Optional[RoutineFit],
+    standardized_ingredients: list[dict],
+    safety_report: SafetyAudit | None,
+    routine_fit: RoutineFit | None,
     question: str,
     lang: str,
-    profile: Optional[UserProfile] = None,
-    user_name: Optional[str] = None,
-    routine_products: Optional[List[RoutineProduct]] = None,
+    profile: UserProfile | None = None,
+    user_name: str | None = None,
+    routine_products: list[RoutineProduct] | None = None,
 ) -> str:
     """Answer one grounded follow-up question in the requested language."""
     # Rebuild the coach-shaped state so its context builders can be reused as-is.
-    state = {
-        "extracted_data": ProductExtraction(
-            brand=brand,
-            product_name=product_name,
-            ingredients=[],
-            source_language="",
-            extraction_confidence=1.0,
-            system_status="SUCCESS",
-        ),
-        "standardized_ingredients": standardized_ingredients,
-        "unmatched_ingredients": [],
-        "safety_report": safety_report,
-        "routine_products": routine_products,
-    }
+    state = cast(
+        AgentState,
+        {
+            "extracted_data": ProductExtraction(
+                brand=brand,
+                product_name=product_name,
+                ingredients=[],
+                source_language="",
+                extraction_confidence=1.0,
+                system_status="SUCCESS",
+            ),
+            "standardized_ingredients": standardized_ingredients,
+            "unmatched_ingredients": [],
+            "safety_report": safety_report,
+            "routine_products": routine_products,
+        },
+    )
 
     blocks = [f"## Product Analysis\n{_product_context(state)}"]
     blocks.append(f"## {_user_context(profile, user_name)}")
@@ -115,17 +129,12 @@ def answer_followup(
         )
     language = "Japanese (敬体)" if lang == "ja" else "English"
     blocks.append(
-        f"## Question\n{question.strip()}\n\n"
-        f"Answer the question above, entirely in {language}."
+        f"## Question\n{question.strip()}\n\nAnswer the question above, entirely in {language}."
     )
     human_prompt = "\n\n".join(blocks)
 
-    logging.info(
-        "Follow-up (%s): %s — %s: %.60s", lang, brand, product_name, question
-    )
-    llm = ChatGoogleGenerativeAI(
-        model=FLASH_MODEL, temperature=0.2, timeout=120, max_retries=3
-    )
+    logging.info("Follow-up (%s): %s — %s: %.60s", lang, brand, product_name, question)
+    llm = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.2, timeout=120, max_retries=3)
     response = llm.invoke(
         [
             SystemMessage(content=FOLLOWUP_SYSTEM_PROMPT),

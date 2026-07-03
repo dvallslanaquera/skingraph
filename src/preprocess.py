@@ -4,19 +4,17 @@ import base64
 import io
 import logging
 from functools import lru_cache
-from typing import Optional
 
 import numpy as np
 from PIL import Image, ImageFilter, ImageStat
 
-from src.config import (MAX_MEAN_LUMINANCE, MIN_LUMINANCE_STDDEV,
-                        MIN_MEAN_LUMINANCE)
+from src.config import MAX_MEAN_LUMINANCE, MIN_LUMINANCE_STDDEV, MIN_MEAN_LUMINANCE
 
 
 def _apply_white_balance(img: Image.Image) -> Image.Image:
     """Gray-world white balance, capped at ±20% per channel to protect brand colors."""
     arr = np.array(img, dtype=np.float32)
-    means = arr.mean(axis=(0, 1))          # (R_mean, G_mean, B_mean)
+    means = arr.mean(axis=(0, 1))  # (R_mean, G_mean, B_mean)
     overall = means.mean()
     scales = np.clip(overall / np.maximum(means, 1.0), 0.8, 1.2)
     return Image.fromarray(np.clip(arr * scales, 0, 255).astype(np.uint8))
@@ -35,10 +33,13 @@ def _apply_gamma(img: Image.Image, target_mean: float = 100.0) -> Image.Image:
     mean = float(gray.mean())
     if mean >= target_mean:
         return img
-    gamma = float(np.clip(
-        np.log(target_mean / 255.0) / np.log(max(mean, 1.0) / 255.0),
-        0.5, 2.0,
-    ))
+    gamma = float(
+        np.clip(
+            np.log(target_mean / 255.0) / np.log(max(mean, 1.0) / 255.0),
+            0.5,
+            2.0,
+        )
+    )
     lut = (255.0 * (np.arange(256) / 255.0) ** gamma).astype(np.uint8)
     return Image.fromarray(lut[np.array(img)])
 
@@ -57,7 +58,7 @@ def _deskew(img: Image.Image, max_angle: float = 10.0) -> Image.Image:
     """
     scale = 400.0 / max(img.width, img.height)
     tw, th = int(img.width * scale), int(img.height * scale)
-    arr = np.array(img.resize((tw, th), Image.BILINEAR).convert("L"))
+    arr = np.array(img.resize((tw, th), Image.Resampling.BILINEAR).convert("L"))
     binary = Image.fromarray(((arr < arr.mean()) * 255).astype(np.uint8))
 
     best_angle, best_var = 0.0, -1.0
@@ -70,8 +71,9 @@ def _deskew(img: Image.Image, max_angle: float = 10.0) -> Image.Image:
 
     if abs(best_angle) < 0.5:
         return img
-    return img.rotate(best_angle, resample=Image.BILINEAR, expand=False,
-                      fillcolor=(255, 255, 255))
+    return img.rotate(
+        best_angle, resample=Image.Resampling.BILINEAR, expand=False, fillcolor=(255, 255, 255)
+    )
 
 
 def _apply_clahe(
@@ -121,8 +123,8 @@ def _apply_clahe(
     tx0 = np.floor(tx).astype(int)
     ty1 = np.minimum(ty0 + 1, grid_h - 1)
     tx1 = np.minimum(tx0 + 1, grid_w - 1)
-    fy = (ty - ty0)[:, np.newaxis]   # (h, 1)
-    fx = (tx - tx0)[np.newaxis, :]   # (1, w)
+    fy = (ty - ty0)[:, np.newaxis]  # (h, 1)
+    fx = (tx - tx0)[np.newaxis, :]  # (1, w)
 
     # Advanced indexing: shapes (h,1), (1,w), (h,w) broadcast to (h,w)
     v00 = luts[ty0[:, np.newaxis], tx0[np.newaxis, :], y_arr]
@@ -131,9 +133,9 @@ def _apply_clahe(
     v11 = luts[ty1[:, np.newaxis], tx1[np.newaxis, :], y_arr]
 
     y_enhanced = np.clip(
-        v00 * (1 - fy) * (1 - fx) + v01 * (1 - fy) * fx +
-        v10 * fy * (1 - fx) + v11 * fy * fx,
-        0, 255,
+        v00 * (1 - fy) * (1 - fx) + v01 * (1 - fy) * fx + v10 * fy * (1 - fx) + v11 * fy * fx,
+        0,
+        255,
     ).astype(np.uint8)
 
     return Image.merge("YCbCr", (Image.fromarray(y_enhanced), cb, cr)).convert("RGB")
@@ -147,6 +149,7 @@ def _sharpen(img: Image.Image) -> Image.Image:
 # ---------------------------------------------------------------------------
 # Main preprocessing entry point
 # ---------------------------------------------------------------------------
+
 
 def preprocess_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
     """Full preprocessing pipeline applied to every image before VLM inference.
@@ -162,7 +165,7 @@ def preprocess_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
         8. Sharpening   — unsharp mask for crisp text edges
         9. JPEG encode  — quality 85 for payload efficiency
     """
-    img = Image.open(io.BytesIO(image_bytes))
+    img: Image.Image = Image.open(io.BytesIO(image_bytes))
     w, h = img.size
     if max(w, h) > max_dim:
         scale = max_dim / max(w, h)
@@ -193,7 +196,7 @@ def encode_image(image_path: str) -> str:
     return base64.b64encode(image_bytes).decode(encoding="utf-8")
 
 
-def assess_image_quality(image_path: str) -> Optional[str]:
+def assess_image_quality(image_path: str) -> str | None:
     """Tier-1 deterministic pre-flight on raw pixels — costs no VLM call.
 
     Returns ``None`` when the frame is worth sending to Gemini, or a short reason
@@ -220,9 +223,7 @@ def assess_image_quality(image_path: str) -> Optional[str]:
 
     mean = stat.mean[0]
     stddev = stat.stddev[0]
-    logging.info(
-        "Tier-1 pixel pre-check: mean luminance %.1f, stddev %.1f", mean, stddev
-    )
+    logging.info("Tier-1 pixel pre-check: mean luminance %.1f, stddev %.1f", mean, stddev)
     if mean < MIN_MEAN_LUMINANCE:
         return "too_dark"
     if mean > MAX_MEAN_LUMINANCE:

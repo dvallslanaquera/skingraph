@@ -9,6 +9,7 @@ and personalised coach advice.
 Create users first with:  poetry run python scripts/manage_users.py seed
 This makes live Gemini API calls (needs GOOGLE_API_KEY in .env).
 """
+
 import logging
 import os
 import sys
@@ -24,6 +25,7 @@ from dotenv import load_dotenv  # noqa: E402
 
 from src import user_store  # noqa: E402
 from src.graph import app  # noqa: E402
+from src.render import render_coach_cards  # noqa: E402
 from src.state import build_initial_state  # noqa: E402
 
 
@@ -96,9 +98,7 @@ def main():
 
     print(f"\nRunning pipeline on {Path(image_path).name} … (this calls the API)\n")
     final_state = app.invoke(
-        build_initial_state(
-            image_path, "back", user_profile=profile, user_name=uname
-        )
+        build_initial_state(image_path, "back", user_profile=profile, user_name=uname)
     )
 
     _print_results(final_state)
@@ -131,11 +131,12 @@ def _print_results(state):
         for w in report.warnings:
             print(f"  {w}")
 
-    if advice:
+    cards = state.get("coach_cards")
+    if cards:
         print("\n" + "-" * 60)
         print("COACH ADVICE")
         print("-" * 60)
-        print(advice)
+        print(render_coach_cards(cards))
     print("=" * 60)
 
 

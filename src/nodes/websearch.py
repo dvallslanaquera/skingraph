@@ -10,7 +10,7 @@
 # search returns grounded text that we parse deterministically.
 import logging
 import re
-from typing import Any, List, Tuple
+from typing import Any
 
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -19,7 +19,6 @@ from src.config import FLASH_MODEL, MIN_INGREDIENTS_FOR_AUDIT
 from src.messages import CONFIRM_IDENTITY, SEARCH_FAILED
 from src.prompts.websearch import SEARCH_PROMPT
 from src.state import AgentState, Ingredient, Notice
-
 
 # Strips leading bullets / numbering like "1. ", "・", "- ", "* ".
 _NOISE = re.compile(r"^[\s・\-\*•]*\d*[\.\)]?\s*")
@@ -39,10 +38,10 @@ def _text_of(response: Any) -> str:
     return str(content)
 
 
-def _parse_ingredients(text: str) -> Tuple[List[str], List[str]]:
+def _parse_ingredients(text: str) -> tuple[list[str], list[str]]:
     """Parse the grounded answer into (ingredient_names, source_urls)."""
-    ingredients: List[str] = []
-    sources: List[str] = []
+    ingredients: list[str] = []
+    sources: list[str] = []
     for raw in text.splitlines():
         line = raw.strip()
         if not line:
@@ -61,9 +60,9 @@ def _parse_ingredients(text: str) -> Tuple[List[str], List[str]]:
     return ingredients, sources
 
 
-def _grounding_sources(response: Any) -> List[str]:
+def _grounding_sources(response: Any) -> list[str]:
     """Best-effort extraction of citation URLs from grounding metadata."""
-    urls: List[str] = []
+    urls: list[str] = []
     try:
         meta = getattr(response, "response_metadata", {}) or {}
         grounding = meta.get("grounding_metadata") or {}
@@ -71,7 +70,7 @@ def _grounding_sources(response: Any) -> List[str]:
             uri = (chunk.get("web") or {}).get("uri")
             if uri:
                 urls.append(uri)
-    except Exception:  # metadata shape varies by version; citations are optional
+    except Exception:  # noqa: S110 — metadata shape varies by version; citations are optional
         pass
     return urls
 
@@ -85,9 +84,7 @@ def web_search_node(state: AgentState) -> dict:
 
     llm = ChatGoogleGenerativeAI(model=FLASH_MODEL, temperature=0.0, timeout=120)
     prompt = SEARCH_PROMPT.format(brand=brand, product_name=product)
-    response = llm.invoke(
-        [HumanMessage(content=prompt)], tools=[{"google_search": {}}]
-    )
+    response = llm.invoke([HumanMessage(content=prompt)], tools=[{"google_search": {}}])
 
     names, sources = _parse_ingredients(_text_of(response))
     for uri in _grounding_sources(response):
