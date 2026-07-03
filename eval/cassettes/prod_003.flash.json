@@ -1,0 +1,330 @@
+{
+  "id": "prod_003",
+  "image_sha256": "8656bf050bec5afeac9adde9e50034add7d670fd2e3baacbe5cfed3edd07fafe",
+  "model_id": "gemini-3.1-flash-lite",
+  "prompt_sha256": "70b8e0658da1f19a8edcc172a026c06050bc54003abfe5e131de87054972aa9a",
+  "recorded_at": "2026-07-03T11:51:23+00:00",
+  "extraction": {
+    "brand": "ALLNA ORGANIC",
+    "product_name": "Moisturizing Milk",
+    "jan_code": null,
+    "ingredients": [
+      {
+        "name_raw": "水",
+        "name_standardized": "Water",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "BG",
+        "name_standardized": "Butylene Glycol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "グリセリン",
+        "name_standardized": "Glycerin",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "スクワラン",
+        "name_standardized": "Squalane",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "トリエチルヘキサノイン",
+        "name_standardized": "Triethylhexanoin",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "アスコルビルグルコシド",
+        "name_standardized": "Ascorbyl Glucoside",
+        "is_active": true,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "アセチルヒアルロン酸Na",
+        "name_standardized": "Sodium Acetylated Hyaluronate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "アルガニアスピノサ核油",
+        "name_standardized": "Argania Spinosa Kernel Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "エタノール",
+        "name_standardized": "Alcohol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "エチルヘキシルグリセリン",
+        "name_standardized": "Ethylhexylglycerin",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "イザヨイバラエキス",
+        "name_standardized": "Rosa Roxburghii Fruit Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "イタドリ根エキス",
+        "name_standardized": "Polygonum Cuspidatum Root Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "キハダ樹皮エキス",
+        "name_standardized": "Phellodendron Amurense Bark Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "オウゴン根エキス",
+        "name_standardized": "Scutellaria Baicalensis Root Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "オリーブ果実油",
+        "name_standardized": "Olea Europaea (Olive) Fruit Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "オレンジ果皮油",
+        "name_standardized": "Citrus Aurantium Dulcis (Orange) Peel Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "カミツレ花エキス",
+        "name_standardized": "Chamomilla Recutita (Matricaria) Flower Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "カンゾウ根エキス",
+        "name_standardized": "Glycyrrhiza Glabra (Licorice) Root Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "キサンタンガム",
+        "name_standardized": "Xanthan Gum",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "サクシノイルアテロコラーゲン",
+        "name_standardized": "Succinoyl Atelocollagen",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ステアリン酸ポリグリセリル-10",
+        "name_standardized": "Polyglyceryl-10 Stearate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ステアリン酸グリセリル(SE)",
+        "name_standardized": "Glyceryl Stearate SE",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "セラミドAG",
+        "name_standardized": "Ceramide AG",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "セラミドAP",
+        "name_standardized": "Ceramide AP",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "セラミドNG",
+        "name_standardized": "Ceramide NG",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "セラミドNP",
+        "name_standardized": "Ceramide NP",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ソメイヨシノ葉エキス",
+        "name_standardized": "Prunus Yedoensis Leaf Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ソルビトール",
+        "name_standardized": "Sorbitol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "チャ葉エキス",
+        "name_standardized": "Camellia Sinensis Leaf Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ツボクサエキス",
+        "name_standardized": "Centella Asiatica Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ティーツリー葉油",
+        "name_standardized": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "テトラヘキシルデカン酸アスコルビル",
+        "name_standardized": "Ascorbyl Tetraisopalmitate",
+        "is_active": true,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "トレハロース",
+        "name_standardized": "Trehalose",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ノイバラ果実エキス",
+        "name_standardized": "Rosa Multiflora Fruit Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "パルミチン酸アスコルビルリン酸3Na",
+        "name_standardized": "Trisodium Ascorbyl Palmitate Phosphate",
+        "is_active": true,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ヒアルロン酸Na",
+        "name_standardized": "Sodium Hyaluronate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ヒアルロン酸クロスポリマーNa",
+        "name_standardized": "Sodium Hyaluronate Crosspolymer",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "フィトステロールズ",
+        "name_standardized": "Phytosterols",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "フユボダイジュ花エキス",
+        "name_standardized": "Tilia Cordata Flower Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ベヘニルアルコール",
+        "name_standardized": "Behenyl Alcohol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ペンチレングリコール",
+        "name_standardized": "Pentylene Glycol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ボタンエキス",
+        "name_standardized": "Paeonia Suffruticosa Root Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ポリソルベート60",
+        "name_standardized": "Polysorbate 60",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "マンダリンオレンジ果皮エキス",
+        "name_standardized": "Citrus Reticulata (Tangerine) Peel Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ラベンダー油",
+        "name_standardized": "Lavandula Angustifolia (Lavender) Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "リン酸アスコルビルMg",
+        "name_standardized": "Magnesium Ascorbyl Phosphate",
+        "is_active": true,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ローズマリー葉エキス",
+        "name_standardized": "Rosmarinus Officinalis (Rosemary) Leaf Extract",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "加水分解コラーゲン",
+        "name_standardized": "Hydrolyzed Collagen",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "加水分解ヒアルロン酸",
+        "name_standardized": "Hydrolyzed Hyaluronic Acid",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "水添レシチン",
+        "name_standardized": "Hydrogenated Lecithin",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "水溶性コラーゲン",
+        "name_standardized": "Soluble Collagen",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "フェノキシエタノール",
+        "name_standardized": "Phenoxyethanol",
+        "is_active": false,
+        "source_language": "JP"
+      }
+    ],
+    "is_quasi_drug": false,
+    "source_language": "JP",
+    "extraction_confidence": 0.9,
+    "system_status": "SUCCESS"
+  }
+}

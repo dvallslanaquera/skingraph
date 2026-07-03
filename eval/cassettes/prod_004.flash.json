@@ -1,0 +1,126 @@
+{
+  "id": "prod_004",
+  "image_sha256": "cafc897a6368d67d707fc8f8c89facc81c94ca57346d827bb7672a87e0c4a31a",
+  "model_id": "gemini-3.1-flash-lite",
+  "prompt_sha256": "70b8e0658da1f19a8edcc172a026c06050bc54003abfe5e131de87054972aa9a",
+  "recorded_at": "2026-07-03T11:51:28+00:00",
+  "extraction": {
+    "brand": "Dong-A Pharm",
+    "product_name": "Elatone Cream",
+    "jan_code": null,
+    "ingredients": [
+      {
+        "name_raw": "히드로퀴논",
+        "name_standardized": "Hydroquinone",
+        "is_active": true,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "메틸파라벤",
+        "name_standardized": "Methylparaben",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "프로필파라벤",
+        "name_standardized": "Propylparaben",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "농글리세린",
+        "name_standardized": "Glycerin",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "데카메틸시클로펜타실록산",
+        "name_standardized": "Cyclopentasiloxane",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "메틸글루세스-10",
+        "name_standardized": "Methyl Gluceth-10",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "모노앤디글리세리드",
+        "name_standardized": "Glyceryl Stearate",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "부틸레이티드히드록시톨루엔",
+        "name_standardized": "BHT",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "부틸렌글리콜",
+        "name_standardized": "Butylene Glycol",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "세탄올",
+        "name_standardized": "Cetyl Alcohol",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "스테아릴알코올",
+        "name_standardized": "Stearyl Alcohol",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "아스코르브산팔미테이트",
+        "name_standardized": "Ascorbyl Palmitate",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "유동파라핀",
+        "name_standardized": "Mineral Oil",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "이소프로필미리스테이트",
+        "name_standardized": "Isopropyl Myristate",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "자기유화형글리세릴모노스테아레이트",
+        "name_standardized": "Glyceryl Stearate SE",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "정제수",
+        "name_standardized": "Water",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "폴리에틸렌글리콜4000",
+        "name_standardized": "PEG-4000",
+        "is_active": false,
+        "source_language": "KO"
+      },
+      {
+        "name_raw": "피로아황산나트륨",
+        "name_standardized": "Sodium Metabisulfite",
+        "is_active": false,
+        "source_language": "KO"
+      }
+    ],
+    "is_quasi_drug": false,
+    "source_language": "KO",
+    "extraction_confidence": 0.9,
+    "system_status": "SUCCESS"
+  }
+}

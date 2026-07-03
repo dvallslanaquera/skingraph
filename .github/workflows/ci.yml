@@ -71,6 +71,27 @@ jobs:
         # Offline/deterministic: every Gemini and vector-store call is mocked.
         run: pytest
 
+  eval-replay:
+    name: Eval regression gate (replay, F1 floor)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+
+      - name: Replay recorded cassettes against the scoring path
+        # Fully offline: no API key, no images. Fails on F1 regression OR on a
+        # prompt/model change without a matching local re-record (staleness guard).
+        run: python -m eval.evaluate --replay --min-f1 0.90
+
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
