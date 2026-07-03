@@ -1,6 +1,6 @@
 [project]
 name = "skincare-coach"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = [
     {name = "David Valls",email = "dvallslanaquera@gmail.com"}
@@ -33,7 +33,10 @@ build-backend = "poetry.core.masonry.api"
 # API key + image) are never collected.
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+# Coverage floor set 5 points under the measured 84% (2026-07); ratchet up, not down.
+# Note a partial run (pytest tests/test_x.py) will fail the floor — pass
+# --no-cov when iterating on a single file.
+addopts = "-q --cov=src --cov-fail-under=79"
 
 [dependency-groups]
 dev = [

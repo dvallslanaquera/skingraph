@@ -1,5 +1,9 @@
 import os
 
+# Keep in sync with [project] version in pyproject.toml (the api image ships
+# src/ without pyproject, so the version lives here for /health to report).
+APP_VERSION = "1.0.0"
+
 FLASH_ACCEPT_THRESHOLD = 0.85
 FLASH_ESCALATE_THRESHOLD = 0.5
 MAX_CORRECTIONS = 2
