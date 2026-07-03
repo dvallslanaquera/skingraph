@@ -1,0 +1,15 @@
+# Local commit gate: lint + format (ruff) and secret scanning (gitleaks).
+# Install once with:  poetry run pre-commit install
+# CI runs the same checks in the `lint` job, so a skipped hook still gets caught.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.20  # keep in lockstep with the ruff pin in pyproject.toml
+    hooks:
+      - id: ruff-check
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.29.1
+    hooks:
+      - id: gitleaks

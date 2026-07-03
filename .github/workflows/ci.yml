@@ -17,6 +17,35 @@ permissions:
   contents: read
 
 jobs:
+  lint:
+    name: Lint (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # mypy needs the real runtime deps (pydantic plugin, langgraph types).
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+
+      - name: Install lint tools
+        run: pip install "ruff>=0.15.20,<0.16" "mypy>=2.1,<3"
+
+      - name: ruff check
+        run: ruff check .
+
+      - name: ruff format check
+        run: ruff format --check .
+
+      - name: mypy
+        run: mypy src
+
   backend:
     name: Backend tests (py${{ matrix.python-version }})
     runs-on: ubuntu-latest

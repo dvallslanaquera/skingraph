@@ -36,5 +36,29 @@ addopts = "-q"
 
 [dependency-groups]
 dev = [
-    "pytest (>=9.1.0,<10.0.0)"
+    "pytest (>=9.1.0,<10.0.0)",
+    "ruff (>=0.15.20,<0.16.0)",
+    "mypy (>=2.1.0,<3.0.0)",
+    "pre-commit (>=4.6.0,<5.0.0)",
+    "pytest-cov (>=7.1.0,<8.0.0)"
 ]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+# S is the bandit ruleset — no separate bandit tool needed.
+select = ["E", "F", "I", "UP", "B", "S"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]                 # pytest asserts
+"src/user_store.py" = ["S608"]        # parametrised ALTER TABLE trips the SQL check
+"src/prompts/*" = ["E501"]            # prompt text is verbatim model input; don't reflow
+"src/api/main.py" = ["B008"]          # FastAPI's File()/Form() defaults are the idiom
+
+[tool.mypy]
+files = ["src"]
+plugins = ["pydantic.mypy"]
+# Non-strict to start; ratchet up later. Third-party libs without stubs
+# (langgraph, fastembed, qdrant) are followed loosely, not ignored wholesale.
+ignore_missing_imports = true
