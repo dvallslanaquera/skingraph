@@ -2,6 +2,9 @@
 
 <div align="center">
 
+<img src="docs/logo.jpg" alt="SkinGraph Logo" width="200" />
+<br>
+
 [![CI](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml/badge.svg)](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml)
 [![Deploy](https://github.com/ShinBellator/skingraph/actions/workflows/deploy.yml/badge.svg)](https://github.com/ShinBellator/skingraph/actions/workflows/deploy.yml)
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
@@ -245,18 +248,39 @@ Built with ❤️ and matcha 🍵 by [David Valls](https://github.com/ShinBellat
 
 ## 📑 Table of Contents
 
-- [Highlights](#-highlights)
-- [Overview](#ℹ️-overview)
-- [Tech stack](#-tech-stack)
-- [Architecture](#-architecture)
-- [Design decisions](#-design-decisions)
-- [Installation](#️-installation)
-- [Usage](#-usage)
-- [Can you trust it?](#️-can-you-trust-it)
-- [Limitations & roadmap](#-limitations--roadmap)
-- [Contributing & Feedback](#-contributing--feedback)
-- [Learn More](#-learn-more)
-- [License](#-license)
+- [🌿 SkinGraph](#-skingraph)
+- [🌿 SkinGraph — スキンケアラベル分析パイプライン](#-skingraph--スキンケアラベル分析パイプライン)
+  - [📑 目次](#-目次)
+  - [🌟 ハイライト](#-ハイライト)
+  - [ℹ️ 概要](#ℹ️-概要)
+    - [比較位置](#比較位置)
+    - [✍️ 作者](#️-作者)
+  - [🧰 テックスタック](#-テックスタック)
+  - [🏗️ アーキテクチャ](#️-アーキテクチャ)
+  - [🧭 設計判断](#-設計判断)
+  - [⬇️ インストール](#️-インストール)
+  - [🚀 使い方](#-使い方)
+  - [🛡️ 信頼性](#️-信頼性)
+  - [🧭 制限とロードマップ](#-制限とロードマップ)
+  - [💭 コントリビュート \& フィードバック](#-コントリビュート--フィードバック)
+  - [📖 詳細情報](#-詳細情報)
+  - [📄 ライセンス](#-ライセンス)
+- [🌿 SkinGraph — AI Skincare Label Analysis Pipeline](#-skingraph--ai-skincare-label-analysis-pipeline)
+  - [📑 Table of Contents](#-table-of-contents)
+  - [🌟 Highlights](#-highlights)
+  - [ℹ️ Overview](#ℹ️-overview)
+    - [How it compares](#how-it-compares)
+    - [✍️ Author](#️-author)
+  - [🧰 Tech stack](#-tech-stack)
+  - [🏗️ Architecture](#️-architecture)
+  - [🧭 Design decisions](#-design-decisions)
+  - [⬇️ Installation](#️-installation)
+  - [🚀 Usage](#-usage)
+  - [🛡️ Can you trust it?](#️-can-you-trust-it)
+  - [🧭 Limitations \& roadmap](#-limitations--roadmap)
+  - [💭 Contributing \& Feedback](#-contributing--feedback)
+  - [📖 Learn More](#-learn-more)
+  - [📄 License](#-license)
 
 ---
 
