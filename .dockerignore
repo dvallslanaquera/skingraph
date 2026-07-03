@@ -18,7 +18,7 @@ env/
 
 # Dev / test / benchmark files
 tests/
-evaluate.py
+eval/
 test_scanner.py
 
 # Editor / OS artefacts

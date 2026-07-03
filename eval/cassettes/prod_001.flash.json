@@ -1,0 +1,162 @@
+{
+  "id": "prod_001",
+  "image_sha256": "2756c2813442bb1ce1c129943cbe81c1c64ac47f43c488a333bab19402e6e534",
+  "model_id": "gemini-3.1-flash-lite",
+  "prompt_sha256": "70b8e0658da1f19a8edcc172a026c06050bc54003abfe5e131de87054972aa9a",
+  "recorded_at": "2026-07-03T11:51:03+00:00",
+  "extraction": {
+    "brand": "Cetaphil",
+    "product_name": "Moisturizing Cream",
+    "jan_code": null,
+    "ingredients": [
+      {
+        "name_raw": "水",
+        "name_standardized": "Water",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "グリセリン",
+        "name_standardized": "Glycerin",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ワセリン",
+        "name_standardized": "Petrolatum",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ジカプリリルエーテル",
+        "name_standardized": "Dicaprylyl Ether",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ジメチコン",
+        "name_standardized": "Dimethicone",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ステアリン酸グリセリル",
+        "name_standardized": "Glyceryl Stearate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "セタノール",
+        "name_standardized": "Cetyl Alcohol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ヒマワリ種子油",
+        "name_standardized": "Helianthus Annuus (Sunflower) Seed Oil",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ステアリン酸PEG-30",
+        "name_standardized": "PEG-30 Stearate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "酢酸トコフェロール",
+        "name_standardized": "Tocopheryl Acetate",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ジメチコノール",
+        "name_standardized": "Dimethiconol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "(アクリレーツ/アクリル酸アルキル(C10-30))クロスポリマー",
+        "name_standardized": "Acrylates/C10-30 Alkyl Acrylate Crosspolymer",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ベンジルアルコール",
+        "name_standardized": "Benzyl Alcohol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "フェノキシエタノール",
+        "name_standardized": "Phenoxyethanol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "PG",
+        "name_standardized": "Propylene Glycol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "パンテノール",
+        "name_standardized": "Panthenol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "ナイアシンアミド",
+        "name_standardized": "Niacinamide",
+        "is_active": true,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "EDTA-2Na",
+        "name_standardized": "Disodium EDTA",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "カルボマー",
+        "name_standardized": "Carbomer",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "水酸化Na",
+        "name_standardized": "Sodium Hydroxide",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "トコフェロール",
+        "name_standardized": "Tocopherol",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "パントラクトン",
+        "name_standardized": "Pantolactone",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "クエン酸",
+        "name_standardized": "Citric Acid",
+        "is_active": false,
+        "source_language": "JP"
+      },
+      {
+        "name_raw": "BHT",
+        "name_standardized": "BHT",
+        "is_active": false,
+        "source_language": "JP"
+      }
+    ],
+    "is_quasi_drug": false,
+    "source_language": "JP",
+    "extraction_confidence": 0.95,
+    "system_status": "SUCCESS"
+  }
+}
