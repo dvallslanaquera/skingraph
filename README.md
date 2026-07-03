@@ -2,7 +2,7 @@
 
 <div align="center">
 
-<img src="docs/logo.jpg" alt="SkinGraph Logo" width="200" />
+<img src="docs/logo.jpg" alt="SkinGraph Logo" width="100%" />
 <br>
 
 [![CI](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml/badge.svg)](https://github.com/ShinBellator/skingraph/actions/workflows/ci.yml)
