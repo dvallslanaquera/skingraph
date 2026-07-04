@@ -262,7 +262,11 @@ export function MyProfile() {
               </Field>
             </div>
 
-            <Field label={t("profile.goals")} help={t("profile.goals.help")}>
+            {/* FieldBlock (a <div>), not Field (a <label>): a <label> wrapping the
+                TagInput's chips means a tap on a suggestion also fires the label's
+                default control — which, once a tag exists, is that tag's remove
+                button — so on touch you could never hold more than one selection. */}
+            <FieldBlock label={t("profile.goals")} help={t("profile.goals.help")}>
               <TagInput
                 values={profile.goals}
                 onChange={(v) => set("goals", v)}
@@ -270,9 +274,9 @@ export function MyProfile() {
                 formatLabel={term}
                 placeholder={t("profile.goals.placeholder")}
               />
-            </Field>
+            </FieldBlock>
 
-            <Field label={t("profile.conditions")} help={t("profile.conditions.help")}>
+            <FieldBlock label={t("profile.conditions")} help={t("profile.conditions.help")}>
               <TagInput
                 values={profile.skin_conditions}
                 onChange={(v) => set("skin_conditions", v)}
@@ -280,7 +284,7 @@ export function MyProfile() {
                 formatLabel={term}
                 placeholder={t("profile.conditions.placeholder")}
               />
-            </Field>
+            </FieldBlock>
           </section>
 
           <section className="card">
@@ -349,6 +353,7 @@ export function MyProfile() {
                 <span>{formatBudget(lang, 0, BUDGET_MAX)}</span>
                 <span>{formatBudget(lang, BUDGET_MAX, BUDGET_MAX)}</span>
               </div>
+              <p className="field-note">{t("profile.budget.amortized")}</p>
             </FieldBlock>
           </section>
 

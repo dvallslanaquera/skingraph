@@ -51,7 +51,7 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <div className="topbar-inner">
-          <a className="topbar-logo" href="#check" aria-label="SkinGraph home">
+          <a className="topbar-logo" href="/" aria-label="SkinGraph home">
             <span className="brand-mark" aria-hidden="true">
               {/* leaf + cat-ear mark — matches the landing page (ui/index.html) */}
               <svg viewBox="0 0 34 34" fill="none">

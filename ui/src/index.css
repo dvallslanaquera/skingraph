@@ -1460,6 +1460,79 @@ h3,
   font-size: 13px;
 }
 
+/* Ready-to-scan CTA: once a photo is chosen, a prominent bar makes the scan
+   action unmissable (the old right-aligned button was easy to overlook). */
+.scan-cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin-top: 16px;
+  padding: 16px 18px;
+  background: var(--accent-soft);
+  border: 1px solid #c4ddce;
+  border-radius: var(--radius);
+}
+
+.scan-cta-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.scan-cta-copy strong {
+  color: var(--accent-strong);
+  font-size: 15px;
+}
+
+.scan-cta-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-left: auto;
+}
+
+/* The scan button is the page's primary action — give it real presence. */
+.btn-scan {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 26px;
+  font-size: 15px;
+  box-shadow: 0 3px 12px rgba(67, 112, 97, 0.28);
+}
+
+/* In-button spinner: smaller than the overlay .spinner and tinted white to read
+   on the accent-filled button. */
+.spinner-sm {
+  width: 17px;
+  height: 17px;
+  border-width: 2.5px;
+  border-color: rgba(255, 255, 255, 0.45);
+  border-top-color: #fff;
+}
+
+@media (max-width: 720px) {
+  .scan-cta-actions {
+    flex: 1 1 100%;
+  }
+  .btn-scan {
+    flex: 1;
+    justify-content: center;
+    padding: 14px 26px;
+  }
+}
+
+/* Small explanatory note under a field control (e.g. budget amortization). */
+.field-note {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-soft);
+}
+
 /* ---- the coach, beside the upload card --------------------------------- */
 /* Reuses the landing's .cat-peek + .coach-quote treatment (ui/index.html). */
 

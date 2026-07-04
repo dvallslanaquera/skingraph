@@ -6,7 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { ScanResponse } from "../api/types";
 import { ErrorBoundary } from "../components/ErrorBoundary";
-import { CameraIcon } from "../components/icons";
+import { CameraIcon, CheckIcon } from "../components/icons";
 import { PipelineSteps } from "../components/PipelineSteps";
 import { ScanResult } from "../components/ScanResult";
 import { useUsers } from "../context/UserContext";
@@ -337,8 +337,14 @@ export function CheckProduct() {
       </section>
 
       {file && (
-        <div className="scan-controls">
-          <div className="scan-controls-actions">
+        <div className="scan-cta">
+          {!scanning && !result && (
+            <div className="scan-cta-copy">
+              <strong>{t("check.ready.title")}</strong>
+              <span className="muted">{t("check.ready.hint")}</span>
+            </div>
+          )}
+          <div className="scan-cta-actions">
             <button
               className="btn btn-ghost"
               onClick={reset}
@@ -347,11 +353,16 @@ export function CheckProduct() {
               {t("common.clear")}
             </button>
             <button
-              className="btn btn-primary"
+              className="btn btn-primary btn-scan"
               onClick={() => void handleScan()}
               disabled={scanning}
             >
-              {scanning ? t("check.scanning") : t("check.scan")}
+              {scanning ? (
+                <span className="spinner spinner-sm" aria-hidden="true" />
+              ) : (
+                <CheckIcon size={20} />
+              )}
+              <span>{scanning ? t("check.scanning") : t("check.scan")}</span>
             </button>
           </div>
         </div>
