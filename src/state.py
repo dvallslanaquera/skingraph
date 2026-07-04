@@ -15,6 +15,14 @@ class Ingredient(BaseModel):
     source_language: str = Field(
         "JP", description="language of the ingredient name as extracted from the image"
     )
+    confidence: float | None = Field(
+        None,
+        description=(
+            "0.0-1.0 confidence that THIS ingredient name was read correctly off "
+            "the label. Use < 0.7 when the name is blurry, curved, partially "
+            "occluded, or was guessed from context."
+        ),
+    )
 
 
 class ProductExtraction(BaseModel):
@@ -332,17 +340,32 @@ class AgentState(TypedDict):
     # input gating
     # Tier-1 pixel pre-flight verdict (set by the image-quality gate): None when
     # the frame passed, else a reason code ("too_dark" | "too_bright" | "blank" |
-    # "unreadable") used to craft the retake message.
+    # "blurry" | "unreadable") used to craft the retake message.
     image_quality_issue: str | None
     # Tier-2 content classification from the side/content classifier: "product",
-    # "not_a_product", or "multiple_products". Non-product / multi-product frames
-    # are rejected before extraction so the scanner never fabricates a product.
+    # "not_a_product", "non_skincare_product", or "multiple_products". Frames
+    # that aren't a single skincare product are rejected before extraction so
+    # the scanner never fabricates one.
     image_content: str | None
+    # The Tier-2 classifier's own 0-1 confidence in its content+side verdict;
+    # verdicts below CLASSIFY_CONFIDENCE_THRESHOLD are bounced for a retake.
+    classify_confidence: float | None
+    # JAN/EAN barcode digits decoded deterministically from the frame (pyzbar,
+    # when installed) — the strongest identity key for the registry lookup.
+    jan_code: str | None
 
     # extraction state
     extracted_data: ProductExtraction | None
     model_used: Literal["flash", "pro", "database", "web"]
     inference_confidence: float
+    # Grounded extraction-quality signal: fraction of extracted ingredient names
+    # that resolve in the normalizer ledger's exact tier (None when there are no
+    # ingredients to check, e.g. front photos). Unlike inference_confidence this
+    # cannot be hallucinated by the model.
+    ledger_match_rate: float | None
+    # Advisory OCR cross-check (opt-in): fraction of the VLM's ingredient names
+    # also found by the local OCR pass. None when the check is disabled.
+    ocr_agreement: float | None
 
     # processed data — normalizer rows are plain dicts
     # ({name_raw, name_standardized, is_active, source_language}), not Ingredient models.
@@ -373,6 +396,10 @@ class AgentState(TypedDict):
     identity_confidence: float | None
     ingredient_source: str | None  # "registry" | "label" | "web"
     web_sources: list[str] | None
+    # True when the web search found *a* product but its identity did not match
+    # what was read off the photo — the list is not adopted and the user is
+    # asked to confirm instead (never audit another product's ingredients).
+    web_identity_mismatch: bool | None
 
     # personalised coaching
     user_profile: UserProfile | None

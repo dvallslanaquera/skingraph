@@ -1,5 +1,17 @@
 # Eval harness — golden set, record & replay
 
+Two harnesses live here:
+
+- **`eval/evaluate.py`** — back-label extraction accuracy (this README).
+- **`eval/vision_eval.py`** — the vision-layer *gates*: the Tier-1 pixel
+  pre-flight (dark/bright/blank/blurry) and the Tier-2 content+side classifier.
+  Driven by a hand-labeled manifest (`data/vision_eval_set.json`; images stay
+  out of git). `--sweep` prints the Tier-1 stat distributions per label so the
+  config thresholds can be calibrated from data; `--live` also scores the
+  classifier (needs `GOOGLE_API_KEY`). Frames captured by the opt-in rejection
+  store (`REJECTION_STORE_ENABLED=1` → `data/rejections/`) are the natural feed
+  for this set.
+
 `eval/evaluate.py` scores the vision scanner's ingredient extraction against a
 hand-annotated **golden set**: 40+ real product-label photos
 (`data/golden_set/*.jpg`), 14 of which carry per-product ground truth in

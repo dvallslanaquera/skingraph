@@ -6,9 +6,14 @@ import logging
 from functools import lru_cache
 
 import numpy as np
-from PIL import Image, ImageFilter, ImageStat
+from PIL import Image, ImageFilter, ImageOps
 
-from src.config import MAX_MEAN_LUMINANCE, MIN_LUMINANCE_STDDEV, MIN_MEAN_LUMINANCE
+from src.config import (
+    MAX_MEAN_LUMINANCE,
+    MIN_FOCUS_VARIANCE,
+    MIN_LUMINANCE_STDDEV,
+    MIN_MEAN_LUMINANCE,
+)
 
 
 def _apply_white_balance(img: Image.Image) -> Image.Image:
@@ -151,21 +156,32 @@ def _sharpen(img: Image.Image) -> Image.Image:
 # ---------------------------------------------------------------------------
 
 
-def preprocess_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
-    """Full preprocessing pipeline applied to every image before VLM inference.
+def preprocess_image(image_bytes: bytes, max_dim: int = 2048, profile: str = "ocr") -> bytes:
+    """Preprocessing pipeline applied to every image before VLM inference.
 
-    Steps (in order):
-        1. Resize       — cap longest edge at 2048 px (LANCZOS)
-        2. White balance — gray-world correction, ±20 % cap per channel
+    Two profiles, because the heavy stack below is tuned for reading dense
+    back-label text and can *hurt* other tasks (deskew assumes text lines;
+    aggressive CLAHE + unsharp distort logos and brand colours the content/side
+    classifier keys on):
+
+    ``"light"`` — classification / front-identity reads:
+        1. EXIF transpose — honor the phone's rotation flag
+        2. Resize        — cap longest edge at 2048 px (LANCZOS)
+        3. White balance — gray-world correction, ±20 % cap per channel
+        4. JPEG encode   — quality 85
+
+    ``"ocr"`` — back-label ingredient extraction (all "light" steps plus):
         3. Glare reduction — clamp specular highlights ≥ 245 luma
         4. Gamma correction — brighten dark labels (mean luma < 100)
         5. Noise reduction — 3×3 median filter to suppress sensor grain
         6. Deskewing    — projection-profile variance to correct tilt ≤ ±10°
         7. CLAHE        — 8×8 tile adaptive contrast on Y channel (YCbCr)
         8. Sharpening   — unsharp mask for crisp text edges
-        9. JPEG encode  — quality 85 for payload efficiency
     """
     img: Image.Image = Image.open(io.BytesIO(image_bytes))
+    # Phone cameras store rotation in EXIF instead of rotating pixels; without
+    # this the deskew heuristic and the VLM see a sideways label.
+    img = ImageOps.exif_transpose(img)
     w, h = img.size
     if max(w, h) > max_dim:
         scale = max_dim / max(w, h)
@@ -173,12 +189,13 @@ def preprocess_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
     img = img.convert("RGB")
 
     img = _apply_white_balance(img)
-    img = _reduce_glare(img)
-    img = _apply_gamma(img)
-    img = _reduce_noise(img)
-    img = _deskew(img)
-    img = _apply_clahe(img)
-    img = _sharpen(img)
+    if profile == "ocr":
+        img = _reduce_glare(img)
+        img = _apply_gamma(img)
+        img = _reduce_noise(img)
+        img = _deskew(img)
+        img = _apply_clahe(img)
+        img = _sharpen(img)
 
     buffer = io.BytesIO()
     img.save(buffer, format="JPEG", quality=85)
@@ -188,12 +205,30 @@ def preprocess_image(image_bytes: bytes, max_dim: int = 2048) -> bytes:
 # Cached: within one scan the same temp file is encoded for every VLM call
 # (classify, each flash attempt, pro, verify), and the full pipeline — deskew
 # loop + CLAHE included — costs ~1–3 s per run. Scan images are written once
-# per upload, so a path never changes content mid-scan.
+# per upload, so a (path, profile) pair never changes content mid-scan.
 @lru_cache(maxsize=8)
-def encode_image(image_path: str) -> str:
+def encode_image(image_path: str, profile: str = "ocr") -> str:
     with open(image_path, "rb") as img_file:
-        image_bytes = preprocess_image(img_file.read())
+        image_bytes = preprocess_image(img_file.read(), profile=profile)
     return base64.b64encode(image_bytes).decode(encoding="utf-8")
+
+
+def _focus_variance(gray: np.ndarray) -> float:
+    """Variance of the 4-neighbour Laplacian — the classic focus measure.
+
+    Sharp text/edges produce high-frequency detail, so the Laplacian response
+    spreads out (high variance); a defocused or motion-blurred frame is smooth,
+    so the response collapses towards zero. Computed with plain NumPy slicing
+    (no OpenCV dependency).
+    """
+    a = gray.astype(np.float32)
+    lap = a[:-2, 1:-1] + a[2:, 1:-1] + a[1:-1, :-2] + a[1:-1, 2:] - 4.0 * a[1:-1, 1:-1]
+    return float(lap.var())
+
+
+# Focus is measured on a fixed-width thumbnail so the score — and the threshold
+# tuned against it — is independent of the upload's resolution.
+_FOCUS_THUMB_WIDTH = 800
 
 
 def assess_image_quality(image_path: str) -> str | None:
@@ -204,7 +239,8 @@ def assess_image_quality(image_path: str) -> str | None:
 
       - ``"too_dark"``   near-black frame (lens cap, no light)
       - ``"too_bright"`` blown-out / washed-out frame
-      - ``"blank"``      near-uniform frame (blank wall, severe defocus, no product)
+      - ``"blank"``      near-uniform frame (blank wall, no product)
+      - ``"blurry"``     severe defocus / motion blur (no fine detail at all)
       - ``"unreadable"`` the bytes could not be decoded as an image
 
     This is the cheapest out-of-distribution filter in the pipeline: it spends no
@@ -212,22 +248,78 @@ def assess_image_quality(image_path: str) -> str | None:
     scanner would otherwise be *forced* to hallucinate a product from (its
     ``brand`` / ``ingredients`` fields are required, so it cannot answer "nothing
     here"). Thresholds live in config and are tuned to fire only on truly
-    degenerate frames, not on merely dark or low-contrast labels.
+    degenerate frames, not on merely dark or low-contrast labels; calibrate them
+    against a labeled set with eval/vision_eval.py --sweep.
     """
-    try:
-        with Image.open(image_path) as img:
-            stat = ImageStat.Stat(img.convert("L"))
-    except Exception:
+    stats = frame_stats(image_path)
+    if stats is None:
         logging.warning("Tier-1 pixel pre-check: could not open %s", image_path)
         return "unreadable"
 
-    mean = stat.mean[0]
-    stddev = stat.stddev[0]
-    logging.info("Tier-1 pixel pre-check: mean luminance %.1f, stddev %.1f", mean, stddev)
+    mean, stddev, focus = stats["mean"], stats["stddev"], stats["focus"]
+    logging.info(
+        "Tier-1 pixel pre-check: mean luminance %.1f, stddev %.1f, focus %.1f",
+        mean,
+        stddev,
+        focus,
+    )
     if mean < MIN_MEAN_LUMINANCE:
         return "too_dark"
     if mean > MAX_MEAN_LUMINANCE:
         return "too_bright"
     if stddev < MIN_LUMINANCE_STDDEV:
         return "blank"
+    if focus < MIN_FOCUS_VARIANCE:
+        return "blurry"
+    return None
+
+
+def frame_stats(image_path: str) -> dict[str, float] | None:
+    """The raw Tier-1 statistics for one frame, or None when undecodable.
+
+    Shared by the gate above and by eval/vision_eval.py, whose threshold sweep
+    needs the underlying numbers rather than the verdict.
+    """
+    try:
+        with Image.open(image_path) as img:
+            gray_img = img.convert("L")
+            if gray_img.width > _FOCUS_THUMB_WIDTH:
+                scale = _FOCUS_THUMB_WIDTH / gray_img.width
+                gray_img = gray_img.resize(
+                    (_FOCUS_THUMB_WIDTH, max(1, int(gray_img.height * scale))),
+                    Image.Resampling.BILINEAR,
+                )
+            gray = np.asarray(gray_img)
+    except Exception:  # noqa: BLE001 — any undecodable input is one verdict
+        return None
+    return {
+        "mean": float(gray.mean()),
+        "stddev": float(gray.std()),
+        "focus": _focus_variance(gray),
+    }
+
+
+def decode_jan(image_path: str) -> str | None:
+    """Best-effort deterministic barcode (JAN/EAN) read — no VLM call.
+
+    A decoded barcode is the strongest identity signal a photo can carry: it
+    keys the product registry exactly instead of relying on a fuzzy brand-name
+    read. pyzbar (and its native zbar library) is an *optional* runtime extra —
+    when it isn't installed this quietly returns None and the pipeline falls
+    back to the VLM's label read (``ProductExtraction.jan_code``).
+    """
+    try:
+        from pyzbar.pyzbar import decode as _zbar_decode  # noqa: PLC0415 — optional dep
+    except Exception:
+        return None
+    try:
+        with Image.open(image_path) as img:
+            oriented = ImageOps.exif_transpose(img)
+            for symbol in _zbar_decode(oriented.convert("L")):
+                digits = symbol.data.decode("ascii", "ignore").strip()
+                if digits.isdigit() and len(digits) in (8, 13):
+                    logging.info("Barcode decoded deterministically: %s", digits)
+                    return digits
+    except Exception:  # noqa: S110 — barcode read is best-effort, never fatal
+        pass
     return None

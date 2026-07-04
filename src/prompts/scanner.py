@@ -44,11 +44,17 @@ Look at this photo and report what it shows, then which side of the product it i
 
 1) content — what is actually in the frame:
    - "product": exactly ONE skincare product (bottle, tube, jar, pump, sachet,
-     or its box) is the subject.
-   - "not_a_product": there is NO skincare product to analyse — e.g. a person,
-     a pet, scenery, food, a screenshot, a random object, or a blank/illegible
-     frame.
-   - "multiple_products": TWO OR MORE distinct skincare products are in frame.
+     or its box) is the subject. Skincare = products applied to the skin for
+     care/cosmetic purposes: cleanser, toner/lotion, serum/essence, moisturizer,
+     cream, sunscreen, mask, balm, body/face oil, and their quasi-drug (医薬部外品)
+     variants.
+   - "not_a_product": there is NO product to analyse at all — e.g. a person,
+     a pet, scenery, a screenshot, a random object, or a blank/illegible frame.
+   - "non_skincare_product": the frame shows ONE product, but it is NOT
+     skincare — e.g. food or drink, supplements/medicine, makeup colour
+     cosmetics (lipstick, mascara), haircare (shampoo), household cleaning,
+     pet products.
+   - "multiple_products": TWO OR MORE distinct products are in frame.
 
 2) side — only meaningful when content is "product" (give your best guess
    otherwise):
@@ -69,7 +75,7 @@ Look at this photo and report what it shows, then which side of the product it i
      blurry, partially hidden, ambiguous, or you had to guess.
 
 Return:
-- content: "product" | "not_a_product" | "multiple_products"
+- content: "product" | "not_a_product" | "non_skincare_product" | "multiple_products"
 - side: "front" or "back"
 - confidence: 0.0-1.0 — how certain you are about content + side.
 - brand: the brand name (English), or "".

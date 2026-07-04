@@ -18,6 +18,11 @@ data/golden_set/*.jpg
 data/users.db
 data/registry_candidates.json
 data/qdrant/
+# Opt-in captures of bounced frames (may contain PII) + web-search result cache
+data/rejections/
+data/web_cache.json
+# Local labeled images for eval/vision_eval.py (manifest is committed, images aren't)
+data/vision_eval/
 .DS_Store
 .TODO.md
 

@@ -22,7 +22,7 @@ def mock_gemini(monkeypatch):
     `ChatGoogleGenerativeAI(...).with_structured_output(...).invoke(...)` chain
     to return `return_value`, and hands back the mocks for inspection.
     """
-    monkeypatch.setattr(scanner, "encode_image", lambda path: "FAKE_BASE64")
+    monkeypatch.setattr(scanner, "encode_image", lambda path, profile="ocr": "FAKE_BASE64")
     handles = {}
 
     def install(return_value):
@@ -49,19 +49,45 @@ def _prompt_text(invoke_mock) -> str:
 # --------------------------------------------------------------------------- #
 # classify_side_node
 # --------------------------------------------------------------------------- #
-def test_classify_side_honours_caller_override(mock_gemini):
-    handles = mock_gemini(None)
+def test_classify_side_override_pins_side_but_still_classifies_content(mock_gemini):
+    # The caller's override wins on *side*, but the content (OOD) verdict still
+    # comes from the VLM — a non-product frame with an override must not reach
+    # the scanner unguarded.
+    handles = mock_gemini(ImageSide(content="not_a_product", side="front", confidence=0.9))
     result = scanner.classify_side_node({"image_type": "back", "image_path": "x.jpg"})
-    assert result == {"image_type": "back"}
-    # The override short-circuits before any model is constructed.
-    handles["cls"].assert_not_called()
+    assert result["image_type"] == "back"  # override kept
+    assert result["image_content"] == "not_a_product"
+    handles["cls"].assert_called_once()
+
+
+def test_classify_side_front_override_still_seeds_identity(mock_gemini):
+    # An overridden *front* photo needs the branding read for the web fallback —
+    # skipping the call used to dead-end every such scan at confirm_identity.
+    mock_gemini(
+        ImageSide(
+            content="product",
+            side="front",
+            confidence=0.9,
+            brand="Curel",
+            product_name="Cream",
+            identity_confidence=0.9,
+        )
+    )
+    result = scanner.classify_side_node({"image_type": "front", "image_path": "x.jpg"})
+    assert result["image_type"] == "front"
+    assert result["extracted_data"].brand == "Curel"
+    assert result["identity_confidence"] == 0.9
 
 
 def test_classify_side_auto_detects_back(mock_gemini):
     handles = mock_gemini(ImageSide(side="back", confidence=0.92))
     result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
     # A back photo carries no seeded identity — the scanner reads it instead.
-    assert result == {"image_type": "back", "image_content": "product"}
+    assert result == {
+        "image_type": "back",
+        "image_content": "product",
+        "classify_confidence": 0.92,
+    }
     handles["cls"].assert_called_once()
 
 
@@ -93,7 +119,19 @@ def test_classify_side_surfaces_content_verdict(mock_gemini):
     # Tier 2: the classifier flags a non-product frame in the same VLM call.
     mock_gemini(ImageSide(content="not_a_product", side="back", confidence=0.3))
     result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
-    assert result == {"image_type": "back", "image_content": "not_a_product"}
+    assert result == {
+        "image_type": "back",
+        "image_content": "not_a_product",
+        "classify_confidence": 0.3,
+    }
+
+
+def test_classify_side_flags_non_skincare(mock_gemini):
+    mock_gemini(ImageSide(content="non_skincare_product", side="front", confidence=0.9))
+    result = scanner.classify_side_node({"image_type": None, "image_path": "x.jpg"})
+    assert result["image_content"] == "non_skincare_product"
+    # A non-skincare frame never seeds a web-search identity.
+    assert "extracted_data" not in result
 
 
 # --------------------------------------------------------------------------- #
@@ -121,10 +159,25 @@ def test_quality_flags_uniform_blank_frame(tmp_path):
     assert assess_image_quality(path) == "blank"
 
 
+def _detailed_image(size: int = 64) -> Image.Image:
+    """A checkerboard: mid mean, high contrast, and sharp edges (in focus)."""
+    import numpy as np
+
+    tile = np.indices((size, size)).sum(axis=0) % 2 * 255
+    return Image.fromarray(tile.astype("uint8")).convert("RGB")
+
+
 def test_quality_passes_a_normal_contrasty_image(tmp_path):
-    # A gradient has plenty of spread and mid-range mean → worth a VLM call.
-    path = _save(Image.linear_gradient("L").convert("RGB"), tmp_path)
+    # Sharp detail, spread-out histogram, mid-range mean → worth a VLM call.
+    path = _save(_detailed_image(), tmp_path)
     assert assess_image_quality(path) is None
+
+
+def test_quality_flags_detail_free_blur(tmp_path):
+    # A smooth gradient has contrast but zero fine detail — exactly what severe
+    # defocus produces. The Laplacian focus gate must catch it.
+    path = _save(Image.linear_gradient("L").convert("RGB"), tmp_path)
+    assert assess_image_quality(path) == "blurry"
 
 
 def test_quality_reports_unreadable_bytes(tmp_path):
@@ -145,6 +198,30 @@ def test_flash_scanner_maps_extraction_to_state(mock_gemini):
     assert result["extracted_data"] is extraction
     assert result["inference_confidence"] == 0.88
     assert result["model_used"] == "flash"
+    # Placeholder names resolve to nothing in the ledger → grounded rate 0.0.
+    assert result["ledger_match_rate"] == 0.0
+
+
+def test_flash_scanner_grounds_match_rate_in_the_ledger(mock_gemini):
+    from src.state import Ingredient
+
+    extraction = make_extraction(
+        ingredients=[
+            Ingredient(name_raw="水", source_language="JP"),  # ledger hit
+            Ingredient(name_raw="グリセリン", source_language="JP"),  # ledger hit
+            Ingredient(name_raw="ZZ_NOT_AN_INGREDIENT", source_language="JP"),
+        ]
+    )
+    mock_gemini(extraction)
+    result = scanner.flash_scanner_node({"image_path": "x.jpg"})
+    assert result["ledger_match_rate"] == pytest.approx(2 / 3)
+
+
+def test_flash_scanner_no_ingredients_has_no_match_rate(mock_gemini):
+    mock_gemini(make_extraction(0))
+    result = scanner.flash_scanner_node({"image_path": "x.jpg"})
+    # Nothing to ground → None (routers treat that as "no signal", not failure).
+    assert result["ledger_match_rate"] is None
 
 
 def test_flash_scanner_threads_correction_feedback_into_prompt(mock_gemini):

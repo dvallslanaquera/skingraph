@@ -6,11 +6,13 @@ import pytest
 
 from src import graph
 from src.config import (
+    CLASSIFY_CONFIDENCE_THRESHOLD,
     FLASH_ACCEPT_THRESHOLD,
     FLASH_ESCALATE_THRESHOLD,
     IDENTITY_CONFIDENCE_THRESHOLD,
     MAX_CORRECTIONS,
     MIN_INGREDIENTS_FOR_AUDIT,
+    MIN_LEDGER_MATCH_RATE,
 )
 from src.messages import RETAKE_DEFAULT
 from tests.helpers import make_extraction
@@ -26,6 +28,7 @@ from tests.helpers import make_extraction
         ("too_dark", "reject"),
         ("too_bright", "reject"),
         ("blank", "reject"),
+        ("blurry", "reject"),
         ("unreadable", "reject"),
     ],
 )
@@ -93,6 +96,30 @@ def test_classify_router_front_uncertain_asks_to_confirm():
     assert graph.classify_router(state) == "uncertain"
 
 
+def test_classify_router_rejects_non_skincare():
+    state = {"image_content": "non_skincare_product", "image_type": "back"}
+    assert graph.classify_router(state) == "reject"
+
+
+def test_classify_router_rejects_untrusted_verdict():
+    # A verdict the classifier itself doesn't trust must not be acted on.
+    state = {
+        "image_content": "product",
+        "image_type": "back",
+        "classify_confidence": CLASSIFY_CONFIDENCE_THRESHOLD - 0.01,
+    }
+    assert graph.classify_router(state) == "reject"
+
+
+def test_classify_router_accepts_confident_verdict():
+    state = {
+        "image_content": "product",
+        "image_type": "back",
+        "classify_confidence": CLASSIFY_CONFIDENCE_THRESHOLD,
+    }
+    assert graph.classify_router(state) == "back"
+
+
 # --------------------------------------------------------------------------- #
 # inference_router
 # --------------------------------------------------------------------------- #
@@ -132,6 +159,42 @@ def test_inference_router_defaults_attempts_to_zero():
     assert graph.inference_router(state) == "correct"
 
 
+def test_inference_router_demotes_confident_but_ungrounded_extraction():
+    # Self-reported confidence is high, but almost nothing the scanner "read"
+    # resolves to a known ingredient — grounded signal wins → retry, not accept.
+    state = {
+        "inference_confidence": 0.99,
+        "correction_attempts": 0,
+        "ledger_match_rate": MIN_LEDGER_MATCH_RATE - 0.01,
+    }
+    assert graph.inference_router(state) == "correct"
+
+
+def test_inference_router_escalates_ungrounded_when_corrections_exhausted():
+    state = {
+        "inference_confidence": 0.99,
+        "correction_attempts": MAX_CORRECTIONS,
+        "ledger_match_rate": 0.0,
+    }
+    assert graph.inference_router(state) == "escalate"
+
+
+def test_inference_router_accepts_grounded_extraction():
+    state = {
+        "inference_confidence": FLASH_ACCEPT_THRESHOLD,
+        "correction_attempts": 0,
+        "ledger_match_rate": MIN_LEDGER_MATCH_RATE,
+    }
+    assert graph.inference_router(state) == "accept"
+
+
+def test_inference_router_treats_no_rate_as_grounded():
+    # None = nothing to check (e.g. seeded front identity) — other routers gate
+    # on ingredient count; the grounding check must not block here.
+    state = {"inference_confidence": 0.9, "ledger_match_rate": None}
+    assert graph.inference_router(state) == "accept"
+
+
 # --------------------------------------------------------------------------- #
 # early_registry_router
 # --------------------------------------------------------------------------- #
@@ -156,6 +219,15 @@ def test_pro_scanner_router_accept_at_threshold():
 
 def test_pro_scanner_router_retake_below_threshold():
     state = {"inference_confidence": FLASH_ACCEPT_THRESHOLD - 0.01}
+    assert graph.pro_scanner_router(state) == "retake"
+
+
+def test_pro_scanner_router_retake_when_ungrounded():
+    # Even the pro model doesn't get to ship OCR garbage on self-confidence.
+    state = {
+        "inference_confidence": 0.99,
+        "ledger_match_rate": MIN_LEDGER_MATCH_RATE - 0.01,
+    }
     assert graph.pro_scanner_router(state) == "retake"
 
 
@@ -243,6 +315,16 @@ def test_web_result_router_not_found_with_no_extraction():
     assert graph.web_result_router({"extracted_data": None}) == "not_found"
 
 
+def test_web_result_router_mismatch_wins_over_count():
+    # A retrieved list that belongs to a different product must never be
+    # audited, even if it's long enough.
+    state = {
+        "web_identity_mismatch": True,
+        "extracted_data": make_extraction(MIN_INGREDIENTS_FOR_AUDIT),
+    }
+    assert graph.web_result_router(state) == "mismatch"
+
+
 # --------------------------------------------------------------------------- #
 # inline nodes: correction / retake
 # --------------------------------------------------------------------------- #
@@ -255,6 +337,15 @@ def test_correction_node_builds_feedback_and_increments_attempts():
     assert result["correction_attempts"] == 2
     assert "0.62" in result["correction_feedback"]
     assert "INCOMPLETE" in result["correction_feedback"]
+
+
+def test_correction_node_names_unmatched_ingredients():
+    # Placeholder names resolve to nothing in the ledger, so the feedback names
+    # them specifically instead of a generic "look more carefully".
+    extraction = make_extraction(2, extraction_confidence=0.62)
+    result = graph.correction_node({"extracted_data": extraction})
+    assert "ing_0" in result["correction_feedback"]
+    assert "ing_1" in result["correction_feedback"]
 
 
 def test_correction_node_defaults_attempts_to_zero():
@@ -293,3 +384,48 @@ def test_retake_node_ignores_valid_product_content():
     # must NOT be mistaken for an OOD rejection — it gets the default message.
     result = graph.retake_node({"image_content": "product"})
     assert result["notice"].en == RETAKE_DEFAULT["en"]
+
+
+def test_retake_node_blurry_reason_message():
+    result = graph.retake_node({"image_quality_issue": "blurry"})
+    assert "blurry" in result["notice"].en.lower()
+
+
+def test_retake_node_non_skincare_reason_message():
+    result = graph.retake_node({"image_content": "non_skincare_product"})
+    assert "skincare" in result["notice"].en.lower()
+
+
+def test_retake_node_low_classify_confidence_message():
+    result = graph.retake_node(
+        {
+            "image_content": "product",
+            "classify_confidence": CLASSIFY_CONFIDENCE_THRESHOLD - 0.01,
+        }
+    )
+    assert "confidence" in result["notice"].en.lower() or "tell" in result["notice"].en.lower()
+
+
+def test_retake_node_captures_rejection_when_enabled(monkeypatch, tmp_path):
+    # The flywheel: with the store enabled, a bounced frame is copied with a
+    # sidecar carrying the reason + scores.
+    from src import config, rejection_store
+
+    img = tmp_path / "frame.jpg"
+    img.write_bytes(b"fake image bytes")
+    monkeypatch.setattr(config, "REJECTION_STORE_ENABLED", True)
+    monkeypatch.setattr(config, "REJECTION_STORE_PATH", str(tmp_path / "rejections"))
+
+    graph.retake_node(
+        {"image_path": str(img), "image_quality_issue": "too_dark", "trace_id": "t-1"}
+    )
+
+    files = list((tmp_path / "rejections").iterdir())
+    assert len(files) == 2  # image copy + JSON sidecar
+    sidecar = next(f for f in files if f.suffix == ".json")
+    import json
+
+    meta = json.loads(sidecar.read_text(encoding="utf-8"))
+    assert meta["reason"] == "too_dark"
+    assert meta["trace_id"] == "t-1"
+    assert rejection_store  # imported for clarity; store exercised via retake_node

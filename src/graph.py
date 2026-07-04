@@ -4,21 +4,24 @@ import logging
 from langgraph.graph import END, StateGraph
 
 from src.config import (
+    CLASSIFY_CONFIDENCE_THRESHOLD,
     FLASH_ACCEPT_THRESHOLD,
     FLASH_ESCALATE_THRESHOLD,
     IDENTITY_CONFIDENCE_THRESHOLD,
     MAX_CORRECTIONS,
     MIN_INGREDIENTS_FOR_AUDIT,
+    MIN_LEDGER_MATCH_RATE,
 )
 from src.messages import REJECTION_MESSAGES, RETAKE_DEFAULT
 from src.nodes.auditor import auditor_node
 from src.nodes.coach import coach_node
-from src.nodes.normalizer import normalizer_node
+from src.nodes.normalizer import ledger_match, normalizer_node
 from src.nodes.registry import early_registry_check_node, registry_lookup_node
 from src.nodes.routine_advisor import routine_advisor_node
 from src.nodes.scanner import classify_side_node, flash_scanner_node, pro_scanner_node
 from src.nodes.websearch import confirm_identity_node, search_failed_node, web_search_node
-from src.preprocess import assess_image_quality
+from src.preprocess import assess_image_quality, decode_jan
+from src.rejection_store import record_rejection
 from src.state import AgentState, Notice
 
 
@@ -27,7 +30,10 @@ def quality_gate_node(state: AgentState) -> dict:
     issue = assess_image_quality(state["image_path"])
     if issue:
         logging.warning("Image failed Tier-1 pixel pre-check: %s", issue)
-    return {"image_quality_issue": issue}
+        return {"image_quality_issue": issue}
+    # A frame worth analysing may carry a barcode — the strongest identity key
+    # the registry lookup can get. Deterministic and free (no-op without pyzbar).
+    return {"image_quality_issue": issue, "jan_code": decode_jan(state["image_path"])}
 
 
 def quality_router(state: AgentState) -> str:
@@ -48,24 +54,46 @@ def side_router(state: AgentState) -> str:
 def classify_router(state: AgentState) -> str:
     """Route after the Tier-2 content + side classification.
 
-    A non-product or multi-product frame is rejected before any extraction runs
-    (the structured-output scanner cannot say "no product" — it would fabricate
-    one). A back photo carries the ingredient list, so it goes to the scanner. A
-    front photo has no readable list, so it skips straight to the identity-gated
-    web fallback — the classifier already read the branding, so we reuse
-    identity_router here instead of a separate verify_identity VLM call.
+    A frame that isn't exactly one skincare product is rejected before any
+    extraction runs (the structured-output scanner cannot say "no product" — it
+    would fabricate one), and so is a verdict the classifier itself doesn't
+    trust: acting on a coin-flip classification is how wrong products get
+    audited. A back photo carries the ingredient list, so it goes to the
+    scanner. A front photo has no readable list, so it skips straight to the
+    identity-gated web fallback — the classifier already read the branding, so
+    we reuse identity_router here instead of a separate verify_identity call.
     """
-    if state.get("image_content") in ("not_a_product", "multiple_products"):
+    if state.get("image_content") in (
+        "not_a_product",
+        "non_skincare_product",
+        "multiple_products",
+    ):
+        return "reject"
+    conf = state.get("classify_confidence")
+    if conf is not None and conf < CLASSIFY_CONFIDENCE_THRESHOLD:
         return "reject"
     if side_router(state) == "front":
         return identity_router(state)
     return "back"
 
 
+def _extraction_grounded(state: AgentState) -> bool:
+    """Grounded acceptance check: the ledger match rate must not scream garbage.
+
+    The scanners' self-reported confidence is uncalibrated — the model grades
+    its own homework. The ledger match rate is verifiable: when almost nothing
+    the scanner "read" resolves to a known ingredient synonym, the extraction is
+    OCR noise no matter how confident the model claims to be. None (no
+    ingredients to check) is treated as grounded — other routers gate on count.
+    """
+    rate = state.get("ledger_match_rate")
+    return rate is None or rate >= MIN_LEDGER_MATCH_RATE
+
+
 def inference_router(state: AgentState) -> str:
     conf = state["inference_confidence"]
     attempts = state.get("correction_attempts", 0)
-    if conf >= FLASH_ACCEPT_THRESHOLD:
+    if conf >= FLASH_ACCEPT_THRESHOLD and _extraction_grounded(state):
         return "accept"
     if conf >= FLASH_ESCALATE_THRESHOLD and attempts < MAX_CORRECTIONS:
         return "correct"
@@ -77,7 +105,9 @@ def early_registry_router(state: AgentState) -> str:
 
 
 def pro_scanner_router(state: AgentState) -> str:
-    accept = state["inference_confidence"] >= FLASH_ACCEPT_THRESHOLD
+    accept = state["inference_confidence"] >= FLASH_ACCEPT_THRESHOLD and _extraction_grounded(
+        state
+    )
     return "accept" if accept else "retake"
 
 
@@ -90,6 +120,15 @@ def correction_node(state: AgentState) -> dict:
         f"(status: {extracted.system_status}). "
         "Re-examine any blurry, curved, or partially visible text more carefully."
     )
+    # Name the specific reads that resolve to no known ingredient — far more
+    # actionable for the retry than "look more carefully".
+    _, unmatched = ledger_match([ing.name_raw for ing in extracted.ingredients])
+    if unmatched:
+        sample = ", ".join(unmatched[:8])
+        feedback += (
+            f"\nThese extracted names match no known cosmetic ingredient and are "
+            f"likely misread: {sample}. Re-read them character by character."
+        )
     return {
         "correction_feedback": feedback,
         "correction_attempts": state.get("correction_attempts", 0) + 1,
@@ -97,16 +136,34 @@ def correction_node(state: AgentState) -> dict:
 
 
 def retake_node(state: AgentState) -> dict:
-    """Graceful exit for any unusable input: pixel-degenerate (Tier 1),
-    non/multi-product (Tier 2), or unreadable after both scanners (confidence)."""
+    """Graceful exit for any unusable input: pixel-degenerate (Tier 1), non-/
+    multi-/non-skincare-product or an untrusted classification (Tier 2), or
+    unreadable after both scanners (confidence)."""
     reason = state.get("image_quality_issue")
     if not reason and state.get("image_content") in (
         "not_a_product",
+        "non_skincare_product",
         "multiple_products",
     ):
         reason = state.get("image_content")
+    classify_conf = state.get("classify_confidence")
+    if not reason and classify_conf is not None and classify_conf < CLASSIFY_CONFIDENCE_THRESHOLD:
+        reason = "low_confidence"
     logging.warning("Bouncing input back to user (reason: %s).", reason or "low_confidence")
     message = REJECTION_MESSAGES.get(reason or "", RETAKE_DEFAULT)
+    # Opt-in flywheel: keep the bounced frame + why, so the OOD gates can be
+    # calibrated against real failures (eval/vision_eval.py).
+    record_rejection(
+        state.get("image_path", ""),
+        reason or "low_extraction_confidence",
+        {
+            "trace_id": state.get("trace_id"),
+            "classify_confidence": classify_conf,
+            "image_content": state.get("image_content"),
+            "inference_confidence": state.get("inference_confidence"),
+            "ledger_match_rate": state.get("ledger_match_rate"),
+        },
+    )
     return {
         "retake_requested": True,
         "is_ready_for_logic": False,
@@ -146,6 +203,10 @@ def identity_router(state: AgentState) -> str:
 
 
 def web_result_router(state: AgentState) -> str:
+    # A list that belongs to a different product is worse than no list at all —
+    # route to confirm_identity so the user corrects the name, never to audit.
+    if state.get("web_identity_mismatch"):
+        return "mismatch"
     data = state.get("extracted_data")
     count = len(data.ingredients) if data else 0
     return "found" if count >= MIN_INGREDIENTS_FOR_AUDIT else "not_found"
@@ -171,8 +232,10 @@ workflow.add_node("retake_request", retake_node)
 
 workflow.set_entry_point("image_quality_gate")
 
-# Tier 1: deterministic pixel gate runs first, even on the CLI/API override path
-# (which skips the Tier-2 classifier). Degenerate frames never reach the VLM.
+# Tier 1: deterministic pixel gate runs first. Degenerate frames never reach
+# the VLM. A caller's image_type override no longer skips the Tier-2 classifier
+# (it only pins the side): skipping left non-product frames unguarded and
+# front-photo overrides with no identity read.
 workflow.add_conditional_edges(
     "image_quality_gate",
     quality_router,
@@ -245,6 +308,7 @@ workflow.add_conditional_edges(
     {
         "found": "normalizer",
         "not_found": "search_failed",
+        "mismatch": "confirm_identity",
     },
 )
 

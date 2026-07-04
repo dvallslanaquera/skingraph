@@ -7,18 +7,23 @@ from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from pydantic import BaseModel, Field
 
-from src.config import FLASH_MODEL, PRO_MODEL
+from src.config import FLASH_MODEL, OCR_CROSS_CHECK_ENABLED, PRO_MODEL
+from src.nodes.normalizer import ledger_match
+from src.ocr_check import ocr_agreement
 from src.preprocess import encode_image
 from src.prompts.scanner import CLASSIFY_PROMPT, SCANNER_SYSTEM_PROMPT
 from src.state import AgentState, ProductExtraction
 
 
 class ImageSide(BaseModel):
-    content: Literal["product", "not_a_product", "multiple_products"] = Field(
+    content: Literal[
+        "product", "not_a_product", "non_skincare_product", "multiple_products"
+    ] = Field(
         default="product",
         description=(
-            "What the photo shows: one analysable product, no product at all, "
-            "or several distinct products sharing one frame."
+            "What the photo shows: one analysable skincare product, no product "
+            "at all, a product that is NOT skincare (food, supplements, "
+            "haircare, cleaning...), or several distinct products in one frame."
         ),
     )
     side: Literal["front", "back"] = Field(description="Which side of the product the photo shows.")
@@ -51,9 +56,14 @@ def build_vlm(model: str, schema, *, temperature: float = 0.0):
     ).with_structured_output(schema)
 
 
-def image_message(text: str, image_path: str) -> HumanMessage:
-    """A HumanMessage carrying a text prompt plus the preprocessed base64 image."""
-    base64_image = encode_image(image_path)
+def image_message(text: str, image_path: str, *, profile: str = "ocr") -> HumanMessage:
+    """A HumanMessage carrying a text prompt plus the preprocessed base64 image.
+
+    ``profile`` picks the preprocessing stack: "light" for classification /
+    identity reads (the heavy OCR stack distorts logos and brand colours),
+    "ocr" for back-label ingredient extraction.
+    """
+    base64_image = encode_image(image_path, profile)
     return HumanMessage(
         content=[
             {"type": "text", "text": text},
@@ -68,35 +78,49 @@ def image_message(text: str, image_path: str) -> HumanMessage:
 def classify_side_node(state: AgentState) -> dict[str, Any]:
     """Classify the photo's content (Tier 2) and which side it shows.
 
-    In one VLM call this both decides front vs back AND flags out-of-distribution
-    frames — ``not_a_product`` / ``multiple_products`` — so the graph can reject
-    them before the structured-output scanner is forced to fabricate a product.
-    An explicitly passed ``image_type`` (CLI override) wins and skips the call;
-    the Tier-1 pixel gate still guards that path.
+    In one VLM call this decides front vs back, flags out-of-distribution
+    frames — ``not_a_product`` / ``non_skincare_product`` / ``multiple_products``
+    — AND reads the branding, so the graph can reject bad frames before the
+    structured-output scanner is forced to fabricate a product.
+
+    The classification now runs even when the caller passed an explicit
+    ``image_type`` override: the override pins the *side*, but skipping the call
+    entirely left two holes — a non-product frame with an override went straight
+    to the scanner (which cannot say "no product"), and an overridden *front*
+    photo reached the identity gate with no identity read at all, dead-ending
+    every such scan at confirm_identity.
     """
     override = state.get("image_type")
-    if override in ("front", "back"):
-        logging.info("Image side overridden by caller: %s", override)
-        return {"image_type": override}
+    if override not in ("front", "back"):
+        override = None
 
     logging.info("Classifying image content + side...")
     llm = build_vlm(FLASH_MODEL, ImageSide)
-    result = cast(ImageSide, llm.invoke([image_message(CLASSIFY_PROMPT, state["image_path"])]))
+    result = cast(
+        ImageSide,
+        llm.invoke([image_message(CLASSIFY_PROMPT, state["image_path"], profile="light")]),
+    )
+    side = override or result.side
+    if override and override != result.side:
+        logging.info(
+            "Caller override keeps side=%s (classifier saw %s).", override, result.side
+        )
     logging.info(
         "Image classified: content=%s side=%s (confidence %.2f)",
         result.content,
-        result.side,
+        side,
         result.confidence,
     )
     out: dict[str, Any] = {
-        "image_type": result.side,
+        "image_type": side,
         "image_content": result.content,
+        "classify_confidence": result.confidence,
     }
     # A front photo has no ingredient list to scan, so seed the identity the web
     # fallback needs directly from this call's branding read — no separate
     # verify_identity VLM pass. Back photos get their identity from the scanner
     # instead, so we leave identity_confidence unset for them.
-    if result.side == "front" and result.content == "product":
+    if side == "front" and result.content == "product":
         logging.info(
             "Front photo identity: %s — %s (confidence %.2f)",
             result.brand,
@@ -126,11 +150,31 @@ def _run_scanner(state: AgentState, *, model: str, prompt: str, model_tag: str) 
         model_tag,
         extracted.extraction_confidence,
     )
-    return {
+    # Grounded quality signal the router can trust: how much of what the model
+    # "read" resolves to known ingredient names (exact ledger tier, offline).
+    rate, unmatched = ledger_match([ing.name_raw for ing in extracted.ingredients])
+    if rate is not None:
+        logging.info(
+            "Ledger match rate: %.2f (%d/%d unmatched)",
+            rate,
+            len(unmatched),
+            len(extracted.ingredients),
+        )
+    out: dict[str, Any] = {
         "extracted_data": extracted,
         "inference_confidence": extracted.extraction_confidence,
+        "ledger_match_rate": rate,
         "model_used": model_tag,
     }
+    # Advisory cross-check against a local OCR pass (opt-in; needs yomitoku).
+    if OCR_CROSS_CHECK_ENABLED:
+        agreement = ocr_agreement(
+            state["image_path"], [ing.name_raw for ing in extracted.ingredients]
+        )
+        if agreement is not None:
+            logging.info("OCR cross-check agreement: %.2f", agreement)
+        out["ocr_agreement"] = agreement
+    return out
 
 
 # Lightweight scanner (Flash Gemini). On a correction retry, the deterministic

@@ -119,3 +119,49 @@ def test_same_score_differs_between_early_and_normal(patch_search):
     patch_search(PAYLOAD, score)
     assert registry.registry_lookup_node(_state())["registry_matched"] is True
     assert registry.early_registry_check_node(_state())["registry_matched"] is False
+
+
+# --------------------------------------------------------------------------- #
+# JAN/EAN tier (deterministic, checked before the vector search)
+# --------------------------------------------------------------------------- #
+JAN = "4901301388513"
+
+
+@pytest.fixture
+def jan_index(monkeypatch):
+    monkeypatch.setattr(registry, "_JAN_INDEX", {JAN: PAYLOAD})
+
+
+def test_jan_from_state_hits_without_vector_search(patch_search, jan_index):
+    patch_search(None, 0.0)  # the vector tier would miss — JAN must win first
+    state = {**_state(), "jan_code": JAN}
+    result = registry.registry_lookup_node(state)
+
+    assert result["registry_matched"] is True
+    assert result["inference_confidence"] == 1.0
+    assert result["ingredient_source"] == "registry"
+    assert patch_search.calls == []  # no embedding/vector call was needed
+
+
+def test_jan_read_off_label_by_vlm_also_hits(patch_search, jan_index):
+    patch_search(None, 0.0)
+    state = {"extracted_data": make_extraction(jan_code=JAN)}
+    assert registry.registry_lookup_node(state)["registry_matched"] is True
+    assert patch_search.calls == []
+
+
+def test_unknown_jan_falls_back_to_vector_match(patch_search, jan_index):
+    patch_search(PAYLOAD, PRODUCT_MATCH_THRESHOLD)
+    state = {**_state(), "jan_code": "9999999999999"}
+    result = registry.registry_lookup_node(state)
+    assert result["registry_matched"] is True
+    assert result["inference_confidence"] == PRODUCT_MATCH_THRESHOLD
+    assert patch_search.calls == ["Curel Cream"]
+
+
+def test_jan_index_loads_from_registry_file(monkeypatch):
+    # The real data file carries JAN keys — the index must pick them up.
+    monkeypatch.setattr(registry, "_JAN_INDEX", None)
+    index = registry._jan_index()
+    assert JAN in index
+    assert index[JAN]["brand"] == "Cetaphil"

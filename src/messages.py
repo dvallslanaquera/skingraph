@@ -58,6 +58,17 @@ REJECTION_MESSAGES = {
             "写真（JPEGまたはPNG）をアップロードしてください。"
         ),
     },
+    "blurry": {
+        "en": (
+            "This photo is too blurry to read — the text has no sharp detail. "
+            "Please hold the camera steady, tap to focus on the label, and "
+            "retake the photo."
+        ),
+        "ja": (
+            "お写真のピントが大きく外れており、文字を読み取ることができません。"
+            "カメラを安定させ、ラベルにピントを合わせて撮り直してください。"
+        ),
+    },
     "not_a_product": {
         "en": (
             "I couldn't find a skincare product in this photo. Please take a clear "
@@ -66,6 +77,31 @@ REJECTION_MESSAGES = {
         "ja": (
             "お写真からスキンケア製品を確認できませんでした。製品1点のラベルが"
             "はっきり写るように撮影してください。"
+        ),
+    },
+    "non_skincare_product": {
+        "en": (
+            "This looks like a product, but not a skincare one — I can only "
+            "analyse skincare (cleansers, toners, serums, moisturizers, "
+            "sunscreens, masks and similar). Please photograph a skincare "
+            "product's label."
+        ),
+        "ja": (
+            "製品は写っていますが、スキンケア製品ではないようです。分析できるのは"
+            "スキンケア製品（洗顔料・化粧水・美容液・保湿剤・日焼け止め・マスク等）"
+            "のみです。スキンケア製品のラベルを撮影してください。"
+        ),
+    },
+    "low_confidence": {
+        "en": (
+            "I couldn't tell with confidence what this photo shows. Please "
+            "retake it with the single product filling the frame, in good "
+            "light and with the label facing the camera."
+        ),
+        "ja": (
+            "お写真に何が写っているかを十分な確度で判定できませんでした。"
+            "明るい場所で、製品1点がラベルを正面に向けて画面いっぱいに写るように"
+            "撮り直してください。"
         ),
     },
     "multiple_products": {
@@ -94,6 +130,25 @@ CONFIRM_IDENTITY = {
         "おそらく「{guess}」かと思われます。成分を正確にお調べするため、"
         "ブランド名と製品名をご確認いただくか、正面ラベルをより鮮明に"
         "撮り直してください。"
+    ),
+}
+
+# Web-mismatch exit: a list was found online but it belongs to a different
+# product than the one read off the photo — never audit the wrong ingredients.
+# Format with guess="Brand — Product" (the identity read off the photo).
+WEB_MISMATCH = {
+    "en": (
+        "I read this product as '{guess}', but the ingredient list I found "
+        "online belongs to a different product, so I didn't use it. Please "
+        "confirm the exact brand and product name — or photograph the "
+        "ingredient list (全成分) on the back label, which is the most "
+        "reliable option."
+    ),
+    "ja": (
+        "製品を「{guess}」と読み取りましたが、オンラインで見つかった全成分リストは"
+        "別の製品のものだったため、使用しませんでした。正確なブランド名と製品名を"
+        "ご確認いただくか、最も確実な方法として、背面ラベルの全成分表示を"
+        "撮影してください。"
     ),
 }
 

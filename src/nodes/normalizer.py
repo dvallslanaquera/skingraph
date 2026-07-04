@@ -60,6 +60,21 @@ def _load_index() -> dict[str, str]:
     return _INDEX_CACHE
 
 
+def ledger_match(names: list[str]) -> tuple[float | None, list[str]]:
+    """Grounded extraction-quality check: (exact-tier match rate, unmatched names).
+
+    Runs only the ledger's exact tier (free, deterministic, offline — no Qdrant)
+    over raw extracted names. The rate is a signal the VLM cannot fake: real
+    label text mostly resolves to known INCI synonyms, OCR garbage doesn't.
+    Returns (None, []) when there is nothing to check (e.g. a front photo).
+    """
+    if not names:
+        return None, []
+    index = _load_index()
+    unmatched = [n for n in names if _normalize(n) not in index]
+    return 1.0 - len(unmatched) / len(names), unmatched
+
+
 def _resolve(raw_name: str, index: dict[str, str]) -> tuple[str | None, str]:
     """Resolve one raw name to (inci_or_None, method).
 

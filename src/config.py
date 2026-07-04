@@ -27,6 +27,31 @@ MODEL_PRICES_USD_PER_MTOK = {
 MIN_MEAN_LUMINANCE = 18.0  # mean grey < this ⇒ near-black frame
 MAX_MEAN_LUMINANCE = 240.0  # mean grey > this ⇒ blown-out / blank-white frame
 MIN_LUMINANCE_STDDEV = 6.0  # contrast spread < this ⇒ near-uniform (no product)
+# Variance of the Laplacian (on an 800px-wide grayscale thumbnail) below this ⇒
+# severe defocus/motion blur with no fine detail to OCR. Deliberately low: a
+# soft-but-readable label scores well above this; calibrate with
+# eval/vision_eval.py --sweep once a labeled set exists.
+MIN_FOCUS_VARIANCE = 10.0
+
+# --- Tier-2 content/side classifier ------------------------------------------
+# Below this the classifier's own content+side confidence is too weak to act on
+# (fabrication risk in the structured-output scanner) — bounce for a retake
+# instead of trusting a coin-flip verdict.
+CLASSIFY_CONFIDENCE_THRESHOLD = 0.55
+
+# --- Extraction grounding ----------------------------------------------------
+# Fraction of extracted ingredient names that must resolve in the normalizer
+# ledger's exact tier for a scan to be accepted on the scanner's self-reported
+# confidence alone. This is a *grounded* signal (the model can't invent it): a
+# rate near zero means the "ingredients" are OCR garbage regardless of how
+# confident the scanner claims to be. Kept permissive — obscure-but-real
+# products with thin ledger coverage must still pass; tune via the eval harness.
+MIN_LEDGER_MATCH_RATE = 0.25
+
+# Product registry source of truth (also feeds scripts/build_index.py). The
+# deterministic JAN/EAN lookup reads it directly — barcode hits shouldn't
+# depend on vector similarity.
+REGISTRY_PATH = "data/registry.json"
 
 # Qdrant vector retrieval (embedded/local mode) — replaces the rapidfuzz scans
 # for both product registry lookup and ingredient normalization. The store is
@@ -137,3 +162,42 @@ MIN_INGREDIENTS_FOR_AUDIT = 5
 # Minimum confidence in the re-verified brand+product name before we trust it
 # enough to query the web for that specific product's ingredients.
 IDENTITY_CONFIDENCE_THRESHOLD = 0.8
+# Fuzzy match (rapidfuzz WRatio, 0-100) between the identity read off the photo
+# and the identity of the product the web search actually returned. Below this
+# the retrieved ingredient list likely belongs to a *different* product, so we
+# ask the user to confirm instead of silently auditing the wrong ingredients.
+WEB_IDENTITY_MATCH_THRESHOLD = 70.0
+# Source domains treated as reliable for ingredient lists; grounded citations
+# from these are surfaced first. Anything else is still usable (many official
+# brand domains can't be enumerated) but is logged and ranked after these.
+TRUSTED_SOURCE_DOMAINS = (
+    "incidecoder.com",
+    "cosdna.com",
+    "cosmetic-info.jp",
+    "ewg.org",
+    "skincarisma.com",
+    "cosme.net",
+)
+# On-disk cache for web-search results, keyed by normalized "brand|product".
+# Repeat scans of the same front label shouldn't re-pay a grounded search.
+WEB_CACHE_PATH = "data/web_cache.json"
+WEB_CACHE_TTL_DAYS = 30
+
+# --- Rejection flywheel (opt-in) ----------------------------------------------
+# When enabled, frames the pipeline bounces (Tier-1/Tier-2 rejects, scanner
+# retakes) are copied — with their reason + scores — into REJECTION_STORE_PATH
+# so they can be hand-labeled into the vision eval set. Off by default: user
+# photos can contain faces/PII, so persisting them is a deliberate decision
+# (see docs/ARCHITECTURE.md "Image data handling").
+REJECTION_STORE_ENABLED = os.getenv("REJECTION_STORE_ENABLED", "").lower() in ("1", "true", "yes")
+REJECTION_STORE_PATH = "data/rejections"
+REJECTION_STORE_MAX = 200  # oldest captures are pruned beyond this many
+
+# --- OCR cross-check (opt-in, advisory) ----------------------------------------
+# When enabled AND yomitoku is installed, back-label scans also run a local OCR
+# pass and record what fraction of the VLM's ingredient names appear in the OCR
+# text (state.ocr_agreement). Advisory only — logged and surfaced, not routed on.
+# Off by default: yomitoku pulls in torch, which the API image deliberately
+# excludes (512 MB Railway container).
+OCR_CROSS_CHECK_ENABLED = os.getenv("OCR_CROSS_CHECK", "").lower() in ("1", "true", "yes")
+OCR_AGREEMENT_FUZZ_THRESHOLD = 80  # rapidfuzz partial_ratio ≥ this counts as "seen in OCR"
