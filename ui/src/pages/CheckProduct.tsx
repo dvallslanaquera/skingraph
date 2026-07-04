@@ -149,7 +149,7 @@ export function CheckProduct() {
         </div>
       </header>
 
-      <section className="card">
+      <section className="check-hero" aria-label="Upload label">
         <div
           className={`dropzone${dragging ? " dragging" : ""}${
             preview ? " has-image" : ""
@@ -196,49 +196,139 @@ export function CheckProduct() {
           />
         </div>
 
-        <div className="upload-actions">
-          <button
-            type="button"
-            className="btn btn-primary btn-photo"
-            onClick={() => cameraInputRef.current?.click()}
-            disabled={scanning}
+        {/* the coach, peeking from beside the upload card */}
+        <aside className="check-coach">
+          <svg
+            className="cat-peek"
+            viewBox="0 0 120 120"
+            fill="none"
+            aria-hidden="true"
           >
-            {t("check.takePhoto")}
-          </button>
-          <span className="muted upload-actions-hint">
-            {t("check.uploadHint")}
-          </span>
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/*"
-            capture="environment"
-            hidden
-            onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
-          />
-        </div>
+            {/* ears */}
+            <path
+              d="M34 52 28 28 52 42Z"
+              fill="#fff"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M86 52 92 28 68 42Z"
+              fill="#fff"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinejoin="round"
+            />
+            <path d="M35 46 33 36 44 42Z" fill="#fceae6" />
+            <path d="M85 46 87 36 76 42Z" fill="#fceae6" />
+            {/* head */}
+            <path
+              d="M60 38c18 0 30 14 30 31 0 18-13 30-30 30S30 87 30 69c0-17 12-31 30-31Z"
+              fill="#fff"
+              stroke="currentColor"
+              strokeWidth="3"
+            />
+            {/* calm closed eyes */}
+            <path
+              className="eye"
+              d="M44 66c2.5 3 6.5 3 9 0"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            <path
+              className="eye"
+              d="M67 66c2.5 3 6.5 3 9 0"
+              stroke="currentColor"
+              strokeWidth="3"
+              strokeLinecap="round"
+            />
+            {/* nose + mouth */}
+            <path d="M56 75h8l-4 4Z" fill="#ee9e92" />
+            <path
+              d="M60 79c-1.5 3-5 3-6.5 1M60 79c1.5 3 5 3 6.5 1"
+              stroke="currentColor"
+              strokeWidth="2.4"
+              strokeLinecap="round"
+            />
+            {/* whiskers */}
+            <path
+              d="M40 72 22 69M41 78 24 80M80 72 98 69M79 78 96 80"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              opacity="0.7"
+            />
+          </svg>
 
-        {file && (
-          <div className="scan-controls">
-            <div className="scan-controls-actions">
-              <button
-                className="btn btn-ghost"
-                onClick={reset}
-                disabled={scanning}
-              >
-                {t("common.clear")}
-              </button>
-              <button
-                className="btn btn-primary"
-                onClick={() => void handleScan()}
-                disabled={scanning}
-              >
-                {scanning ? t("check.scanning") : t("check.scan")}
-              </button>
-            </div>
+          <div className="coach-quote">
+            <p>{t("check.coachLine")}</p>
+            <span className="coach-by">
+              <span className="cat-chip" aria-hidden="true">
+                <svg viewBox="0 0 120 120" fill="none">
+                  <path d="M34 52 28 30 50 43Z" fill="currentColor" />
+                  <path d="M86 52 92 30 70 43Z" fill="currentColor" />
+                  <path
+                    d="M60 40c17 0 28 13 28 29s-12 28-28 28-28-12-28-28 11-29 28-29Z"
+                    fill="currentColor"
+                  />
+                  <path
+                    d="M48 66c2 2.5 6 2.5 8 0M64 66c2 2.5 6 2.5 8 0"
+                    stroke="#fff"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                  <path d="M57 75h6l-3 3Z" fill="#fff" />
+                </svg>
+              </span>
+              {t("check.coachBy")}
+            </span>
           </div>
-        )}
+        </aside>
       </section>
+
+      <div className="upload-actions">
+        <button
+          type="button"
+          className="btn btn-primary btn-photo"
+          onClick={() => cameraInputRef.current?.click()}
+          disabled={scanning}
+        >
+          {t("check.takePhoto")}
+        </button>
+        <span className="muted upload-actions-hint">
+          {t("check.uploadHint")}
+        </span>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          hidden
+          onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
+        />
+      </div>
+
+      {file && (
+        <div className="scan-controls">
+          <div className="scan-controls-actions">
+            <button
+              className="btn btn-ghost"
+              onClick={reset}
+              disabled={scanning}
+            >
+              {t("common.clear")}
+            </button>
+            <button
+              className="btn btn-primary"
+              onClick={() => void handleScan()}
+              disabled={scanning}
+            >
+              {scanning ? t("check.scanning") : t("check.scan")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && <div className="banner banner-error">{error}</div>}
 

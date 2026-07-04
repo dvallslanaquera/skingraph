@@ -129,6 +129,13 @@ export default function App() {
         {view === "profile" && <MyProfile />}
         {view === "routine" && <MyRoutine />}
         {view === "check" && <CheckProduct />}
+
+        <footer className="app-foot">
+          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z" />
+          </svg>
+          <span>LangGraph · FastAPI · Gemini</span>
+        </footer>
       </main>
 
       {/* on narrow screens the tabs relocate here */}

@@ -134,6 +134,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     "check.title": "Check Product",
     "check.eyebrow": "Scan any label",
+    "check.coachLine": "Point your camera at the label — I'll read the tricky bits for you. 🍃",
+    "check.coachBy": "Your SkinGraph coach",
     "check.sub.personalised": "Personalised for {name}.",
     "check.sub.anon": "Scanning anonymously — pick a user for personalised advice.",
     "check.takePhoto": "📷 Take a photo",
@@ -317,6 +319,8 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     "check.title": "製品チェック",
     "check.eyebrow": "ラベルをスキャン",
+    "check.coachLine": "ラベルをカメラに向けて。むずかしい部分は私が読みますよ。🍃",
+    "check.coachBy": "SkinGraphコーチ",
     "check.sub.personalised": "{name}さん向けにパーソナライズ。",
     "check.sub.anon": "匿名でスキャン中 — パーソナライズするにはユーザーを選択してください。",
     "check.takePhoto": "📷 写真を撮る",
