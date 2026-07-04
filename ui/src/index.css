@@ -161,8 +161,13 @@ h3,
 }
 
 .nav-icon {
-  font-size: 17px;
+  display: inline-flex;
+  align-items: center;
   line-height: 1;
+}
+
+.nav-icon svg {
+  display: block;
 }
 
 .topbar-spacer {
@@ -1075,7 +1080,8 @@ h3,
 }
 
 .empty-emoji {
-  font-size: 40px;
+  color: var(--accent);
+  margin-bottom: 6px;
 }
 
 .muted {
@@ -1262,6 +1268,43 @@ h3,
   margin-bottom: 18px;
 }
 
+/* Wraps the upload card so the botanical sprays can peek from behind its
+   corners without being clipped by the dropzone's own overflow:hidden. */
+.dropzone-wrap {
+  position: relative;
+}
+
+.dropzone-wrap .dropzone {
+  position: relative;
+  z-index: 1;
+}
+
+/* Subtle scattered leaves — same motif + colour as the landing scene, but
+   dialed back in opacity so they read as a soft backdrop, not decoration
+   competing with the card and the coach. */
+.dropzone-wrap .leaf-spray {
+  position: absolute;
+  z-index: 0;
+  color: var(--accent);
+  pointer-events: none;
+}
+
+.dropzone-wrap .leaf-spray.tl {
+  left: -32px;
+  bottom: -24px;
+  width: 116px;
+  opacity: 0.5;
+  transform: rotate(-8deg);
+}
+
+.dropzone-wrap .leaf-spray.br {
+  right: -22px;
+  bottom: 18px;
+  width: 82px;
+  opacity: 0.32;
+  transform: rotate(150deg);
+}
+
 /* The dropzone is the hero — a floating card matching the landing's .scan-card:
    solid surface, large radius, lift shadow. Dashed only while empty so it
    still reads as a drop target. */
@@ -1365,6 +1408,10 @@ h3,
 
 /* The camera button is the primary action on phones — give it real presence. */
 .btn-photo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   padding: 12px 22px;
   font-size: 15px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
@@ -1615,11 +1662,18 @@ h3,
 }
 
 .badge-coach {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-size: 13px;
   padding: 5px 10px;
   background: rgba(255, 255, 255, 0.7);
   border: 1px solid #cfe0da;
   color: var(--text);
+}
+
+.badge-coach svg {
+  color: var(--accent-strong);
 }
 
 .coach-integration {
@@ -1842,11 +1896,36 @@ h3,
     cursor: pointer;
     transition: color 0.15s;
   }
+  /* Active indicator: a filled pill behind the icon, matching the landing's
+     .nav-link active treatment. Hover lifts the colour; keyboard focus gets a
+     visible ring. */
   .bottom-nav-item .nav-icon {
-    font-size: 20px;
+    padding: 3px 16px;
+    border-radius: var(--radius-pill);
+    transition: background 0.15s, color 0.15s;
+  }
+  .bottom-nav-item:hover {
+    color: var(--text);
   }
   .bottom-nav-item.active {
     color: var(--accent-strong);
+  }
+  .bottom-nav-item.active .nav-icon {
+    background: var(--accent-soft);
+    color: var(--accent-strong);
+  }
+  .bottom-nav-item:focus-visible {
+    outline: 2.5px solid var(--accent-strong);
+    outline-offset: -3px;
+    border-radius: var(--radius-sm);
+  }
+  /* pull the sprays in so they never push past the tighter phone gutter */
+  .dropzone-wrap .leaf-spray.tl {
+    left: -14px;
+    width: 96px;
+  }
+  .dropzone-wrap .leaf-spray.br {
+    right: -8px;
   }
   .content {
     padding: 26px 18px 90px;

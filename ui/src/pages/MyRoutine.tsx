@@ -12,6 +12,7 @@ import type {
   RoutineDashboardCard,
   ScanResponse,
 } from "../api/types";
+import { CameraIcon, RoutineIcon } from "../components/icons";
 import { LeafScore } from "../components/LeafScore";
 import { NoUser } from "../components/NoUser";
 import { PipelineSteps } from "../components/PipelineSteps";
@@ -96,7 +97,9 @@ export function MyRoutine() {
       ) : products.length === 0 ? (
         !adding && (
           <div className="empty-state">
-            <div className="empty-emoji">🧴</div>
+            <div className="empty-emoji">
+              <RoutineIcon size={44} />
+            </div>
             <h2>{t("routine.empty.title")}</h2>
             <p>{t("routine.empty.body")}</p>
           </div>
@@ -372,7 +375,9 @@ function AddProductPanel({
               <img src={preview} alt="Label preview" className="preview-img" />
             ) : (
               <div className="dropzone-prompt">
-                <div className="empty-emoji">📷</div>
+                <div className="empty-emoji">
+                  <CameraIcon size={46} />
+                </div>
                 <p>
                   <strong>{t("dropzone.drop")}</strong>
                   {t("dropzone.browse")}

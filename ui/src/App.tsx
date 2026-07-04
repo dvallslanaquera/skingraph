@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import { Flag } from "./components/Flag";
+import { CheckIcon, ProfileIcon, RoutineIcon } from "./components/icons";
 import { UserMenu } from "./components/UserPicker";
 import { useI18n, type Lang } from "./i18n";
 import { LANGS, STRINGS } from "./i18n/strings";
@@ -9,10 +10,10 @@ import { MyRoutine } from "./pages/MyRoutine";
 
 type View = "profile" | "routine" | "check";
 
-const NAV: { id: View; icon: string }[] = [
-  { id: "profile", icon: "👤" },
-  { id: "routine", icon: "🧴" },
-  { id: "check", icon: "📷" },
+const NAV: { id: View; Icon: ComponentType<{ size?: number }> }[] = [
+  { id: "profile", Icon: ProfileIcon },
+  { id: "routine", Icon: RoutineIcon },
+  { id: "check", Icon: CheckIcon },
 ];
 
 const VIEWS = NAV.map((n) => n.id);
@@ -84,7 +85,7 @@ export default function App() {
                 onClick={() => goTo(item.id)}
               >
                 <span className="nav-icon" aria-hidden="true">
-                  {item.icon}
+                  <item.Icon size={18} />
                 </span>
                 <span>{t(`nav.${item.id}.label`)}</span>
               </button>
@@ -148,7 +149,7 @@ export default function App() {
             onClick={() => goTo(item.id)}
           >
             <span className="nav-icon" aria-hidden="true">
-              {item.icon}
+              <item.Icon size={22} />
             </span>
             <span>{t(`nav.${item.id}.label`)}</span>
           </button>

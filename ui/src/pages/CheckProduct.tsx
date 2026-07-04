@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { ScanResponse } from "../api/types";
+import { CameraIcon } from "../components/icons";
 import { PipelineSteps } from "../components/PipelineSteps";
 import { ScanResult } from "../components/ScanResult";
 import { useUsers } from "../context/UserContext";
@@ -150,11 +151,30 @@ export function CheckProduct() {
       </header>
 
       <section className="check-hero" aria-label="Upload label">
-        <div
-          className={`dropzone${dragging ? " dragging" : ""}${
-            preview ? " has-image" : ""
-          }${scanning ? " scanning" : ""}`}
-          onDragOver={(e) => {
+        <div className="dropzone-wrap">
+          {/* botanical sprays, tucked behind the upload card corners — mirrors
+             the landing's .leaf-spray treatment (ui/index.html) */}
+          <svg className="leaf-spray tl" viewBox="0 0 120 90" fill="currentColor" aria-hidden="true">
+            <path d="M10 80C10 40 40 14 86 12c2 40-26 68-76 68Z" opacity="0.9" />
+            <path d="M10 80 86 14" stroke="#fff" strokeWidth="2" fill="none" />
+            <path
+              d="M52 47 38 40M64 33 53 24M40 60 28 56"
+              stroke="#fff"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+              fill="none"
+              opacity="0.8"
+            />
+          </svg>
+          <svg className="leaf-spray br" viewBox="0 0 120 90" fill="currentColor" aria-hidden="true">
+            <path d="M10 80C10 40 40 14 86 12c2 40-26 68-76 68Z" />
+          </svg>
+
+          <div
+            className={`dropzone${dragging ? " dragging" : ""}${
+              preview ? " has-image" : ""
+            }${scanning ? " scanning" : ""}`}
+            onDragOver={(e) => {
             if (scanning) return;
             e.preventDefault();
             setDragging(true);
@@ -174,7 +194,9 @@ export function CheckProduct() {
             <img src={preview} alt="Label preview" className="preview-img" />
           ) : (
             <div className="dropzone-prompt">
-              <div className="empty-emoji">📷</div>
+              <div className="empty-emoji">
+                <CameraIcon size={46} />
+              </div>
               <p>
                 <strong>{t("dropzone.drop")}</strong>
                 {t("dropzone.browse")}
@@ -194,6 +216,7 @@ export function CheckProduct() {
             hidden
             onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
           />
+          </div>
         </div>
 
         {/* the coach, peeking from beside the upload card */}
@@ -294,7 +317,8 @@ export function CheckProduct() {
           onClick={() => cameraInputRef.current?.click()}
           disabled={scanning}
         >
-          {t("check.takePhoto")}
+          <CameraIcon size={18} />
+          <span>{t("check.takePhoto")}</span>
         </button>
         <span className="muted upload-actions-hint">
           {t("check.uploadHint")}
