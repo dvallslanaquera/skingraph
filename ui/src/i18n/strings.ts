@@ -47,7 +47,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     "dropzone.drop": "Drop a label photo here",
     "dropzone.browse": " or click to browse",
-    "dropzone.hint": "Front or back of the product. Max 15 MB.",
+    "dropzone.hint": "Snap the front or back of the label — either works. Max 15 MB.",
 
     "profile.title": "My Profile",
     "profile.sub": "This data personalises every scan's safety check and coaching — it's used only to tailor your advice.",
@@ -148,6 +148,9 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "check.save.selectUser": "Select a user to save this product to a routine.",
     "check.nudge.text": "Tell me your skin type and I can tailor this to you.",
     "check.nudge.link": "Set up My Profile →",
+    "check.resultError.title": "Couldn't display this result.",
+    "check.resultError.body": "The scan finished but the result couldn't be shown. Please try scanning again.",
+    "check.resultError.retry": "Scan again",
 
     "pipeline.title": "Analysing…",
     "pipeline.step1": "Scanning the picture…",
@@ -232,7 +235,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
 
     "dropzone.drop": "成分表示の写真をここにドロップ",
     "dropzone.browse": " またはクリックして選択",
-    "dropzone.hint": "製品の表面または裏面。最大15MB。",
+    "dropzone.hint": "ラベルの表面でも裏面でも撮影OKです。最大15MB。",
 
     "profile.title": "プロフィール",
     "profile.sub": "このデータは、すべてのスキャンの安全チェックとアドバイスをあなた仕様にするためだけに使います。",
@@ -333,6 +336,9 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "check.save.selectUser": "この製品をルーティンに保存するにはユーザーを選択してください。",
     "check.nudge.text": "肌質を教えていただければ、あなたに合わせてご提案できます。",
     "check.nudge.link": "マイプロフィールを設定 →",
+    "check.resultError.title": "結果を表示できませんでした。",
+    "check.resultError.body": "スキャンは完了しましたが、結果を表示できませんでした。もう一度スキャンしてください。",
+    "check.resultError.retry": "もう一度スキャン",
 
     "pipeline.title": "分析中…",
     "pipeline.step1": "画像をスキャン中…",

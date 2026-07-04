@@ -41,11 +41,11 @@ export function ScanResult({ result }: { result: ScanResponse }) {
   // rendering alongside the English one. Pick per locale, falling back to English
   // if the JA list is absent (e.g. an older backend response).
   const safetyWarnings =
-    safety && lang === "ja" && safety.warnings_ja.length
+    safety && lang === "ja" && safety.warnings_ja?.length
       ? safety.warnings_ja
       : (safety?.warnings ?? []);
   const safetyConflicts =
-    safety && lang === "ja" && safety.ingredient_conflicts_ja.length
+    safety && lang === "ja" && safety.ingredient_conflicts_ja?.length
       ? safety.ingredient_conflicts_ja
       : (safety?.ingredient_conflicts ?? []);
 

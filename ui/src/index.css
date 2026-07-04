@@ -1019,6 +1019,37 @@ h3,
   white-space: nowrap;
 }
 
+/* Scoped fallback when a scan result fails to render: message on the left, a
+   retry action on the right. */
+.result-error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.result-error p {
+  margin: 4px 0 0;
+}
+
+/* Last-resort full-page fallback from the top-level ErrorBoundary. */
+.app-crash {
+  max-width: 480px;
+  margin: 15vh auto 0;
+  padding: 0 24px;
+  text-align: center;
+}
+
+.app-crash h1 {
+  margin-bottom: 8px;
+}
+
+.app-crash p {
+  color: var(--text-soft);
+  margin-bottom: 20px;
+}
+
 /* ---- follow-up Q&A ------------------------------------------------------- */
 
 .followup-thread {

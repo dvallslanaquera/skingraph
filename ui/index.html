@@ -805,12 +805,6 @@
         font-size: 15px;
         line-height: 1.85;
       }
-      .coach-msg + .coach-msg {
-        margin-top: 12px;
-        padding-top: 14px;
-        border-top: 1px dashed var(--line);
-        color: var(--ink-soft);
-      }
       .coach-foot {
         margin-top: 18px;
         display: flex;
@@ -1341,7 +1335,7 @@
               </div>
               <span class="chip note" style="margin-left:auto" data-i18n="coach.badge">4 / 5 leaves</span>
             </div>
-            <p class="coach-msg" data-i18n="coach.msgEn">This one suits your dehydrated skin beautifully — the snail mucin and hyaluronic acid are big drinks of water. It plays well with everything on your shelf. Use it morning and night, right after toner.</p>
+            <p class="coach-msg" hidden data-i18n="coach.msgEn">This one suits your dehydrated skin beautifully — the snail mucin and hyaluronic acid are big drinks of water. It plays well with everything on your shelf. Use it morning and night, right after toner.</p>
             <p class="coach-msg ja" lang="ja" data-i18n="coach.msgJa">乾燥が気になるあなたの肌にぴったり。スネルムチンとヒアルロン酸がたっぷりうるおいを届けます。お手持ちのアイテムとも相性よし。化粧水のあと、朝晩にどうぞ。</p>
             <div class="coach-foot">
               <span class="chip good"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg><span data-i18n="coach.f1">Pregnancy-safe</span></span>
@@ -1622,6 +1616,11 @@
         document.querySelectorAll("[data-i18n]").forEach((el) => {
           const v = dict[el.getAttribute("data-i18n")];
           if (v != null) el.innerHTML = v;
+        });
+        // The coach sample card carries an EN and a JA message; show only the
+        // one matching the active language.
+        document.querySelectorAll(".coach-msg").forEach((el) => {
+          el.hidden = el.classList.contains("ja") !== (lang === "ja");
         });
         document.querySelectorAll(".lang button").forEach((b) =>
           b.classList.toggle("on", b.dataset.lang === lang)

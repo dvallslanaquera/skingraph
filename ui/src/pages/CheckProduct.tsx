@@ -5,6 +5,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type { ScanResponse } from "../api/types";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 import { CameraIcon } from "../components/icons";
 import { PipelineSteps } from "../components/PipelineSteps";
 import { ScanResult } from "../components/ScanResult";
@@ -217,6 +218,31 @@ export function CheckProduct() {
             onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
           />
           </div>
+
+          {/* Camera button sits directly under the drop card — the primary
+              action on phones, where dragging/dropping is rarely an option. */}
+          <div className="upload-actions">
+            <button
+              type="button"
+              className="btn btn-primary btn-photo"
+              onClick={() => cameraInputRef.current?.click()}
+              disabled={scanning}
+            >
+              <CameraIcon size={18} />
+              <span>{t("check.takePhoto")}</span>
+            </button>
+            <span className="muted upload-actions-hint">
+              {t("check.uploadHint")}
+            </span>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              hidden
+              onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
+            />
+          </div>
         </div>
 
         {/* the coach, peeking from beside the upload card */}
@@ -310,29 +336,6 @@ export function CheckProduct() {
         </aside>
       </section>
 
-      <div className="upload-actions">
-        <button
-          type="button"
-          className="btn btn-primary btn-photo"
-          onClick={() => cameraInputRef.current?.click()}
-          disabled={scanning}
-        >
-          <CameraIcon size={18} />
-          <span>{t("check.takePhoto")}</span>
-        </button>
-        <span className="muted upload-actions-hint">
-          {t("check.uploadHint")}
-        </span>
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          hidden
-          onChange={(e) => chooseFile(e.target.files?.[0] ?? null)}
-        />
-      </div>
-
       {file && (
         <div className="scan-controls">
           <div className="scan-controls-actions">
@@ -367,7 +370,22 @@ export function CheckProduct() {
 
       {result && !scanning && (
         <>
-          <ScanResult result={result} />
+          <ErrorBoundary
+            resetKeys={[result]}
+            fallback={() => (
+              <div className="banner banner-error result-error">
+                <div>
+                  <strong>{t("check.resultError.title")}</strong>
+                  <p className="muted">{t("check.resultError.body")}</p>
+                </div>
+                <button className="btn btn-primary" onClick={reset}>
+                  {t("check.resultError.retry")}
+                </button>
+              </div>
+            )}
+          >
+            <ScanResult result={result} />
+          </ErrorBoundary>
 
           {!currentUserId && result.status === "complete" && (
             <div className="banner banner-nudge">
