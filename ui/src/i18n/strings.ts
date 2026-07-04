@@ -41,7 +41,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "userPicker.newUser": "+ New user",
 
     "noUser.title": "No user selected",
-    "noUser.body": "Pick a user from the sidebar (or create one) to {action}.",
+    "noUser.body": "Pick a user from the menu top-right (or create one) to {action}.",
     "noUser.action.profile": "view and edit a profile",
     "noUser.action.routine": "manage a routine",
 
@@ -133,6 +133,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "routine.manual.adding": "Adding…",
 
     "check.title": "Check Product",
+    "check.eyebrow": "Scan any label",
     "check.sub.personalised": "Personalised for {name}.",
     "check.sub.anon": "Scanning anonymously — pick a user for personalised advice.",
     "check.takePhoto": "📷 Take a photo",
@@ -173,12 +174,11 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "scan.coach.warnings": "Watch out for",
     "scan.coach.howToApply": "How to apply",
     "scan.coach.fit": "Fitting it into your routine",
-    "scan.meta.language": "Language",
     "scan.meta.source": "Ingredients from",
     "scan.meta.source.label": "Read from label",
     "scan.meta.source.registry": "Matched in registry",
     "scan.meta.source.web": "Found via web search",
-    "scan.meta.details": "engine: {model} · read confidence {pct}",
+    "scan.meta.details": "read confidence {pct}",
     "scan.followup.title": "Ask your coach",
     "scan.followup.placeholder": "e.g. Can I use this with my vitamin C serum?",
     "scan.followup.send": "Ask",
@@ -224,7 +224,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "userPicker.newUser": "+ 新規ユーザー",
 
     "noUser.title": "ユーザーが選択されていません",
-    "noUser.body": "サイドバーからユーザーを選択（または作成）すると、{action}ことができます。",
+    "noUser.body": "右上のメニューからユーザーを選択（または作成）すると、{action}ことができます。",
     "noUser.action.profile": "プロフィールを表示・編集する",
     "noUser.action.routine": "ルーティンを管理する",
 
@@ -316,6 +316,7 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "routine.manual.adding": "追加中…",
 
     "check.title": "製品チェック",
+    "check.eyebrow": "ラベルをスキャン",
     "check.sub.personalised": "{name}さん向けにパーソナライズ。",
     "check.sub.anon": "匿名でスキャン中 — パーソナライズするにはユーザーを選択してください。",
     "check.takePhoto": "📷 写真を撮る",
@@ -356,12 +357,11 @@ export const STRINGS: Record<Lang, Record<string, string>> = {
     "scan.coach.warnings": "注意事項",
     "scan.coach.howToApply": "使い方のポイント",
     "scan.coach.fit": "ルーティンへの取り入れ方",
-    "scan.meta.language": "言語",
     "scan.meta.source": "成分の取得元",
     "scan.meta.source.label": "ラベルから読み取り",
     "scan.meta.source.registry": "レジストリで照合済み",
     "scan.meta.source.web": "Web検索で取得",
-    "scan.meta.details": "エンジン：{model} ・ 読み取り信頼度 {pct}",
+    "scan.meta.details": "読み取り信頼度 {pct}",
     "scan.followup.title": "コーチに質問",
     "scan.followup.placeholder": "例：ビタミンC美容液と併用できますか？",
     "scan.followup.send": "質問する",

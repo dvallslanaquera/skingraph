@@ -137,6 +137,7 @@ export function CheckProduct() {
     <div className="page">
       <header className="page-header">
         <div>
+          <p className="page-eyebrow">{t("check.eyebrow")}</p>
           <h1>{t("check.title")}</h1>
           <p className="page-sub">
             {currentUser

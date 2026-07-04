@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Flag } from "./components/Flag";
-import { UserPicker } from "./components/UserPicker";
+import { UserMenu } from "./components/UserPicker";
 import { useI18n, type Lang } from "./i18n";
 import { LANGS, STRINGS } from "./i18n/strings";
 import { CheckProduct } from "./pages/CheckProduct";
@@ -48,75 +48,105 @@ export default function App() {
 
   return (
     <div className="app">
-      <aside className="sidebar">
-        <div className="brand">
-          <span className="brand-mark" aria-hidden="true">
-            {/* leaf + cat-ear mark — matches the landing page (ui/index.html) */}
-            <svg viewBox="0 0 34 34" fill="none">
-              <circle cx="17" cy="17" r="17" fill="#e6f1ea" />
-              <path d="M9 24c0-8 6-14 16-15-1 10-7 16-16 15Z" fill="#6db48c" />
-              <path
-                d="M9 24 24 9"
-                stroke="#fff"
-                strokeWidth="1.4"
-                strokeLinecap="round"
-              />
-              <path
-                d="M21 11.5l1.6-3 1.4 3M11 21.5l-2.6.6 1.7-2.2"
-                stroke="#4e9e78"
-                strokeWidth="1.3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <div>
-            <div className="brand-name">SkinGraph</div>
-            <div className="brand-sub">{t("brand.sub")}</div>
+      <header className="topbar">
+        <div className="topbar-inner">
+          <a className="topbar-logo" href="#check" aria-label="SkinGraph home">
+            <span className="brand-mark" aria-hidden="true">
+              {/* leaf + cat-ear mark — matches the landing page (ui/index.html) */}
+              <svg viewBox="0 0 34 34" fill="none">
+                <circle cx="17" cy="17" r="17" fill="#e6f1ea" />
+                <path d="M9 24c0-8 6-14 16-15-1 10-7 16-16 15Z" fill="#6db48c" />
+                <path
+                  d="M9 24 24 9"
+                  stroke="#fff"
+                  strokeWidth="1.4"
+                  strokeLinecap="round"
+                />
+                <path
+                  d="M21 11.5l1.6-3 1.4 3M11 21.5l-2.6.6 1.7-2.2"
+                  stroke="#4e9e78"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </span>
+            SkinGraph
+          </a>
+
+          {/* tabs sit immediately after the logo */}
+          <nav className="topbar-nav" aria-label="Primary">
+            {NAV.map((item) => (
+              <button
+                key={item.id}
+                className={`topbar-link${view === item.id ? " active" : ""}`}
+                aria-current={view === item.id ? "page" : undefined}
+                onClick={() => goTo(item.id)}
+              >
+                <span className="nav-icon" aria-hidden="true">
+                  {item.icon}
+                </span>
+                <span>{t(`nav.${item.id}.label`)}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="topbar-spacer" />
+
+          <div className="topbar-right">
+            <div className="topbar-lang" role="group" aria-label="Language">
+              {LANGS.map((l: Lang) => (
+                <button
+                  key={l}
+                  type="button"
+                  className={`topbar-lang-btn${lang === l ? " active" : ""}`}
+                  aria-pressed={lang === l}
+                  onClick={() => setLang(l)}
+                >
+                  <Flag lang={l} />
+                  {STRINGS[l]["lang.name"]}
+                </button>
+              ))}
+            </div>
+
+            {/* Persistent primary action: jump to a scan. Hidden once you're on
+               the Check tab, where it would be redundant. */}
+            {view !== "check" && (
+              <button
+                className="btn btn-primary topbar-cta"
+                onClick={() => goTo("check")}
+              >
+                {t("check.scan")}
+              </button>
+            )}
+
+            <UserMenu />
           </div>
         </div>
-
-        <UserPicker />
-
-        <nav className="nav">
-          {NAV.map((item) => (
-            <button
-              key={item.id}
-              className={`nav-item${view === item.id ? " active" : ""}`}
-              onClick={() => goTo(item.id)}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span className="nav-text">
-                <span className="nav-label">{t(`nav.${item.id}.label`)}</span>
-                <span className="nav-hint">{t(`nav.${item.id}.hint`)}</span>
-              </span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="lang-toggle" role="group" aria-label="Language">
-          {LANGS.map((l: Lang) => (
-            <button
-              key={l}
-              type="button"
-              className={`lang-option${lang === l ? " active" : ""}`}
-              aria-pressed={lang === l}
-              onClick={() => setLang(l)}
-            >
-              <Flag lang={l} />
-              {STRINGS[l]["lang.name"]}
-            </button>
-          ))}
-        </div>
-
-        <footer className="sidebar-footer">LangGraph · FastAPI · Gemini</footer>
-      </aside>
+      </header>
 
       <main className="content">
         {view === "profile" && <MyProfile />}
         {view === "routine" && <MyRoutine />}
         {view === "check" && <CheckProduct />}
       </main>
+
+      {/* on narrow screens the tabs relocate here */}
+      <nav className="bottom-nav" aria-label="Primary">
+        {NAV.map((item) => (
+          <button
+            key={item.id}
+            className={`bottom-nav-item${view === item.id ? " active" : ""}`}
+            aria-current={view === item.id ? "page" : undefined}
+            onClick={() => goTo(item.id)}
+          >
+            <span className="nav-icon" aria-hidden="true">
+              {item.icon}
+            </span>
+            <span>{t(`nav.${item.id}.label`)}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   );
 }
