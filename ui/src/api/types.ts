@@ -157,6 +157,10 @@ export interface SafetyAudit {
   ingredient_conflicts: string[];
   risk_ingredients: string[];
   warnings: string[];
+  // Japanese renderings of ingredient_conflicts / warnings for the JA UI, built
+  // deterministically on the backend; empty when there are no findings.
+  ingredient_conflicts_ja: string[];
+  warnings_ja: string[];
   safety_score: number;
 }
 

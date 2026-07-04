@@ -6,6 +6,7 @@ import { ApiError, api } from "../api/client";
 import type { ScanResponse, ScanStatus } from "../api/types";
 import { useUsers } from "../context/UserContext";
 import { useI18n } from "../i18n";
+import { ClockIcon, RepeatIcon } from "./icons";
 import { LeafScore } from "./LeafScore";
 import { Typewriter } from "./Typewriter";
 
@@ -35,6 +36,18 @@ export function ScanResult({ result }: { result: ScanResponse }) {
   const tone = STATUS_TONE[result.status];
   const safety = result.safety_report;
   const fit = result.routine_fit;
+
+  // Safety findings are formatted server-side; the auditor emits a Japanese
+  // rendering alongside the English one. Pick per locale, falling back to English
+  // if the JA list is absent (e.g. an older backend response).
+  const safetyWarnings =
+    safety && lang === "ja" && safety.warnings_ja.length
+      ? safety.warnings_ja
+      : (safety?.warnings ?? []);
+  const safetyConflicts =
+    safety && lang === "ja" && safety.ingredient_conflicts_ja.length
+      ? safety.ingredient_conflicts_ja
+      : (safety?.ingredient_conflicts ?? []);
 
   // The coach card in the UI's language; the LLM-phrased routine-fit notes
   // (used for the Routine Fit section when present, since they match the UI
@@ -99,12 +112,14 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             <div className="coach-badges">
               {card.timing && (
                 <span className="badge badge-coach" title={t("scan.coach.timing")}>
-                  🕐 {timingLabel(card.timing)}
+                  <ClockIcon size={14} />
+                  {timingLabel(card.timing)}
                 </span>
               )}
               {card.frequency && (
                 <span className="badge badge-coach" title={t("scan.coach.frequency")}>
-                  🔁 {card.frequency}
+                  <RepeatIcon size={14} />
+                  {card.frequency}
                 </span>
               )}
             </div>
@@ -158,26 +173,17 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             )}
           </div>
 
-          {(result.ingredient_source || result.detected_language) && (
+          {result.ingredient_source && (
             <div className="meta-row">
-              {result.ingredient_source && (
-                <Meta
-                  label={t("scan.meta.source")}
-                  value={sourceLabel(result.ingredient_source)}
-                />
-              )}
-              {result.detected_language && (
-                <Meta
-                  label={t("scan.meta.language")}
-                  value={result.detected_language}
-                />
-              )}
+              <Meta
+                label={t("scan.meta.source")}
+                value={sourceLabel(result.ingredient_source)}
+              />
             </div>
           )}
-          {result.model_used && result.inference_confidence != null && (
+          {result.inference_confidence != null && (
             <p className="meta-details">
               {t("scan.meta.details", {
-                model: result.model_used,
                 pct: `${Math.round(result.inference_confidence * 100)}%`,
               })}
             </p>
@@ -194,9 +200,9 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             </span>
           </div>
 
-          {safety.warnings.length > 0 && (
+          {safetyWarnings.length > 0 && (
             <ul className="finding-list">
-              {safety.warnings.map((w, i) => (
+              {safetyWarnings.map((w, i) => (
                 <li key={i} className="finding warn">
                   {w}
                 </li>
@@ -204,10 +210,10 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             </ul>
           )}
 
-          {safety.ingredient_conflicts.length > 0 && (
+          {safetyConflicts.length > 0 && (
             <Findings
               title={t("scan.safety.conflicts")}
-              items={safety.ingredient_conflicts}
+              items={safetyConflicts}
               tone="danger"
             />
           )}
@@ -219,8 +225,8 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             />
           )}
 
-          {safety.warnings.length === 0 &&
-            safety.ingredient_conflicts.length === 0 &&
+          {safetyWarnings.length === 0 &&
+            safetyConflicts.length === 0 &&
             safety.risk_ingredients.length === 0 && (
               <p className="muted">{t("scan.safety.none")}</p>
             )}

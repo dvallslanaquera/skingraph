@@ -1,5 +1,5 @@
 {
-  "_comment": "Group-based conflict matrix. A rule fires when at least one present ingredient from each of its two groups is found. Group members are canonical INCI keys from ingredient_master.json; members not yet in the ledger stay dormant until added.",
+  "_comment": "Group-based conflict matrix. A rule fires when at least one present ingredient from each of its two groups is found. Group members are canonical INCI keys from ingredient_master.json; members not yet in the ledger stay dormant until added. 'group_labels_ja' and each rule's 'reason_ja' are the hand-written Japanese renderings the deterministic auditor uses for the JA UI (no LLM in the safety path); they fall back to the English name/reason when a key is missing.",
   "groups": {
     "Retinoids": ["Retinol"],
     "AHA": ["Glycolic Acid", "Lactic Acid"],
@@ -33,86 +33,156 @@
       "Citronellol"
     ]
   },
+  "group_labels_ja": {
+    "Retinoids": "レチノイド",
+    "AHA": "AHA（酸性の角質ケア成分）",
+    "BHA": "BHA（サリチル酸）",
+    "Vitamin C": "ビタミンC",
+    "Benzoyl Peroxide": "過酸化ベンゾイル",
+    "Niacinamide": "ナイアシンアミド",
+    "Hydroquinone": "ハイドロキノン",
+    "Copper Peptides": "銅ペプチド",
+    "Peptides": "ペプチド",
+    "Fragrance / Essential Oils": "香料・精油"
+  },
   "rules": [
     {
       "groups": ["Retinoids", "AHA"],
       "severity": "high",
-      "reason": "Extreme risk of over-exfoliation, barrier damage, and redness."
+      "reason": "Extreme risk of over-exfoliation, barrier damage, and redness.",
+      "reason_ja": "過剰な角質ケア、バリア機能の低下、赤みを招くおそれが非常に高い組み合わせです。"
     },
     {
       "groups": ["Retinoids", "BHA"],
       "severity": "high",
-      "reason": "Can severely dry out the skin and compromise the moisture barrier."
+      "reason": "Can severely dry out the skin and compromise the moisture barrier.",
+      "reason_ja": "肌を著しく乾燥させ、うるおいバリアを損なうことがあります。"
     },
     {
       "groups": ["Retinoids", "Benzoyl Peroxide"],
       "severity": "high",
-      "reason": "Benzoyl peroxide oxidizes and degrades traditional retinol, rendering both less effective."
+      "reason": "Benzoyl peroxide oxidizes and degrades traditional retinol, rendering both less effective.",
+      "reason_ja": "過酸化ベンゾイルが従来型のレチノールを酸化・分解し、双方の働きを弱めてしまいます。"
     },
     {
       "groups": ["Vitamin C", "Retinoids"],
       "severity": "high",
-      "reason": "Best used at different times of day due to differing optimal pH and combined irritation risk."
+      "reason": "Best used at different times of day due to differing optimal pH and combined irritation risk.",
+      "reason_ja": "最適なpHが異なり、併用すると刺激が強まりやすいため、朝と夜で使い分けるのがおすすめです。"
     },
     {
       "groups": ["Vitamin C", "AHA"],
       "severity": "medium",
-      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it."
+      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it.",
+      "reason_ja": "どちらも酸性のため、併用すると刺激や皮むけを起こすことがあります（丈夫な肌質では問題ない場合もあります）。"
     },
     {
       "groups": ["Vitamin C", "BHA"],
       "severity": "medium",
-      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it."
+      "reason": "Both are acidic; combining can cause irritation and peeling, though some resilient skin types tolerate it.",
+      "reason_ja": "どちらも酸性のため、併用すると刺激や皮むけを起こすことがあります（丈夫な肌質では問題ない場合もあります）。"
     },
     {
       "groups": ["Vitamin C", "Benzoyl Peroxide"],
       "severity": "high",
-      "reason": "Benzoyl peroxide oxidizes vitamin C, making it largely ineffective."
+      "reason": "Benzoyl peroxide oxidizes vitamin C, making it largely ineffective.",
+      "reason_ja": "過酸化ベンゾイルがビタミンCを酸化させ、ほとんど働かなくなってしまいます。"
     },
     {
       "groups": ["Vitamin C", "Copper Peptides"],
       "severity": "medium",
-      "reason": "Copper can oxidize L-ascorbic acid, reducing its antioxidant benefit."
+      "reason": "Copper can oxidize L-ascorbic acid, reducing its antioxidant benefit.",
+      "reason_ja": "銅がLアスコルビン酸を酸化させ、抗酸化の働きを弱めることがあります。"
     },
     {
       "groups": ["Niacinamide", "Vitamin C"],
       "severity": "low",
-      "reason": "Contested; older studies suggested flushing, but modern formulations are generally stable."
+      "reason": "Contested; older studies suggested flushing, but modern formulations are generally stable.",
+      "reason_ja": "見解が分かれる組み合わせです。古い研究では赤みが指摘されましたが、近年の処方では概ね安定しています。"
     },
     {
       "groups": ["Peptides", "AHA"],
       "severity": "medium",
-      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness."
+      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness.",
+      "reason_ja": "酸の低いpHが一部のペプチド結合を分解し、働きを弱めることがあります。"
     },
     {
       "groups": ["Peptides", "BHA"],
       "severity": "medium",
-      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness."
+      "reason": "The low pH of acids can hydrolyze certain peptide bonds, reducing their effectiveness.",
+      "reason_ja": "酸の低いpHが一部のペプチド結合を分解し、働きを弱めることがあります。"
     },
     {
       "groups": ["Hydroquinone", "AHA"],
       "severity": "medium",
-      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis."
+      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis.",
+      "reason_ja": "肌の敏感さが大きく高まり、そのまま併用すると接触皮膚炎を起こすことがあります。"
     },
     {
       "groups": ["Hydroquinone", "BHA"],
       "severity": "medium",
-      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis."
+      "reason": "Greatly increases skin sensitivity; combining directly can cause contact dermatitis.",
+      "reason_ja": "肌の敏感さが大きく高まり、そのまま併用すると接触皮膚炎を起こすことがあります。"
+    },
+    {
+      "groups": ["Retinoids", "Peptides"],
+      "severity": "low",
+      "reason": "Generally compatible, but both are active on sensitive skin; buffer or separate applications if irritation occurs.",
+      "reason_ja": "基本的には併用可能ですが、敏感肌では刺激が出やすい成分同士です。赤みが出る場合は時間をずらすか、保湿で挟むのがおすすめです。"
+    },
+    {
+      "groups": ["Benzoyl Peroxide", "AHA"],
+      "severity": "high",
+      "reason": "Both are drying and barrier-disrupting; layering them risks extreme dryness, stinging, and barrier damage.",
+      "reason_ja": "どちらも乾燥させバリアを損なうため、重ね付けすると過度な乾燥、ヒリヒリ感、バリア機能の低下を招くおそれがあります。"
+    },
+    {
+      "groups": ["Benzoyl Peroxide", "BHA"],
+      "severity": "high",
+      "reason": "Both are drying and barrier-disrupting; layering them risks extreme dryness, stinging, and barrier damage.",
+      "reason_ja": "どちらも乾燥させバリアを損なうため、重ね付けすると過度な乾燥、ヒリヒリ感、バリア機能の低下を招くおそれがあります。"
+    },
+    {
+      "groups": ["Niacinamide", "AHA"],
+      "severity": "low",
+      "reason": "Contested; acids can convert niacinamide to nicotinic acid, which may cause transient flushing in some skin types.",
+      "reason_ja": "見解が分かれる組み合わせです。酸がナイアシンアミドをナイアシン酸に変え、一時的な赤みを招くことがあるとされます。"
+    },
+    {
+      "groups": ["Niacinamide", "BHA"],
+      "severity": "low",
+      "reason": "Contested; acids can convert niacinamide to nicotinic acid, which may cause transient flushing in some skin types.",
+      "reason_ja": "見解が分かれる組み合わせです。酸がナイアシンアミドをナイアシン酸に変え、一時的な赤みを招くことがあるとされます。"
+    },
+    {
+      "groups": ["Peptides", "Vitamin C"],
+      "severity": "medium",
+      "reason": "The low pH of L-ascorbic acid can denature peptides and reduce their signaling activity; use at different times of day.",
+      "reason_ja": "Lアスコルビン酸の低いpHがペプチドの構造を変性させ、働きを弱めることがあります。朝と夜で使い分けるのがおすすめです。"
+    },
+    {
+      "groups": ["Hydroquinone", "Vitamin C"],
+      "severity": "medium",
+      "reason": "Both are brightening actives; combining raises skin sensitivity and can increase irritation.",
+      "reason_ja": "どちらもブライトニング成分で、併用すると肌の敏感さが高まり、刺激が強まりやすくなります。"
     },
     {
       "groups": ["Fragrance / Essential Oils", "AHA"],
       "severity": "medium",
-      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate."
+      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate.",
+      "reason_ja": "角質ケア成分がバリアを弱め、香料アレルゲンがより深く浸透して刺激となることがあります。"
     },
     {
       "groups": ["Fragrance / Essential Oils", "BHA"],
       "severity": "medium",
-      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate."
+      "reason": "Exfoliants compromise the barrier, letting fragrance allergens penetrate deeper and irritate.",
+      "reason_ja": "角質ケア成分がバリアを弱め、香料アレルゲンがより深く浸透して刺激となることがあります。"
     },
     {
       "groups": ["Fragrance / Essential Oils", "Retinoids"],
       "severity": "medium",
-      "reason": "Retinoids compromise the barrier slightly, letting fragrance allergens penetrate deeper and irritate."
+      "reason": "Retinoids compromise the barrier slightly, letting fragrance allergens penetrate deeper and irritate.",
+      "reason_ja": "レチノイドがバリアをわずかに弱め、香料アレルゲンがより深く浸透して刺激となることがあります。"
     }
   ]
 }

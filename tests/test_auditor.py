@@ -125,6 +125,49 @@ def test_risk_ingredients_reported_in_sorted_order(audit_data):
     assert report.risk_ingredients == ["Ethanol", "Hydroquinone"]
 
 
+def test_japanese_findings_use_localized_reason_and_labels(monkeypatch):
+    # When the data files carry reason_ja / group_labels_ja, the parallel JA lists
+    # use them (localized group name + reason), keep INCI hits canonical, and tag
+    # severity with 高/中/低 — while the English lists are unchanged.
+    conflicts_ja = {
+        "groups": {"Retinoids": ["Retinol"], "AHA": ["Glycolic Acid"]},
+        "group_labels_ja": {"Retinoids": "レチノイド", "AHA": "AHA"},
+        "rules": [
+            {
+                "groups": ["Retinoids", "AHA"],
+                "severity": "high",
+                "reason": "over-exfoliation",
+                "reason_ja": "過剰な角質ケアのおそれ",
+            }
+        ],
+    }
+    irritants_ja = {
+        "Ethanol": {"ingredient": "Ethanol", "level": "low", "reason": "drying", "reason_ja": "乾燥"}
+    }
+    monkeypatch.setattr(conflicts, "_CONFLICTS_CACHE", conflicts_ja)
+    monkeypatch.setattr(auditor, "_IRRITANTS_CACHE", irritants_ja)
+    report = _audit("Retinol", "Glycolic Acid", "Ethanol")
+    assert report.ingredient_conflicts_ja == [
+        "レチノイド（Retinol） + AHA（Glycolic Acid）：過剰な角質ケアのおそれ"
+    ]
+    assert report.warnings_ja[0] == (
+        "[高] レチノイド（Retinol） + AHA（Glycolic Acid）：過剰な角質ケアのおそれ"
+    )
+    assert "[低] Ethanol：乾燥" in report.warnings_ja
+
+
+def test_japanese_findings_fall_back_to_english_when_untranslated(audit_data):
+    # The audit_data fixture has no reason_ja / group_labels_ja, so the JA lists
+    # fall back to the English group names and reasons (built, never dropped),
+    # still with full-width punctuation and a localized severity tag.
+    report = _audit("Retinol", "Glycolic Acid", unmatched=["成分X"])
+    assert report.ingredient_conflicts_ja == [
+        "Retinoids（Retinol） + AHA（Glycolic Acid）：over-exfoliation"
+    ]
+    assert report.warnings_ja[0].startswith("[高] ")
+    assert any(w.startswith("[情報]") and "1件" in w for w in report.warnings_ja)
+
+
 def test_score_is_clamped_to_zero(monkeypatch):
     # Ten high-severity irritants → 1.5 of penalty, clamped to 0.0 (never negative).
     irritants = {

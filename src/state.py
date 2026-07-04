@@ -77,6 +77,12 @@ class SafetyAudit(BaseModel):
         default_factory=list,
         description="human-readable, severity-tagged warning lines for the coach node",
     )
+    # Japanese renderings of the two user-facing lists above, built deterministically
+    # by the auditor from the hand-written reason_ja / group_labels_ja in the data
+    # files (no LLM in the safety path). The English lists stay the coach's input;
+    # the JA UI reads these. Empty when there are no findings.
+    ingredient_conflicts_ja: list[str] = Field(default_factory=list)
+    warnings_ja: list[str] = Field(default_factory=list)
     safety_score: float = Field(
         1.0,
         description="0.0 (high concern) to 1.0 (no flags); starts at 1.0, penalized per finding",

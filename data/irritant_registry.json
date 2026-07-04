@@ -2,192 +2,229 @@
   {
     "ingredient": "Hydroquinone",
     "level": "high",
-    "reason": "Regulated skin-lightening agent; restricted in leave-on cosmetics in many markets."
+    "reason": "Regulated skin-lightening agent; restricted in leave-on cosmetics in many markets.",
+    "reason_ja": "美白目的で規制される成分。多くの市場で洗い流さない化粧品での使用が制限されています。"
   },
   {
     "ingredient": "Melaleuca Alternifolia (Tea Tree) Leaf Oil",
     "level": "medium",
-    "reason": "Known contact sensitizer; highly sensitizing if used undiluted or oxidized."
+    "reason": "Known contact sensitizer; highly sensitizing if used undiluted or oxidized.",
+    "reason_ja": "既知の接触感作物質。原液のまま、または酸化した状態で使うと感作性が高くなります。"
   },
   {
     "ingredient": "Lavandula Angustifolia (Lavender) Oil",
     "level": "medium",
-    "reason": "Contains linalool and linalyl acetate; a recognized fragrance allergen."
+    "reason": "Contains linalool and linalyl acetate; a recognized fragrance allergen.",
+    "reason_ja": "リナロールや酢酸リナリルを含み、既知の香料アレルゲンです。"
   },
   {
     "ingredient": "Rosmarinus Officinalis (Rosemary) Leaf Oil",
     "level": "medium",
-    "reason": "Aromatic essential oil; potential fragrance allergen for sensitive skin."
+    "reason": "Aromatic essential oil; potential fragrance allergen for sensitive skin.",
+    "reason_ja": "芳香性の精油で、敏感肌では香料アレルゲンとなる可能性があります。"
   },
   {
     "ingredient": "Citrus Aurantium Dulcis (Orange) Peel Oil",
     "level": "medium",
-    "reason": "Citrus peel oil may contain furanocoumarins; can cause phototoxicity under UV."
+    "reason": "Citrus peel oil may contain furanocoumarins; can cause phototoxicity under UV.",
+    "reason_ja": "柑橘の果皮油でフロクマリンを含むことがあり、紫外線下で光毒性を示すことがあります。"
   },
   {
     "ingredient": "Citrus Aurantium Dulcis (Orange) Oil",
     "level": "medium",
-    "reason": "Citrus oil may contain furanocoumarins; can cause phototoxicity under UV."
+    "reason": "Citrus oil may contain furanocoumarins; can cause phototoxicity under UV.",
+    "reason_ja": "柑橘油でフロクマリンを含むことがあり、紫外線下で光毒性を示すことがあります。"
   },
   {
     "ingredient": "Lavandula Angustifolia (Lavender) Flower Extract",
     "level": "low",
-    "reason": "Lavender-derived; may carry trace fragrance allergens."
+    "reason": "Lavender-derived; may carry trace fragrance allergens.",
+    "reason_ja": "ラベンダー由来で、微量の香料アレルゲンを含むことがあります。"
   },
   {
     "ingredient": "Citrus Junos Fruit Extract",
     "level": "low",
-    "reason": "Citrus-derived; mild photosensitivity potential for reactive skin."
+    "reason": "Citrus-derived; mild photosensitivity potential for reactive skin.",
+    "reason_ja": "柑橘由来で、反応しやすい肌ではわずかに光感作性の可能性があります。"
   },
   {
     "ingredient": "Ethanol",
     "level": "low",
-    "reason": "Can be drying or stinging on compromised barriers at high concentration."
+    "reason": "Can be drying or stinging on compromised barriers at high concentration.",
+    "reason_ja": "高濃度では、バリアが低下した肌に乾燥やしみる感じを与えることがあります。"
   },
   {
     "ingredient": "Methylparaben",
     "level": "low",
-    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request."
+    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request.",
+    "reason_ja": "防腐剤。広く使われ概ね問題ありませんが、避けたいという要望の多い成分です。"
   },
   {
     "ingredient": "Propylparaben",
     "level": "low",
-    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request."
+    "reason": "Preservative; widely used and generally well tolerated, but a common avoidance request.",
+    "reason_ja": "防腐剤。広く使われ概ね問題ありませんが、避けたいという要望の多い成分です。"
   },
   {
     "ingredient": "Phenoxyethanol",
     "level": "low",
-    "reason": "Preservative; rare sensitizer at typical use levels."
+    "reason": "Preservative; rare sensitizer at typical use levels.",
+    "reason_ja": "防腐剤。通常の使用量ではまれに感作を起こす程度です。"
   },
   {
     "ingredient": "Benzyl Alcohol",
     "level": "low",
-    "reason": "Preservative and fragrance component; occasional contact allergen."
+    "reason": "Preservative and fragrance component; occasional contact allergen.",
+    "reason_ja": "防腐剤・香料成分で、まれに接触アレルゲンとなることがあります。"
   },
   {
     "ingredient": "BHT",
     "level": "low",
-    "reason": "Synthetic antioxidant; a common avoidance request despite broad regulatory acceptance."
+    "reason": "Synthetic antioxidant; a common avoidance request despite broad regulatory acceptance.",
+    "reason_ja": "合成酸化防止剤。規制上は広く認められていますが、避けたいという要望の多い成分です。"
   },
 
   {
     "ingredient": "Alcohol Denat.",
     "level": "medium",
-    "reason": "Denatured alcohol; strips the skin barrier and can cause dryness."
+    "reason": "Denatured alcohol; strips the skin barrier and can cause dryness.",
+    "reason_ja": "変性アルコール。肌のバリアを奪い、乾燥を招くことがあります。"
   },
   {
     "ingredient": "Isopropyl Alcohol",
     "level": "medium",
-    "reason": "Highly drying solvent; can irritate and dehydrate the skin barrier."
+    "reason": "Highly drying solvent; can irritate and dehydrate the skin barrier.",
+    "reason_ja": "乾燥させやすい溶剤で、肌のバリアを刺激し水分を奪うことがあります。"
   },
   {
     "ingredient": "SD Alcohol 40-B",
     "level": "medium",
-    "reason": "Fast-evaporating solvent alcohol that can dehydrate the epidermis."
+    "reason": "Fast-evaporating solvent alcohol that can dehydrate the epidermis.",
+    "reason_ja": "揮発の速い溶剤アルコールで、表皮を乾燥させることがあります。"
   },
 
   {
     "ingredient": "Sodium Lauryl Sulfate",
     "level": "medium",
-    "reason": "Harsh foaming surfactant known to disrupt the skin lipid barrier."
+    "reason": "Harsh foaming surfactant known to disrupt the skin lipid barrier.",
+    "reason_ja": "肌の脂質バリアを乱すことで知られる強い起泡性界面活性剤です。"
   },
   {
     "ingredient": "Sodium Laureth Sulfate",
     "level": "low",
-    "reason": "Milder than SLS but still a frequent trigger for sensitive or eczema-prone skin."
+    "reason": "Milder than SLS but still a frequent trigger for sensitive or eczema-prone skin.",
+    "reason_ja": "SLSより穏やかですが、敏感肌や湿疹になりやすい肌ではなお刺激となることがあります。"
   },
 
   {
     "ingredient": "Methylchloroisothiazolinone",
     "level": "high",
-    "reason": "Potent contact allergen; typically restricted to rinse-off products."
+    "reason": "Potent contact allergen; typically restricted to rinse-off products.",
+    "reason_ja": "強い接触アレルゲンで、通常は洗い流す製品に限定されます。"
   },
   {
     "ingredient": "Methylisothiazolinone",
     "level": "high",
-    "reason": "Frequent cause of allergic contact dermatitis."
+    "reason": "Frequent cause of allergic contact dermatitis.",
+    "reason_ja": "アレルギー性接触皮膚炎を起こしやすい成分です。"
   },
   {
     "ingredient": "DMDM Hydantoin",
     "level": "medium",
-    "reason": "Formaldehyde releaser; can trigger contact allergy in sensitive skin."
+    "reason": "Formaldehyde releaser; can trigger contact allergy in sensitive skin.",
+    "reason_ja": "ホルムアルデヒド放出剤で、敏感肌では接触アレルギーを引き起こすことがあります。"
   },
   {
     "ingredient": "Diazolidinyl Urea",
     "level": "medium",
-    "reason": "Formaldehyde releaser; potential contact allergen."
+    "reason": "Formaldehyde releaser; potential contact allergen.",
+    "reason_ja": "ホルムアルデヒド放出剤で、接触アレルゲンとなる可能性があります。"
   },
   {
     "ingredient": "Imidazolidinyl Urea",
     "level": "medium",
-    "reason": "Formaldehyde releaser; potential contact allergen."
+    "reason": "Formaldehyde releaser; potential contact allergen.",
+    "reason_ja": "ホルムアルデヒド放出剤で、接触アレルゲンとなる可能性があります。"
   },
   {
     "ingredient": "Quaternium-15",
     "level": "medium",
-    "reason": "Formaldehyde releaser; one of the more sensitizing preservatives."
+    "reason": "Formaldehyde releaser; one of the more sensitizing preservatives.",
+    "reason_ja": "ホルムアルデヒド放出剤で、防腐剤の中でも感作性が高い部類です。"
   },
 
   {
     "ingredient": "Fragrance",
     "level": "medium",
-    "reason": "Blanket term that can mask numerous undisclosed allergens."
+    "reason": "Blanket term that can mask numerous undisclosed allergens.",
+    "reason_ja": "多数の未開示アレルゲンを含みうる総称表示です。"
   },
   {
     "ingredient": "Linalool",
     "level": "medium",
-    "reason": "Fragrance component; its oxidized form is a known sensitizer."
+    "reason": "Fragrance component; its oxidized form is a known sensitizer.",
+    "reason_ja": "香料成分で、酸化した形は既知の感作物質です。"
   },
   {
     "ingredient": "Limonene",
     "level": "medium",
-    "reason": "Fragrance component; its oxidized form is a known sensitizer."
+    "reason": "Fragrance component; its oxidized form is a known sensitizer.",
+    "reason_ja": "香料成分で、酸化した形は既知の感作物質です。"
   },
   {
     "ingredient": "Citral",
     "level": "medium",
-    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy.",
+    "reason_ja": "皮膚アレルギーとの関連が指摘される芳香成分です。"
   },
   {
     "ingredient": "Geraniol",
     "level": "medium",
-    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy.",
+    "reason_ja": "皮膚アレルギーとの関連が指摘される芳香成分です。"
   },
   {
     "ingredient": "Citronellol",
     "level": "medium",
-    "reason": "Aromatic fragrance compound commonly linked to skin allergy."
+    "reason": "Aromatic fragrance compound commonly linked to skin allergy.",
+    "reason_ja": "皮膚アレルギーとの関連が指摘される芳香成分です。"
   },
 
   {
     "ingredient": "Citrus Aurantium Bergamia (Bergamot) Fruit Oil",
     "level": "medium",
-    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure."
+    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure.",
+    "reason_ja": "柑橘油で、紫外線を浴びると光毒性反応を起こすことがあります。"
   },
   {
     "ingredient": "Citrus Limon (Lemon) Peel Oil",
     "level": "medium",
-    "reason": "Citrus peel oil; can cause phototoxic reactions under UV exposure."
+    "reason": "Citrus peel oil; can cause phototoxic reactions under UV exposure.",
+    "reason_ja": "柑橘の果皮油で、紫外線を浴びると光毒性反応を起こすことがあります。"
   },
   {
     "ingredient": "Citrus Aurantifolia (Lime) Oil",
     "level": "medium",
-    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure."
+    "reason": "Citrus oil; can cause phototoxic reactions under UV exposure.",
+    "reason_ja": "柑橘油で、紫外線を浴びると光毒性反応を起こすことがあります。"
   },
 
   {
     "ingredient": "Menthol",
     "level": "medium",
-    "reason": "Cooling agent; the cooling sensation can indicate localized irritation."
+    "reason": "Cooling agent; the cooling sensation can indicate localized irritation.",
+    "reason_ja": "清涼剤で、冷たい感覚は局所的な刺激のサインであることがあります。"
   },
   {
     "ingredient": "Mentha Piperita (Peppermint) Oil",
     "level": "medium",
-    "reason": "Cooling essential oil that can irritate and sensitize skin."
+    "reason": "Cooling essential oil that can irritate and sensitize skin.",
+    "reason_ja": "清涼感のある精油で、肌を刺激・感作することがあります。"
   },
   {
     "ingredient": "Eucalyptus Globulus Leaf Oil",
     "level": "medium",
-    "reason": "Aromatic essential oil that can irritate sensitive skin."
+    "reason": "Aromatic essential oil that can irritate sensitive skin.",
+    "reason_ja": "芳香性の精油で、敏感肌を刺激することがあります。"
   }
 ]
