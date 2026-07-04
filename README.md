@@ -188,8 +188,15 @@ poetry run uvicorn src.api.main:app --reload   # → http://127.0.0.1:8000/docs
 - ✅ **テスト緑** — 上のCIバッジを参照。プッシュのたびに実行。
 - 🔌 **オフラインの決定論的テスト** — すべてのモデル・ベクターストア呼び出しはモック化され、`poetry run pytest` はネットワーク・APIキー・サプライズなしで実行。
 - 📊 **計測済み精度** — 成分抽出は日本語・韓国語・英語ラベルの手動アノテーションセットで **F1 0.94**（高速モデル）/ **0.98**（Proモデル）。
+- 💰 **スキャン単価の可視化** — 各スキャンのレスポンスに`usage`ブロック（トークン数・推定USDコスト）が含まれ、Prometheusの`/metrics`にもコスト・トークンカウンターを公開。
 - 📄 **オープンライセンス** — Apache 2.0（[LICENSE](LICENSE)を参照）。
 - 📬 **メンテ済み** — 最新の活動はコミット履歴で確認。質問・報告は[GitHub Issues](https://github.com/ShinBellator/skingraph/issues)へ。
+
+### 🔒 品質ゲート（CIで毎PR強制）
+
+- 🧪 **評価リプレイゲート** — 記録済みの抽出カセットをオフラインで再生し、ゴールデンセットの成分抽出**F1が0.90を下回るとビルドが失敗**。プロンプト/モデルのハッシュ照合により、変更時はローカル再記録を強制（[eval/README.md](eval/README.md)）。
+- 📈 **カバレッジフロア** — `pytest-cov`のカバレッジ下限をテストマトリクス内で強制。
+- 🛡️ **セキュリティスキャン** — Trivy（DockerイメージのCRITICAL/HIGHで失敗）+ gitleaks（シークレット検出）+ ruffのbanditルールセット。
 
 ---
 
@@ -217,6 +224,7 @@ poetry run uvicorn src.api.main:app --reload   # → http://127.0.0.1:8000/docs
 
 - 📘 **[技術ドキュメント](docs/ARCHITECTURE.md)** — アーキテクチャ図・7ステップ画像パイプライン・デプロイ・可観測性。
 - 🧪 **[ライブAPIドキュメント](https://skingraph-production.up.railway.app/docs)** — 実行中サービスのインタラクティブSwagger UI。
+- 🔬 **[関連リサーチ: glm5.2-benchmark](https://github.com/dvallslanaquera/glm5.2-benchmark)** — このリポジトリから切り出したLLM長文コンテキストベンチマーク。
 - 🐛 **[Issues & ディスカッション](https://github.com/ShinBellator/skingraph/issues)** — プロジェクトへの最速の連絡手段。
 
 ---
@@ -420,8 +428,15 @@ That's the elevator pitch — the [full docs](docs/ARCHITECTURE.md) cover the ar
 - ✅ **Tested & green** — see the CI badge above; it runs on every push.
 - 🔌 **Offline, deterministic tests** — every model and vector-store call is mocked, so `poetry run pytest` runs with no network, no API key, and no surprises.
 - 📊 **Measured accuracy** — ingredient extraction scores **F1 0.94** (fast model) / **0.98** (pro model) on a hand-annotated set of Japanese, Korean, and English labels.
+- 💰 **Cost-per-scan visibility** — every scan response carries a `usage` block (token counts + estimated USD cost), and Prometheus `/metrics` exposes cost/token counters.
 - 📄 **Open licence** — Apache 2.0 (see [LICENSE](LICENSE)).
 - 📬 **Maintained** — check the commit history for the latest activity; questions and reports go through [GitHub Issues](https://github.com/ShinBellator/skingraph/issues).
+
+### 🔒 Quality gates (enforced in CI, every PR)
+
+- 🧪 **Eval replay gate** — recorded extraction cassettes are replayed offline; the build **fails if golden-set ingredient F1 drops below 0.90**. A prompt/model hash check forces a local re-record whenever either changes ([eval/README.md](eval/README.md)).
+- 📈 **Coverage floor** — a `pytest-cov` minimum enforced inside the test matrix.
+- 🛡️ **Security scanning** — Trivy on the Docker image (CRITICAL/HIGH findings fail), gitleaks for secrets, and ruff's bandit ruleset.
 
 ---
 
@@ -449,6 +464,7 @@ Found a bug, or a label it misreads? **[Open an issue](https://github.com/ShinBe
 
 - 📘 **[Full technical README](docs/ARCHITECTURE.md)** — architecture diagrams, the 7-step image pipeline, deployment, and observability.
 - 🧪 **[Live API docs](https://skingraph-production.up.railway.app/docs)** — interactive Swagger UI for the running service.
+- 🔬 **[Related research: glm5.2-benchmark](https://github.com/dvallslanaquera/glm5.2-benchmark)** — an LLM long-context benchmark extracted from this repo.
 - 🐛 **[Issues & discussions](https://github.com/ShinBellator/skingraph/issues)** — the fastest way to reach the project.
 
 ---

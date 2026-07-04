@@ -26,8 +26,12 @@ function safetyTone(score: number): string {
   return "danger";
 }
 
+// Show this many ingredient chips before collapsing behind a "show all" toggle.
+const INGREDIENT_PREVIEW_COUNT = 12;
+
 export function ScanResult({ result }: { result: ScanResponse }) {
   const { t, lang } = useI18n();
+  const [showAllIngredients, setShowAllIngredients] = useState(false);
   const tone = STATUS_TONE[result.status];
   const safety = result.safety_report;
   const fit = result.routine_fit;
@@ -53,6 +57,13 @@ export function ScanResult({ result }: { result: ScanResponse }) {
     const key = `scan.coach.timing.${timing}`;
     const label = t(key);
     return label === key ? timing : label;
+  }
+
+  // "registry" / "label" / "web" humanised; unknown values fall back to the raw token.
+  function sourceLabel(source: string): string {
+    const key = `scan.meta.source.${source}`;
+    const label = t(key);
+    return label === key ? source : label;
   }
 
   return (
@@ -147,13 +158,29 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             )}
           </div>
 
-          {result.detected_language && (
+          {(result.ingredient_source || result.detected_language) && (
             <div className="meta-row">
-              <Meta
-                label={t("scan.meta.language")}
-                value={result.detected_language}
-              />
+              {result.ingredient_source && (
+                <Meta
+                  label={t("scan.meta.source")}
+                  value={sourceLabel(result.ingredient_source)}
+                />
+              )}
+              {result.detected_language && (
+                <Meta
+                  label={t("scan.meta.language")}
+                  value={result.detected_language}
+                />
+              )}
             </div>
+          )}
+          {result.model_used && result.inference_confidence != null && (
+            <p className="meta-details">
+              {t("scan.meta.details", {
+                model: result.model_used,
+                pct: `${Math.round(result.inference_confidence * 100)}%`,
+              })}
+            </p>
           )}
         </section>
       )}
@@ -275,7 +302,10 @@ export function ScanResult({ result }: { result: ScanResponse }) {
             })}
           </h2>
           <div className="ingredient-chips">
-            {result.standardized_ingredients.map((ing, i) => (
+            {(showAllIngredients
+              ? result.standardized_ingredients
+              : result.standardized_ingredients.slice(0, INGREDIENT_PREVIEW_COUNT)
+            ).map((ing, i) => (
               <span
                 key={i}
                 className={`ingredient-chip${ing.is_active ? " active" : ""}`}
@@ -284,6 +314,19 @@ export function ScanResult({ result }: { result: ScanResponse }) {
                 {ing.name_standardized || ing.name_raw}
               </span>
             ))}
+            {result.standardized_ingredients.length > INGREDIENT_PREVIEW_COUNT && (
+              <button
+                type="button"
+                className="chip-toggle"
+                onClick={() => setShowAllIngredients((v) => !v)}
+              >
+                {showAllIngredients
+                  ? t("scan.ingredients.showLess")
+                  : t("scan.ingredients.showAll", {
+                      count: result.standardized_ingredients.length,
+                    })}
+              </button>
+            )}
           </div>
           {result.unmatched_ingredients.length > 0 && (
             <p className="muted unmatched">

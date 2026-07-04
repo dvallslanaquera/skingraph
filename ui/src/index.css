@@ -1022,6 +1022,21 @@ h3,
   font-weight: 600;
 }
 
+.chip-toggle {
+  background: none;
+  border: 1px dashed var(--border);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.chip-toggle:hover {
+  color: var(--text-soft);
+  border-color: var(--text-soft);
+}
+
 .product-remove {
   align-self: flex-start;
   margin-top: auto;
@@ -1368,7 +1383,12 @@ h3,
 
 .meta-value {
   font-weight: 600;
-  text-transform: capitalize;
+}
+
+.meta-details {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--muted);
 }
 
 .score-pill {
