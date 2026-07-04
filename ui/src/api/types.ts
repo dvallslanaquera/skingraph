@@ -94,6 +94,9 @@ export interface RoutineDashboardCard {
   ingredients: string[];
   is_quasi_drug?: boolean | null;
   timing: Timing | string;
+  // True when an active in this product should absorb before the next step; the
+  // dashboard shows a wait cue after it when another step follows.
+  wait_after?: boolean;
   application_notes: string[];
   price_usd?: number | null;
   price_native?: number | null;

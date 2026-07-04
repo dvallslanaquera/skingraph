@@ -132,10 +132,9 @@ export default function App() {
         {view === "check" && <CheckProduct />}
 
         <footer className="app-foot">
-          <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-            <path d="M6 19c0-8 6-13 15-14-1 9-6 15-15 14Z" />
-          </svg>
-          <span>LangGraph · FastAPI · Gemini</span>
+          <span>Created with ❤️ by David</span>
+          <span className="app-foot-sep" aria-hidden="true">·</span>
+          <span className="app-foot-version">v{__APP_VERSION__}</span>
         </footer>
       </main>
 

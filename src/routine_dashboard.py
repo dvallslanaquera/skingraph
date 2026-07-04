@@ -30,6 +30,11 @@ _STEP_RANK = {
 }
 _DEFAULT_STEP = 2.5
 
+# Actives that need to dry down / absorb before the next layer goes on. When a
+# product in one of these categories is followed by another step, the dashboard
+# surfaces a "wait" cue between them (rendered client-side).
+_WAIT_AFTER_CATEGORIES = {"Retinoids", "AHA", "BHA", "Vitamin C"}
+
 
 def infer_timing(categories: set[str]) -> str:
     """Deterministic AM/PM guess for a product with no stored timing.
@@ -48,6 +53,11 @@ def _step_rank(categories: set[str]) -> float:
     """Lowest (earliest) application-step rank among a product's categories."""
     ranks = [_STEP_RANK[c] for c in categories if c in _STEP_RANK]
     return min(ranks) if ranks else _DEFAULT_STEP
+
+
+def _needs_wait_after(categories: set[str]) -> bool:
+    """Whether an active in this product should absorb before the next layer."""
+    return bool(categories & _WAIT_AFTER_CATEGORIES)
 
 
 def _amortized_months(product: RoutineProduct) -> float:
@@ -95,6 +105,7 @@ def _product_card(product: RoutineProduct, lang: str) -> dict:
         "ingredients": product.ingredients,
         "is_quasi_drug": product.is_quasi_drug,
         "timing": timing,
+        "wait_after": _needs_wait_after(categories),
         "application_notes": _localized_notes(product, lang),
         "price_usd": product.price_usd,
         "price_native": product.price_native,

@@ -5,7 +5,7 @@
 // fallback for products that won't scan. The dashboard shows the product list,
 // the routine's amortized monthly cost (USD), an AM/PM split with per-product
 // application notes, and a goal-coverage chart scored out of 5 leaves.
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { ApiError, api } from "../api/client";
 import type {
   RoutineDashboard,
@@ -130,52 +130,43 @@ function Dashboard({
 
   return (
     <>
-      {/* Product list + monthly cost */}
-      <section className="dash-overview">
-        <div className="card product-strip-card">
-          <h2 className="card-title">
-            {t("routine.products", { count: products.length })}
+      {/* Average monthly cost — top of the tab, in the active locale's currency */}
+      <section className="card cost-banner">
+        <div className="cost-banner-main">
+          <h2 className="card-title cost-banner-label">
+            {t("routine.monthlyCost")}
           </h2>
-          <ul className="product-strip">
-            {products.map((p) => (
-              <li key={p.product_id} className="product-strip-row">
-                <div className="product-strip-name">
-                  <span className="product-brand">{p.brand}</span>
-                  <span className="product-name">{p.product_name}</span>
-                </div>
-                <span className="product-strip-price">
-                  {formatProductPrice(lang, p)}
-                </span>
-                <button
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => onRemove(p.product_id)}
-                  aria-label={`${t("routine.remove")} ${p.product_name}`}
-                >
-                  {t("routine.remove")}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="card cost-card">
-          <h2 className="card-title">{t("routine.monthlyCost")}</h2>
           {total != null ? (
-            <>
-              <div className="cost-value">≈ {total}</div>
-              <div className="cost-unit">{t("routine.monthlyCost.unit")}</div>
-              <p className="muted cost-note">{t("routine.monthlyCost.note")}</p>
-            </>
+            <div className="cost-value">
+              ≈ {total}
+              <span className="cost-unit">{t("routine.monthlyCost.unit")}</span>
+            </div>
           ) : (
             <p className="muted">{t("routine.monthlyCost.empty")}</p>
           )}
         </div>
+        {total != null && (
+          <p className="muted cost-note">{t("routine.monthlyCost.note")}</p>
+        )}
       </section>
 
-      {/* AM / PM columns */}
+      {/* Explain the ordering the columns below use */}
+      <p className="routine-order-note">{t("routine.orderNote")}</p>
+
+      {/* AM / PM columns, each in application order with wait cues */}
       <section className="routine-columns">
-        <RoutineColumn title={t("routine.am")} icon={<SunIcon />} products={am} />
-        <RoutineColumn title={t("routine.pm")} icon={<MoonIcon />} products={pm} />
+        <RoutineColumn
+          title={t("routine.am")}
+          icon={<SunIcon />}
+          products={am}
+          onRemove={onRemove}
+        />
+        <RoutineColumn
+          title={t("routine.pm")}
+          icon={<MoonIcon />}
+          products={pm}
+          onRemove={onRemove}
+        />
       </section>
 
       {/* Goals + leaf score */}
@@ -188,12 +179,14 @@ function RoutineColumn({
   title,
   icon,
   products,
+  onRemove,
 }: {
   title: string;
   icon: React.ReactNode;
   products: RoutineDashboardCard[];
+  onRemove: (productId: string) => void;
 }) {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   return (
     <div className="card routine-column">
       <div className="routine-column-head">
@@ -204,26 +197,49 @@ function RoutineColumn({
         <p className="muted">{t("routine.noProductsTime")}</p>
       ) : (
         <ol className="routine-steps">
-          {products.map((p) => (
-            <li key={p.product_id} className="routine-step">
-              <div className="routine-step-head">
-                <span className="product-name">{p.product_name}</span>
-                <span className="product-brand">{p.brand}</span>
-              </div>
-              {p.application_notes.length > 0 ? (
-                <ul className="application-notes">
-                  {p.application_notes.map((note, i) => (
-                    <li key={i} className="application-note">
-                      {note}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="muted application-note-empty">
-                  {t("routine.noNotes")}
-                </p>
+          {products.map((p, i) => (
+            <Fragment key={p.product_id}>
+              <li className="routine-step">
+                <div className="routine-step-main">
+                  <div className="routine-step-head">
+                    <span className="product-name">{p.product_name}</span>
+                    <span className="product-brand">{p.brand}</span>
+                  </div>
+                  <div className="routine-step-side">
+                    <span className="product-strip-price">
+                      {formatProductPrice(lang, p)}
+                    </span>
+                    <button
+                      className="btn btn-ghost btn-sm"
+                      onClick={() => onRemove(p.product_id)}
+                      aria-label={`${t("routine.remove")} ${p.product_name}`}
+                    >
+                      {t("routine.remove")}
+                    </button>
+                  </div>
+                </div>
+                {p.application_notes.length > 0 ? (
+                  <ul className="application-notes">
+                    {p.application_notes.map((note, j) => (
+                      <li key={j} className="application-note">
+                        {note}
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="muted application-note-empty">
+                    {t("routine.noNotes")}
+                  </p>
+                )}
+              </li>
+              {/* Wait cue between steps when this active needs to absorb first */}
+              {p.wait_after && i < products.length - 1 && (
+                <li className="routine-wait">
+                  <ClockIcon />
+                  <span>{t("routine.wait")}</span>
+                </li>
               )}
-            </li>
+            </Fragment>
           ))}
         </ol>
       )}
@@ -591,6 +607,24 @@ function MoonIcon() {
       aria-hidden="true"
     >
       <path d="M30 8a16 16 0 1 0 10 28A18 18 0 0 1 30 8z" />
+    </svg>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg
+      className="wait-icon"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
     </svg>
   );
 }

@@ -181,13 +181,6 @@ export function ScanResult({ result }: { result: ScanResponse }) {
               />
             </div>
           )}
-          {result.inference_confidence != null && (
-            <p className="meta-details">
-              {t("scan.meta.details", {
-                pct: `${Math.round(result.inference_confidence * 100)}%`,
-              })}
-            </p>
-          )}
         </section>
       )}
 

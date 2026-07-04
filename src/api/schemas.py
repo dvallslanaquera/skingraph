@@ -178,6 +178,10 @@ class RoutineDashboardCard(BaseModel):
     ingredients: list[str] = Field(default_factory=list)
     is_quasi_drug: bool | None = None
     timing: str = Field(description="Resolved 'AM' | 'PM' | 'AM & PM'.")
+    wait_after: bool = Field(
+        False,
+        description="True when an active here should absorb before the next step.",
+    )
     application_notes: list[str] = Field(default_factory=list)
     price_usd: float | None = None
     price_native: float | None = None

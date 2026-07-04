@@ -1604,16 +1604,19 @@ h3,
   border-top: 1px solid var(--border);
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   font-size: 13px;
   color: var(--muted);
 }
 
-.app-foot svg {
-  width: 15px;
-  height: 15px;
-  color: var(--accent);
-  flex: none;
+.app-foot-sep {
+  opacity: 0.5;
+}
+
+.app-foot-version {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
 }
 
 /* ---- pipeline ----------------------------------------------------------- */
@@ -2064,38 +2067,23 @@ h3,
 
 /* ---- routine dashboard -------------------------------------------------- */
 
-.dash-overview {
-  display: grid;
-  grid-template-columns: 1fr 300px;
-  gap: 16px;
-  margin-bottom: 16px;
+/* Average monthly cost banner, pinned to the top of the tab. */
+.cost-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
 }
 
-.product-strip {
-  list-style: none;
+.cost-banner-main {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.cost-banner-label {
   margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.product-strip-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-top: 1px solid var(--border);
-}
-
-.product-strip-row:first-child {
-  border-top: none;
-}
-
-.product-strip-name {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
 }
 
 .product-strip-price {
@@ -2105,30 +2093,33 @@ h3,
   white-space: nowrap;
 }
 
-.cost-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  justify-content: center;
-}
-
 .cost-value {
-  font-size: 34px;
+  font-size: 30px;
   font-weight: 700;
   letter-spacing: -0.02em;
   color: var(--accent-strong);
   font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
 }
 
 .cost-unit {
+  font-size: 14px;
+  font-weight: 500;
   color: var(--muted);
-  margin-top: -2px;
 }
 
 .cost-note {
-  margin-top: 10px;
+  margin: 0;
   font-size: 12.5px;
+}
+
+.routine-order-note {
+  margin: 0 0 16px;
+  color: var(--text-soft);
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .routine-columns {
@@ -2191,9 +2182,45 @@ h3,
   font-weight: 600;
 }
 
+.routine-step-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .routine-step-head {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+}
+
+.routine-step-side {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  white-space: nowrap;
+}
+
+/* "Wait between products" cue, sitting between two steps. */
+.routine-wait {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  align-self: flex-start;
+  margin-left: 30px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.wait-icon {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
 }
 
 .application-notes {
@@ -2310,7 +2337,6 @@ h3,
 }
 
 @media (max-width: 880px) {
-  .dash-overview,
   .routine-columns {
     grid-template-columns: 1fr;
   }

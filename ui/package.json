@@ -1,7 +1,7 @@
 {
   "name": "skincare-coach-ui",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.12",
   "type": "module",
   "description": "Demo UI for the SkinGraph skincare-coach API (React + Vite + TypeScript).",
   "scripts": {
