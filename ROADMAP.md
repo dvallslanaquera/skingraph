@@ -49,7 +49,46 @@ as an implementation record; the ✅ headings mark what is live in the repo toda
 - **Deterministic auditor** now emits bilingual Japanese safety warnings. (commit `ffc5fdb`)
 - **`EVAL-OPS.md`** — a standalone eval/Ops playbook (latency+cost bench, CI scorecard,
   eval-diff PR bot, nightly canary, coach-faithfulness eval, router threshold sweep) with
-  GitHub-safe mermaid diagrams. (commit `0187ad5` + pending mermaid-label fixes)
+  GitHub-safe mermaid diagrams. (commit `0187ad5`)
+- **Eval/Ops layer (EVAL-OPS.md §4–§9) ✅** — all six playbook components now shipped:
+  `eval/evaluate.py --bench` (latency/cost per tier), `eval/scorecard.py` (run-summary +
+  `eval/history.jsonl` trend + `docs/badges/`), `eval/diff.py` + `eval-diff.yml` (base-vs-PR
+  F1 comment), `eval/canary.py` + `canary.yml` (live drift → issue; `--dry-run` self-test),
+  `eval/coach_eval.py` (mandated-caution coverage, gated at 1.0 in CI), and `eval/sweep.py`
+  (Flash→Pro cost/accuracy Pareto). Offline-gateable except the live canary. (commit `880a6c4`)
+
+### Remaining eval/Ops follow-ups (tracked, not yet built)
+
+These are the deferred items EVAL-OPS.md itself flags as next steps — the layer's
+machinery is in place, so each is an extension, not a rewrite. Ordered by leverage.
+
+- **Grow the annotated golden set to ~15–20 readable back labels, stratified by failure
+  mode ⭐** (Effort: M · Risk: none · the "one caveat" in EVAL-OPS.md Part 3). The single
+  highest-leverage non-code task: the replay/bench/sweep gates all run today on only ~4
+  readable back labels, so every metric is machinery-complete but thin. Annotate glare,
+  bottle-curvature, JP-vs-KR script, and embossed low-contrast cases (the rejection store,
+  `REJECTION_STORE_ENABLED=1`, already feeds candidates), add them to `ground_truth.json`,
+  and re-record cassettes (`--model both`). Makes the F1 gate, the latency/cost bench, and
+  the router sweep all *discriminate across the failure modes that matter*.
+- **Coach faithfulness — LLM-as-judge layer** (Effort: M · Risk: medium · EVAL-OPS.md §8).
+  The deterministic mandated-caution gate is shipped; layer on a RAGAS-style judge for the
+  properties a rule can't check — 薬機法 tone, over-claiming — via claim-extraction + an NLI
+  step against the grounded findings. Must be validated against a human-labeled sample
+  (judges are biased on length/position/self-preference) and stays a *track*, never the sole
+  gate on a safety claim. Deferred because tone is not gateable the way set inclusion is.
+- **Activate the nightly canary as a true online check** (Effort: S · Risk: low · EVAL-OPS.md
+  §7). `canary.yml` runs `--dry-run` today because the golden photos are out of git. Wire a
+  private image store (2–3 stable back labels) + the `GOOGLE_API_KEY` repo secret, drop the
+  dry-run fallback, and it becomes a real drift sensor against live Gemini.
+- **Statistical drift detection at production scale** (Effort: M · Risk: low · EVAL-OPS.md
+  §7). The fixed-baseline canary catches drift on a handful of pinned inputs; at real traffic
+  volume, monitor *distributions* — KS test / KL divergence / embedding-distribution shift
+  (Evidently, Alibi Detect) plus the schema-invalid rate off `ProductExtraction` — to flag
+  drift without a labeled baseline. Depends on production volume that does not exist yet.
+- **Load / concurrency benchmark** (Effort: S · Risk: low · EVAL-OPS.md §4). The shipped
+  `--bench` is a golden-set replay-timed benchmark ("how fast/costly is one scan per tier");
+  add a Locust/k6 harness for the other question — RPS and tail latency *under saturation* —
+  to size the deploy. Separate concern from the per-scan distribution already tracked.
 
 ---
 
