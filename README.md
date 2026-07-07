@@ -8,6 +8,9 @@
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![License](https://img.shields.io/badge/license-Apache--2.0-green)
 
+[![Ingredient F1](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ShinBellator/skingraph/main/docs/badges/ingredient_f1.json)](EVAL-OPS.md)
+[![Recall](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ShinBellator/skingraph/main/docs/badges/recall.json)](EVAL-OPS.md)
+
 ![LangGraph](https://img.shields.io/badge/LangGraph-Orchestration-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white)
 ![Gemini](https://img.shields.io/badge/Google_Gemini-VLM_Inference-4285F4?style=for-the-badge&logo=google&logoColor=white)
 ![Docker](https://img.shields.io/badge/Docker-Multi--stage-2496ED?style=for-the-badge&logo=docker&logoColor=white)

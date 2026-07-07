@@ -6,21 +6,57 @@ It is written for someone who builds AI systems but is new to eval/ops. Each sec
 
 ## Table of contents
 
-- [0. The mental model](#0-the-mental-model)
-- [Part 1 — What you already have](#part-1--what-you-already-have)
-  - [1. `evaluate.py` — reference-based accuracy + record/replay gate](#1-evaluatepy--reference-based-accuracy--recordreplay-gate)
-  - [2. `vision_eval.py` — guardrail / classifier evaluation](#2-vision_evalpy--guardrail--classifier-evaluation)
-  - [3. `metrics.py` — online operational observability](#3-metricspy--online-operational-observability)
-- [Part 2 — What to add](#part-2--what-to-add)
-  - [4. Latency & cost benchmarking](#4-latency--cost-benchmarking)
-  - [5. Eval scorecard published from CI](#5-eval-scorecard-published-from-ci)
-  - [6. Eval-diff PR bot](#6-eval-diff-pr-bot)
-  - [7. Nightly live canary (drift detection)](#7-nightly-live-canary-drift-detection)
-  - [8. Coach faithfulness eval](#8-coach-faithfulness-eval)
-  - [9. Router threshold sweep (cost–accuracy Pareto)](#9-router-threshold-sweep-costaccuracy-pareto)
-- [Part 3 — Sequencing and the one caveat](#part-3--sequencing-and-the-one-caveat)
-- [Glossary](#glossary)
-- [Sources](#sources)
+- [Eval \& Ops Playbook](#eval--ops-playbook)
+  - [Table of contents](#table-of-contents)
+  - [0. The mental model](#0-the-mental-model)
+    - [Why AI systems need a different kind of test](#why-ai-systems-need-a-different-kind-of-test)
+    - [The vocabulary you need first](#the-vocabulary-you-need-first)
+    - [The three axes you are always measuring](#the-three-axes-you-are-always-measuring)
+    - [The eval flywheel](#the-eval-flywheel)
+    - [Evaluation-Driven Development](#evaluation-driven-development)
+    - [The map: where the nine components sit](#the-map-where-the-nine-components-sit)
+  - [Part 1 — What you already have](#part-1--what-you-already-have)
+    - [1. `evaluate.py` — reference-based accuracy + record/replay gate](#1-evaluatepy--reference-based-accuracy--recordreplay-gate)
+      - [What it is, in general](#what-it-is-in-general)
+      - [The ways people build reference-based evals](#the-ways-people-build-reference-based-evals)
+      - [The record/replay technique](#the-recordreplay-technique)
+      - [In SkinGraph](#in-skingraph)
+    - [2. `vision_eval.py` — guardrail / classifier evaluation](#2-vision_evalpy--guardrail--classifier-evaluation)
+      - [What it is, in general](#what-it-is-in-general-1)
+      - [The ways people build guardrail evals](#the-ways-people-build-guardrail-evals)
+      - [In SkinGraph](#in-skingraph-1)
+    - [3. `metrics.py` — online operational observability](#3-metricspy--online-operational-observability)
+      - [What it is, in general](#what-it-is-in-general-2)
+      - [The ways people build it](#the-ways-people-build-it)
+      - [In SkinGraph](#in-skingraph-2)
+  - [Part 2 — What was added](#part-2--what-was-added)
+    - [4. Latency \& cost benchmarking](#4-latency--cost-benchmarking)
+      - [What it is, in general](#what-it-is-in-general-3)
+      - [The ways people build it](#the-ways-people-build-it-1)
+      - [In SkinGraph](#in-skingraph-3)
+    - [5. Eval scorecard published from CI](#5-eval-scorecard-published-from-ci)
+      - [What it is, in general](#what-it-is-in-general-4)
+      - [The ways people build it](#the-ways-people-build-it-2)
+      - [In SkinGraph](#in-skingraph-4)
+    - [6. Eval-diff PR bot](#6-eval-diff-pr-bot)
+      - [What it is, in general](#what-it-is-in-general-5)
+      - [The ways people build it](#the-ways-people-build-it-3)
+      - [In SkinGraph](#in-skingraph-5)
+    - [7. Nightly live canary (drift detection)](#7-nightly-live-canary-drift-detection)
+      - [What it is, in general](#what-it-is-in-general-6)
+      - [The ways people build it](#the-ways-people-build-it-4)
+      - [In SkinGraph](#in-skingraph-6)
+    - [8. Coach faithfulness eval](#8-coach-faithfulness-eval)
+      - [What it is, in general](#what-it-is-in-general-7)
+      - [The ways people build it](#the-ways-people-build-it-5)
+      - [In SkinGraph](#in-skingraph-7)
+    - [9. Router threshold sweep (cost–accuracy Pareto)](#9-router-threshold-sweep-costaccuracy-pareto)
+      - [What it is, in general](#what-it-is-in-general-8)
+      - [The ways people build it](#the-ways-people-build-it-6)
+      - [In SkinGraph](#in-skingraph-8)
+  - [Part 3 — Sequencing and the one caveat](#part-3--sequencing-and-the-one-caveat)
+  - [Glossary](#glossary)
+  - [Sources](#sources)
 
 ## 0. The mental model
 
@@ -90,7 +126,7 @@ flowchart LR
 
 SkinGraph already has the capture stage wired: the opt-in rejection store (`src/rejection_store.py`, `REJECTION_STORE_ENABLED=1`) writes rejected frames to `data/rejections/`, which is the natural feed for the vision golden set. That is the flywheel's intake valve.
 
-### Evaluation-Driven Development (the framing Chip Huyen pushes)
+### Evaluation-Driven Development 
 
 The "Ops/Eval route" you are aiming at comes from Chip Huyen's argument that for AI systems, evaluation is not a phase at the end — it is the thing that drives the whole lifecycle. You define what "good" means *first*, encode it as evals, and then let those evals guide model selection, design, and iteration. It is test-driven development with a metric where the assertion used to be.
 
@@ -127,12 +163,12 @@ flowchart TD
 | 1 | `evaluate.py` | Flash/Pro extraction | Reference-based accuracy + record/replay | Offline (CI) | **Gate** (F1 floor) | Built |
 | 2 | `vision_eval.py` | Tier-1 & Tier-2 gates | Classifier / guardrail accuracy | Offline (+ live Tier-2) | Gate (optional) | Built |
 | 3 | `metrics.py` | Whole live run | Operational observability | Online (prod) | Track | Built |
-| 4 | Latency & cost bench | Flash vs Pro tiers | Performance benchmark | Offline (recorded) | Track | To add |
-| 5 | Eval scorecard | `evaluate.py` output | Reporting / trend | Offline (CI) | Track | To add |
-| 6 | Eval-diff PR bot | Prompt / cassette changes | Regression-in-review | Offline (PR) | Gate + Track | To add |
-| 7 | Nightly canary | Live Gemini vs baseline | Drift detection | Online (scheduled) | Track / Alert | To add |
-| 8 | Coach faithfulness | Coach card vs findings | Groundedness eval | Offline (+ judge) | **Gate** | To add |
-| 9 | Router threshold sweep | Flash→Pro threshold | Cost–accuracy optimization | Offline (analysis) | Decide | To add |
+| 4 | Latency & cost bench | Flash vs Pro tiers | Performance benchmark | Offline (recorded) | Track | Built |
+| 5 | Eval scorecard | `evaluate.py` output | Reporting / trend | Offline (CI) | Track | Built |
+| 6 | Eval-diff PR bot | Prompt / cassette changes | Regression-in-review | Offline (PR) | Gate + Track | Built |
+| 7 | Nightly canary | Live Gemini vs baseline | Drift detection | Online (scheduled) | Track / Alert | Built |
+| 8 | Coach faithfulness | Coach card vs findings | Groundedness eval | Offline (+ judge) | **Gate** | Built |
+| 9 | Router threshold sweep | Flash→Pro threshold | Cost–accuracy optimization | Offline (analysis) | Decide | Built |
 
 ## Part 1 — What you already have
 
@@ -314,9 +350,9 @@ flowchart LR
 
 The thing to notice: `metrics.py` already measures latency and cost, but only *in production, in aggregate, invisibly*. It cannot answer "what is Flash's p95 on the golden set" before you ship, and its numbers live on a `/metrics` endpoint nobody looks at until something breaks. Components 4 and 5 close exactly those two gaps.
 
-## Part 2 — What to add
+## Part 2 — What was added
 
-The three components above cover quality (offline) and operations (online). The six below extend that spine along the two axes a recruiter probes for: measuring **latency and cost as deliberately as you measure accuracy**, and making all of it **visible, automated, and in the development loop**.
+The three components above cover quality (offline) and operations (online). The six below extend that spine along the two axes a recruiter probes for: measuring **latency and cost as deliberately as you measure accuracy**, and making all of it **visible, automated, and in the development loop**. All six are now implemented — each subsection closes with a **Shipped** pointer to the exact module and CI wiring, and everything runs offline in CI except the live drift canary.
 
 ### 4. Latency & cost benchmarking
 
@@ -362,6 +398,8 @@ xychart-beta
 
 The portfolio line this earns: *"I measure latency and cost as distributions per model tier, and I gate quality but track performance — because one is deterministic and one is not."* That sentence is the entire Ops/Eval route in miniature.
 
+**Shipped:** `eval/evaluate.py` wraps each live `--record` scan in LangChain's `get_usage_metadata_callback` (the same token signal `metrics.py` bills in production) and captures wall-clock + tokens + estimated cost into every cassette's `perf` block. `--bench` aggregates those into p50/p95/p99 latency and mean/p95 `$/scan` per model tier (percentiles in `eval/_stats.py`). Report-only, never gated; the `perf` field is optional, so cassettes recorded before it existed still replay.
+
 ### 5. Eval scorecard published from CI
 
 #### What it is, in general
@@ -404,6 +442,8 @@ xychart-beta
     line [0.90, 0.93, 0.91, 0.94, 0.94]
 ```
 
+**Shipped:** `eval/scorecard.py` renders the replay results as a Markdown table onto `$GITHUB_STEP_SUMMARY`, appends the aggregate to `eval/history.jsonl` for trending across commits, and writes shields.io *endpoint* JSON to `docs/badges/` so the README badges track real numbers. It is wired into the `eval-replay` CI job with `if: always()`, so a regression still surfaces on the run summary even when the gate fails, and the history + badges upload as build artifacts.
+
 ### 6. Eval-diff PR bot
 
 #### What it is, in general
@@ -434,6 +474,8 @@ sequenceDiagram
     CI->>CI: compute delta (F1, per-image, cost)
     CI->>PR: post before/after comment
 ```
+
+**Shipped:** `eval/diff.py` diffs two replay result sets (from `evaluate.py --replay --save`) into a before/after comment — aggregate F1 delta, per-image regressions ordered worst-first, and `$/scan` when timing is present. `.github/workflows/eval-diff.yml` is path-filtered to PRs touching `src/prompts/scanner.py`, `eval/cassettes/`, or the scoring data; it scores the base ref and the PR head offline (the staleness guard guarantees the head cassettes match the head prompt) and upserts a single PR comment.
 
 ### 7. Nightly live canary (drift detection)
 
@@ -472,6 +514,8 @@ sequenceDiagram
     end
 ```
 
+**Shipped:** `eval/canary.py` runs a couple of golden images live against Gemini, diffs each fresh read against its pinned cassette (F1 within a tolerance, latency ceiling, schema-valid `ProductExtraction`), and exits non-zero on divergence. `.github/workflows/canary.yml` runs it twice a week and on demand, opening (or commenting on) a `canary-drift` issue when it trips. Because the golden photos stay out of git, the job self-tests with `--dry-run` (replay the cassette as the "live" read) until the private canary images and `GOOGLE_API_KEY` secret are wired — the one component here that is genuinely online.
+
 ### 8. Coach faithfulness eval
 
 #### What it is, in general
@@ -506,7 +550,9 @@ flowchart TD
 
 #### In SkinGraph
 
-The coach is the only LLM in the safety path (per the key invariants) and currently has **zero** eval coverage — the highest-value gap in the repo. The deterministic version is well-defined against your existing structures: the auditor and routine advisor already emit findings deterministically (against `conflict_matrix.json`, `function_groups.json`, the pregnancy-flagged INCI set), and the coach's output contract (`CoachResponse` → `Recommendation.warnings`, `RoutineFitCard`) is structured. So the eval is: for a set of profile+product fixtures, assert every deterministic finding surfaces in the corresponding card's `warnings`. That is a **gateable groundedness metric with no model in the loop**, and it is the differentiator no other candidate's portfolio will have. The judge layer for 薬機法 tone is a strong follow-up, not a prerequisite.
+The coach is the only LLM in the safety path (per the key invariants) and had **zero** eval coverage — it was the highest-value gap in the repo. The deterministic version is well-defined against the existing structures: the auditor and routine advisor already emit findings deterministically (against `conflict_matrix.json`, `function_groups.json`, the pregnancy-flagged INCI set), and the coach's output contract (`CoachResponse` → `Recommendation.warnings`, `RoutineFitCard`) is structured. So the eval is: for a set of profile+product fixtures, assert every deterministic finding surfaces in the corresponding card's `warnings`. That is a **gateable groundedness metric with no model in the loop**, and it is the differentiator no other candidate's portfolio will have. The judge layer for 薬機法 tone is a strong follow-up, not a prerequisite.
+
+**Shipped:** `eval/coach_eval.py` runs `coach_node` with the Gemini call stubbed to return *empty* warnings, so every caution left on the rendered card is the coach's code-injected deterministic one; it then asserts each mandated caution (pregnancy / dehydration / sun-sensitivity / introduction-pacing) survived. Coverage is set inclusion, gated at 1.0 in the `coach-faithfulness` CI job (offline, no key). The fixtures are an *independent* specification — `tests/test_coach_eval.py` proves the gate is not tautological by dropping a flag set and watching coverage fall below 1.0. The 薬機法-tone judge remains the documented follow-up.
 
 ### 9. Router threshold sweep (cost–accuracy Pareto)
 
@@ -543,9 +589,11 @@ quadrantChart
     Cascade 0.9: [0.58, 0.915]
 ```
 
+**Shipped:** `eval/sweep.py` replays the recorded Flash and Pro cassettes and, for each candidate threshold τ, decides per image which tier the cascade would have used, then computes the resulting aggregate F1 and `$/scan` (reusing `metrics.py`'s cost function). It prints the full curve, marks the currently-shipping `FLASH_ACCEPT_THRESHOLD`, flags the non-dominated Pareto points, and — given `--min-f1` — names the cheapest τ that clears the bar. Pure post-processing (no per-threshold API calls); it needs a `--model both` record first. Decision aid, never a gate.
+
 ## Part 3 — Sequencing and the one caveat
 
-If you build these for the portfolio, sequence by signal-per-effort:
+The six were built in the signal-per-effort order below; each is now live in the repo (see the **Shipped** pointers above), so this reads as the build log rather than a plan:
 
 ```mermaid
 timeline

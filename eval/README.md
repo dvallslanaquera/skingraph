@@ -1,8 +1,11 @@
 # Eval harness — golden set, record & replay
 
-Two harnesses live here:
+The full eval/ops layer and the reasoning behind each piece is written up in
+[`../EVAL-OPS.md`](../EVAL-OPS.md). The modules:
 
-- **`eval/evaluate.py`** — back-label extraction accuracy (this README).
+- **`eval/evaluate.py`** — back-label extraction accuracy (this README). Also
+  captures per-scan latency + token cost on `--record` and reports it per model
+  tier with `--bench` (§4).
 - **`eval/vision_eval.py`** — the vision-layer *gates*: the Tier-1 pixel
   pre-flight (dark/bright/blank/blurry) and the Tier-2 content+side classifier.
   Driven by a hand-labeled manifest (`data/vision_eval_set.json`; images stay
@@ -11,6 +14,18 @@ Two harnesses live here:
   classifier (needs `GOOGLE_API_KEY`). Frames captured by the opt-in rejection
   store (`REJECTION_STORE_ENABLED=1` → `data/rejections/`) are the natural feed
   for this set.
+- **`eval/coach_eval.py`** — coach faithfulness (§8): runs `coach_node` with the
+  Gemini call stubbed to empty warnings and asserts every mandated safety
+  caution survives into the card. Offline gate: `--min-coverage 1.0`.
+- **`eval/scorecard.py`** — publishes the replay results as a Markdown scorecard
+  (`$GITHUB_STEP_SUMMARY`), a trend history (`eval/history.jsonl`), and shields
+  badges (`docs/badges/`) (§5).
+- **`eval/diff.py`** — diffs two `--replay --save` result sets into a PR comment
+  (§6; driven by `.github/workflows/eval-diff.yml`).
+- **`eval/canary.py`** — live drift check against the pinned cassettes; `--dry-run`
+  self-tests offline (§7; driven by `.github/workflows/canary.yml`).
+- **`eval/sweep.py`** — Flash→Pro threshold sweep, the cost/accuracy Pareto
+  frontier over recorded `--model both` cassettes (§9).
 
 `eval/evaluate.py` scores the vision scanner's ingredient extraction against a
 hand-annotated **golden set**: 40+ real product-label photos

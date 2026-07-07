@@ -29,13 +29,17 @@ import json
 import logging
 import os
 import sys
+import time
 import unicodedata
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
+from langchain_core.callbacks import get_usage_metadata_callback
 from rapidfuzz import fuzz, process
 
+from eval._stats import summarize
 from src.config import FLASH_MODEL, PRO_MODEL
+from src.metrics import estimate_cost_usd
 from src.nodes.normalizer import _load_index
 from src.nodes.normalizer import _normalize as _ledger_key
 from src.nodes.scanner import flash_scanner_node, pro_scanner_node
@@ -141,6 +145,35 @@ def run_scanner(model: str, image_path: str) -> ProductExtraction | None:
     return result.get("extracted_data")
 
 
+def run_scanner_timed(model: str, image_path: str) -> tuple[ProductExtraction | None, dict]:
+    """run_scanner + wall-clock and token usage, for the latency/cost benchmark.
+
+    Wraps the live call in ``get_usage_metadata_callback`` so LangChain reports
+    the per-model token counts already flowing through every Gemini call — the
+    same signal src/metrics.py bills in production — with no node-code change.
+    Returns the extraction plus a ``perf`` dict (latency, usage, cost) that
+    ``--record`` writes into the cassette and ``--bench`` aggregates. Timing is a
+    *benchmark*, never a gate: it depends on provider load and the network, so it
+    is tracked and trended, not asserted (see EVAL-OPS.md §4).
+    """
+    start = time.perf_counter()
+    with get_usage_metadata_callback() as cb:
+        extracted = run_scanner(model, image_path)
+    latency = time.perf_counter() - start
+
+    usage = {m: dict(counts) for m, counts in (cb.usage_metadata or {}).items()}
+    cost = sum(
+        estimate_cost_usd(m, c.get("input_tokens", 0), c.get("output_tokens", 0))
+        for m, c in usage.items()
+    )
+    perf = {
+        "latency_seconds": round(latency, 3),
+        "usage": usage,
+        "cost_usd": round(cost, 6),
+    }
+    return extracted, perf
+
+
 def score_extraction(model: str, entry: dict, extracted: ProductExtraction, threshold: int) -> dict:
     """Score one extraction (live or replayed) against its ground-truth entry."""
     gt = entry["ground_truth"]
@@ -177,7 +210,7 @@ def evaluate_live(model: str, entry: dict, threshold: int, record: bool) -> dict
         return None
 
     try:
-        extracted = run_scanner(model, image_path)
+        extracted, perf = run_scanner_timed(model, image_path)
     except Exception as exc:  # noqa: BLE001 — surface API/parse failures per-item
         logging.error("Scanner failed on %s: %s", entry["id"], exc)
         return {"id": entry["id"], "model": model, "error": str(exc)}
@@ -191,7 +224,7 @@ def evaluate_live(model: str, entry: dict, threshold: int, record: bool) -> dict
         # extractions carry no ingredients and their F1 is structurally zero —
         # replaying them would gate on photo composition, not on code.
         if extracted.system_status == "SUCCESS":
-            _write_cassette(model, entry, extracted, image_path)
+            _write_cassette(model, entry, extracted, image_path, perf)
         else:
             logging.info(
                 "Not recording %s (%s): no readable ingredient list to replay.",
@@ -199,7 +232,9 @@ def evaluate_live(model: str, entry: dict, threshold: int, record: bool) -> dict
                 extracted.system_status,
             )
 
-    return score_extraction(model, entry, extracted, threshold)
+    scored = score_extraction(model, entry, extracted, threshold)
+    scored["perf"] = perf
+    return scored
 
 
 # --- cassettes (record / replay) ---------------------------------------------
@@ -228,7 +263,13 @@ def _cassette_path(model: str, entry: dict) -> str:
 RERECORD_HINT = "re-record locally with: poetry run python -m eval.evaluate --record"
 
 
-def _write_cassette(model: str, entry: dict, extracted: ProductExtraction, image_path: str) -> None:
+def _write_cassette(
+    model: str,
+    entry: dict,
+    extracted: ProductExtraction,
+    image_path: str,
+    perf: dict | None = None,
+) -> None:
     payload = {
         "id": entry["id"],
         "image_sha256": _file_sha256(image_path),
@@ -237,6 +278,10 @@ def _write_cassette(model: str, entry: dict, extracted: ProductExtraction, image
         "recorded_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "extraction": extracted.model_dump(),
     }
+    # Latency + token/cost of the live call, for the offline --bench aggregation.
+    # Optional so cassettes recorded before the benchmark existed still replay.
+    if perf is not None:
+        payload["perf"] = perf
     os.makedirs(CASSETTE_DIR, exist_ok=True)
     path = _cassette_path(model, entry)
     with open(path, "w", encoding="utf-8") as f:
@@ -278,6 +323,85 @@ def _aggregate(scored: list[dict]) -> dict:
     }
 
 
+def _bench_summary(perfs: list[dict | None]) -> dict | None:
+    """Latency/cost distributions from a list of per-scan ``perf`` dicts.
+
+    Returns None when no scan carried timing (e.g. cassettes recorded before the
+    benchmark existed), so callers can distinguish "no data" from "all zeros".
+    """
+    latencies = [p["latency_seconds"] for p in perfs if p and "latency_seconds" in p]
+    costs = [p["cost_usd"] for p in perfs if p and "cost_usd" in p]
+    if not latencies and not costs:
+        return None
+    return {
+        "scans": len(latencies),
+        "latency_seconds": summarize(latencies),
+        "cost_usd": summarize(costs),
+    }
+
+
+def run_bench(by_id: dict[str, dict], args: argparse.Namespace) -> dict:
+    """Aggregate recorded per-scan latency + cost into per-tier distributions.
+
+    Offline counterpart to the production histogram in src/metrics.py: it reads
+    the timing captured at ``--record`` time from the cassettes and reports
+    p50/p95/p99 latency and mean/p95 USD-per-scan per model tier. Report only —
+    it never gates (latency is non-deterministic; see EVAL-OPS.md §4).
+    """
+    if not os.path.exists(MANIFEST_PATH):
+        sys.exit(f"No cassette manifest at {MANIFEST_PATH} — {RERECORD_HINT}")
+    with open(MANIFEST_PATH, encoding="utf-8") as f:
+        manifest = json.load(f)
+
+    models = ["flash", "pro"] if args.model == "both" else [args.model]
+    out: dict = {}
+    for model in models:
+        spec = manifest.get("models", {}).get(model)
+        if not spec:
+            continue
+        perfs: list[dict | None] = []
+        for id_ in spec["ids"]:
+            entry = by_id.get(id_)
+            if entry is None:
+                continue
+            path = _cassette_path(model, entry)
+            if not os.path.exists(path):
+                continue
+            with open(path, encoding="utf-8") as f:
+                perfs.append(json.load(f).get("perf"))
+        summary = _bench_summary(perfs)
+        if summary:
+            out[model] = summary
+    return out
+
+
+def print_bench(bench: dict) -> None:
+    print("\n" + "=" * 70)
+    print("  LATENCY & COST BENCHMARK (recorded, per model tier)")
+    print("=" * 70)
+    if not bench:
+        print(
+            "\n  No timing recorded in the cassettes yet. Re-record to capture it:\n"
+            "    poetry run python -m eval.evaluate --model both --record\n"
+        )
+        print("=" * 70 + "\n")
+        return
+    for model, summary in bench.items():
+        lat = summary["latency_seconds"]
+        cost = summary["cost_usd"]
+        print(f"\n[{model}]  ({summary['scans']} scan(s))")
+        print(
+            f"  latency (s) : p50 {lat['p50']:.2f}  p95 {lat['p95']:.2f}  "
+            f"p99 {lat['p99']:.2f}  (mean {lat['mean']:.2f})"
+        )
+        print(
+            f"  cost ($)    : mean {cost['mean']:.4f}  p95 {cost['p95']:.4f}  max {cost['max']:.4f}"
+        )
+    print("\n" + "-" * 70)
+    print("  Tracked, not gated: latency depends on provider load + network.")
+    print("=" * 70 + "\n")
+
+
 def write_manifest(results: list[dict], models: list[str], threshold: int) -> None:
     """Aggregate scores + covered ids at record time, one block per model."""
     manifest: dict = {
@@ -296,11 +420,15 @@ def write_manifest(results: list[dict], models: list[str], threshold: int) -> No
         ]
         if not scored:
             continue
-        manifest["models"][model] = {
+        block = {
             "model_id": MODEL_IDS[model],
             "ids": [r["id"] for r in scored],
             "aggregate": _aggregate(scored),
         }
+        bench = _bench_summary([r.get("perf") for r in scored])
+        if bench:
+            block["bench"] = bench
+        manifest["models"][model] = block
     os.makedirs(CASSETTE_DIR, exist_ok=True)
     with open(MANIFEST_PATH, "w", encoding="utf-8") as f:
         json.dump(manifest, f, ensure_ascii=False, indent=2)
@@ -439,6 +567,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Offline: score the recorded cassettes instead of calling the VLM.",
     )
+    mode.add_argument(
+        "--bench",
+        action="store_true",
+        help="Offline: report recorded latency + cost distributions per model tier.",
+    )
     parser.add_argument(
         "--min-f1",
         type=float,
@@ -464,7 +597,20 @@ def main() -> None:
     if args.replay:
         results = run_replay(by_id, args)
         print_report(results)
+        if args.save:
+            with open(args.save, "w", encoding="utf-8") as f:
+                json.dump(results, f, ensure_ascii=False, indent=2)
+            print(f"Results written to {args.save}")
         apply_gate(results, args.min_f1)
+        return
+
+    if args.bench:
+        bench = run_bench(by_id, args)
+        print_bench(bench)
+        if args.save:
+            with open(args.save, "w", encoding="utf-8") as f:
+                json.dump(bench, f, ensure_ascii=False, indent=2)
+            print(f"Bench written to {args.save}")
         return
 
     if args.ids:

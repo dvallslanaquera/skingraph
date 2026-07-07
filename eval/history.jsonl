@@ -1,0 +1,1 @@
+{"recorded_at": "2026-07-07T17:10:08+00:00", "commit": "731301b49acb", "model": "flash", "images": 4, "ingredient_f1": 0.925, "ingredient_recall": 0.879, "brand_score": 97.5, "product_score": 90.4, "quasi_drug_correct": 3}

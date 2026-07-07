@@ -1,0 +1,89 @@
+# Nightly live canary — drift detection against the pinned cassette baseline.
+#
+# The replay gate never calls Gemini, so it cannot notice Gemini *changing*
+# under us. This scheduled job runs a couple of golden images LIVE, diffs the
+# fresh extraction against the committed baseline, and opens a tracking issue if
+# the model has drifted (F1 drop, latency blow-out, or a schema-invalid read).
+# Costs pennies per run (EVAL-OPS.md §7).
+#
+# Requires two repo secrets/vars to do the live read; without them the job
+# no-ops gracefully rather than failing:
+#   - secret GOOGLE_API_KEY   (the Gemini key)
+#   - the golden images        (kept out of git — see note below)
+#
+# NOTE: the golden-set photos are intentionally not committed (personal photos),
+# so out of the box this canary runs in --dry-run as a wiring self-test. To make
+# it a *live* canary, add a step that fetches the 2-3 canary images into
+# data/golden_set/ from a private store and drop the `--dry-run` fallback.
+name: Canary
+
+on:
+  schedule:
+    - cron: "0 6 * * 1,4" # 06:00 UTC, Mondays and Thursdays
+  workflow_dispatch: # allow manual runs
+
+concurrency:
+  group: canary
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  canary:
+    name: Live drift check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+
+      - name: Run the canary
+        id: canary
+        env:
+          GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
+        run: |
+          # Live when a key AND the golden images are present; else offline self-test.
+          MODE="--dry-run"
+          if [ -n "${GOOGLE_API_KEY}" ] && ls data/golden_set/*.jpg >/dev/null 2>&1; then
+            MODE="--limit 2"
+          fi
+          set +e
+          python -m eval.canary $MODE --summary /tmp/canary.md
+          echo "diverged=$?" >> "$GITHUB_OUTPUT"
+          set -e
+          cat /tmp/canary.md >> "$GITHUB_STEP_SUMMARY" 2>/dev/null || true
+
+      - name: Open a drift issue
+        if: steps.canary.outputs.diverged != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/canary.md', 'utf8')
+              + `\n\nRun: ${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const title = `Canary drift — ${new Date().toISOString().slice(0, 10)}`;
+            const { data: open } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'canary-drift',
+            });
+            if (open.length === 0) {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['canary-drift'],
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: open[0].number, body,
+              });
+            }

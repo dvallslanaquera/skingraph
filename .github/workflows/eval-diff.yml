@@ -1,0 +1,91 @@
+# Eval-diff PR bot — score the eval on the base branch and on the PR, then post
+# the before/after F1 delta as a comment so a probabilistic change (a prompt
+# edit, a re-record, a scoring tweak) is reviewable like any code diff.
+#
+# Path-filtered: only runs when something that can move the eval numbers changes,
+# so unrelated PRs are not diffed. Fully offline — it replays the committed
+# cassettes on each ref, no API key or images (EVAL-OPS.md §6).
+name: Eval diff
+
+on:
+  pull_request:
+    paths:
+      - "src/prompts/scanner.py"
+      - "eval/cassettes/**"
+      - "eval/evaluate.py"
+      - "data/ground_truth.json"
+      - "data/ingredient_master.json"
+
+concurrency:
+  group: eval-diff-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  eval-diff:
+    name: Score base vs PR and comment
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # need the base ref to score it too
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+
+      - name: Score the PR (head)
+        # The staleness guard requires the head cassettes to match the head
+        # prompt/model, so a prompt change must already carry its re-record.
+        run: python -m eval.evaluate --replay --save /tmp/head.json || echo "[]" > /tmp/head.json
+
+      - name: Score the base branch
+        # Bring in ONLY the scoring inputs from the base ref (prompt, cassettes,
+        # ground truth, ingredient master) so base cassettes match the base
+        # prompt hash; the scoring code itself stays at head for an apples-to-
+        # apples comparison under the current scorer.
+        run: |
+          git checkout "origin/${GITHUB_BASE_REF}" -- \
+            src/prompts/scanner.py eval/cassettes data/ground_truth.json \
+            data/ingredient_master.json 2>/dev/null || true
+          python -m eval.evaluate --replay --save /tmp/base.json || echo "[]" > /tmp/base.json
+          git checkout HEAD -- \
+            src/prompts/scanner.py eval/cassettes data/ground_truth.json \
+            data/ingredient_master.json 2>/dev/null || true
+
+      - name: Render the diff comment
+        run: python -m eval.diff --base /tmp/base.json --head /tmp/head.json --out /tmp/comment.md
+
+      - name: Upsert the PR comment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const body = fs.readFileSync('/tmp/comment.md', 'utf8');
+            const marker = '## 🌿 Eval diff';
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const existing = comments.find(c => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: existing.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: context.issue.number, body,
+              });
+            }

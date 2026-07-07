@@ -94,6 +94,50 @@ jobs:
         # prompt/model change without a matching local re-record (staleness guard).
         run: python -m eval.evaluate --replay --min-f1 0.90
 
+      - name: Publish eval scorecard (run summary + trend + badges)
+        # Renders the per-commit scorecard onto the Actions run page, appends the
+        # aggregate to the trend history, and refreshes the shields endpoint JSON
+        # so the README badges track real numbers. Runs even if the gate failed,
+        # so a regression is still visible on the summary.
+        if: always()
+        run: |
+          python -m eval.scorecard \
+            --history eval/history.jsonl \
+            --badges docs/badges \
+            --commit "${GITHUB_SHA}"
+
+      - name: Upload scorecard artifacts (history + badges)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-scorecard
+          path: |
+            eval/history.jsonl
+            docs/badges/*.json
+
+  coach-faithfulness:
+    name: Coach faithfulness gate (mandated-caution coverage)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        uses: ./.github/actions/python-deps
+        with:
+          python-version: "3.12"
+
+      - name: Assert the coach drops no deterministic safety caution
+        # Offline, no API key: the Gemini call is stubbed to return empty
+        # warnings, so every caution in the card is the code-injected
+        # deterministic one. Fails if any mandated safety caution (pregnancy /
+        # dehydration / sun / pacing) is missing from a rendered card.
+        run: python -m eval.coach_eval --min-coverage 1.0
+
   frontend:
     name: Frontend build
     runs-on: ubuntu-latest
