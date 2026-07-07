@@ -7,6 +7,50 @@
 > verifiable plan per phase. Read "Context", "Current state", and "Constraints &
 > conventions" first — they apply to every phase.
 
+## Status — 2026-07-07 (roadmap fully executed)
+
+Every phase below has shipped to `main` (tagged `v1.0.0`). The per-phase specs are kept
+as an implementation record; the ✅ headings mark what is live in the repo today.
+
+- **Phase 3 — Code readability ✅** — prompts extracted to `src/prompts/`
+  (`coach.py`/`scanner.py`/`websearch.py`), preprocessing split to `src/preprocess.py`,
+  bilingual copy in `src/messages.py`, init-once DB migrations (`init_db()` +
+  `_initialized` guard in `user_store.py`), and the `state.py`/`pricing.py` correctness
+  fixes. (commits `dc87ba2`, `3741058`)
+- **Phase 4 — Pipeline efficiency & consultant reasoning ✅** — `verify_identity` and
+  `tag_language` nodes removed (graph is now 15 nodes; identity seeded off `classify_side`),
+  `class Notice` bilingual carrier, `_introduction_pacing_flags` (one-active-at-a-time +
+  patch-test) in `coach.py`, deterministic `Ingredient.is_active` in `normalizer.py`, and
+  the anonymous-scan nudge (`check.nudge.*`) in `CheckProduct.tsx`. (commits `71d8743`,
+  `26af57c`)
+- **Phase 5 — MLOps hardening ✅** — ruff + mypy + pre-commit (`5f6310e`/`38fe0c3`/`fa09f14`),
+  the ⭐ replay-based eval-regression gate (`eval/evaluate.py` + committed
+  `eval/cassettes/*.json` + `eval/README.md`, `--min-f1` staleness-guarded), custom
+  Prometheus metrics + cost-per-scan (`src/metrics.py`), and CI security scanning +
+  coverage floor + versioning (`v1.0.0`, `/health` commit sha). (commits `a5cd8d2`,
+  `b4305e0`, `56c6d39`)
+- **Phase 6 — Coach follow-up chat ✅** — stateless `POST /scan/followup`
+  (`src/followup.py`, `src/prompts/followup.py`, `FollowupRequest`/`FollowupResponse`),
+  reusing the coach's 薬機法 + grounding contract; UI Q&A thread in `ScanResult.tsx`.
+  (commit `52835b9`)
+- **Phase 7 — Docs & UI polish ✅** — delivered and exceeded by the UI redesign arc below;
+  README is bilingual with logo, `eval/README.md` documents the record/replay workflow.
+
+### Post-roadmap work (delivered beyond this plan)
+
+- **Vision-layer overhaul (S1–S17)** — grounded confidence, barcode lookup, and
+  identity-verified web search; adds a dedicated `eval/vision_eval.py`. `SCANNER_SYSTEM_PROMPT`
+  is kept byte-identical (cassette hash), so prompt changes require a `--record` re-run.
+  (commit `9936e3b`)
+- **UI redesign** — landing-style top + bottom nav, hero upload card with coach mascot,
+  consistent line-icon set + leaf motifs, prominent scan CTA, mobile goal multi-select fix,
+  routine step-order wait cues, a version footer, and expanded JA copy. (commits `405d7e1`,
+  `898c402`, `4a60e99`, `b9ee93d`, `bfe13ce`, `7254a31`, `1edd123`)
+- **Deterministic auditor** now emits bilingual Japanese safety warnings. (commit `ffc5fdb`)
+- **`EVAL-OPS.md`** — a standalone eval/Ops playbook (latency+cost bench, CI scorecard,
+  eval-diff PR bot, nightly canary, coach-faithfulness eval, router threshold sweep) with
+  GitHub-safe mermaid diagrams. (commit `0187ad5` + pending mermaid-label fixes)
+
 ---
 
 ## Context
@@ -163,7 +207,7 @@ gate)** — if you only do one thing, do that.
 
 ---
 
-## Phase 3 — Code readability & layout (Effort: M · Risk: low)
+## Phase 3 — Code readability & layout ✅ DONE (Effort: M · Risk: low)
 
 Pure refactors, verified fully offline. No behaviour change except the two small
 correctness fixes noted. Goal: the repo reads hand-crafted.
@@ -228,7 +272,7 @@ copies the whole dir, so this is safe). No real-key run needed.
 
 ---
 
-## Phase 4 — Pipeline efficiency & human-consultant reasoning (Effort: M · Risk: medium — touches model behaviour)
+## Phase 4 — Pipeline efficiency & human-consultant reasoning ✅ DONE (Effort: M · Risk: medium — touches model behaviour)
 
 ### 4.1 Remove the third Flash call (`verify_identity`), keep defense-in-depth
 `verify_identity_node` (`src/nodes/websearch.py`) makes a Flash call to re-read
@@ -309,7 +353,7 @@ If Phase 5 landed first, use its record-mode to regenerate cassettes here instea
 
 ---
 
-## Phase 5 — MLOps hardening, offline-only CI (Effort: M–L · Risk: low, mostly CI)
+## Phase 5 — MLOps hardening, offline-only CI ✅ DONE (Effort: M–L · Risk: low, mostly CI)
 
 Do the sub-steps in this order. **5.2 is the highest-leverage item in the whole roadmap.**
 
@@ -398,7 +442,7 @@ then confirm on Railway's `/metrics` after merge.
 
 ---
 
-## Phase 6 — Coach follow-up chat (Effort: M · Risk: medium — new endpoint + UI)
+## Phase 6 — Coach follow-up chat ✅ DONE (Effort: M · Risk: medium — new endpoint + UI)
 
 The most human-like feature: after a scan, let the user ask the coach a follow-up
 ("can I use this with my vitamin C?", "is it OK while pregnant?"). Keep it **stateless** —
@@ -430,7 +474,7 @@ no server-side conversation store.
 
 ---
 
-## Phase 7 — Docs & UI polish (Effort: S–M · Risk: low)
+## Phase 7 — Docs & UI polish ✅ DONE (Effort: S–M · Risk: low)
 
 ### 7.1 Docs
 - `docs/ARCHITECTURE.md`: trim the marketing intro that duplicates `README.md`; add short

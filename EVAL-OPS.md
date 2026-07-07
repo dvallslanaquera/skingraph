@@ -106,7 +106,7 @@ Here is SkinGraph's pipeline with every eval component attached to the stage it 
 ```mermaid
 flowchart TD
     IMG[Label photo] --> T1
-    subgraph VIS[Vision gates - before extraction]
+    subgraph VIS["Vision gates before extraction"]
       T1[Tier-1 pixel pre-flight<br/>deterministic, free] --> T2[Tier-2 content + side<br/>classifier, 1 VLM call]
     end
     T2 --> SC
@@ -201,17 +201,17 @@ sequenceDiagram
     participant Cass as cassettes/*.json
     participant CI
 
-    Note over Dev,Cass: RECORD — local, needs GOOGLE_API_KEY
+    Note over Dev,Cass: RECORD (local, needs GOOGLE_API_KEY)
     Dev->>Eval: --record
     Eval->>VLM: real scan of each golden image
     VLM-->>Eval: ProductExtraction + confidence
     Eval->>Cass: write extraction + prompt_sha256 + model_id
 
-    Note over CI,Cass: REPLAY — CI, offline, no key, no images
+    Note over CI,Cass: REPLAY (CI, offline, no key, no images)
     CI->>Eval: --replay --min-f1 0.90
     Eval->>Cass: load recordings
     Cass-->>Eval: extractions (+ staleness check)
-    Eval->>Eval: canonical INCI -> fuzzy match -> P/R/F1
+    Eval->>Eval: canonical INCI, fuzzy match, P/R/F1
     Eval-->>CI: exit 0 (pass) / exit 1 (regression)
 ```
 
@@ -249,7 +249,7 @@ flowchart TD
     T1 -->|dark/bright/blank/blurry| R1[reject - correct?]
     T1 -->|pass| T2{Tier-2<br/>content + side}
     T2 -->|no-product / multi-product| R2[reject - correct?]
-    T2 -->|single product, valid side| OK[accept -> extraction]
+    T2 -->|single product, valid side| OK[accept, then extraction]
     R1 --> CM[Confusion matrix<br/>accuracy per class]
     R2 --> CM
     OK --> CM
@@ -354,7 +354,7 @@ Illustrative output (real numbers land once `--bench` runs against the golden se
 
 ```mermaid
 xychart-beta
-    title "Scan latency by percentile — Flash tier (illustrative)"
+    title "Scan latency by percentile, Flash tier (illustrative)"
     x-axis ["p50", "p95", "p99"]
     y-axis "seconds" 0 --> 20
     bar [3.1, 6.2, 14.5]
@@ -489,7 +489,7 @@ Two approaches, and the order matters:
 
 ```mermaid
 flowchart TD
-    subgraph DET[Deterministic coverage — start here, no LLM, gateable]
+    subgraph DET["Deterministic coverage: start here, no LLM, gateable"]
       FIND[Auditor + Routine findings<br/>conflicts, risk flags, pregnancy cautions]
       CARD[Coach card warnings]
       FIND --> CHK{Every finding<br/>present in card?}
@@ -497,10 +497,10 @@ flowchart TD
       CHK -->|yes| PASS[faithful]
       CHK -->|no| FAIL[dropped a safety finding - FAIL]
     end
-    subgraph JUDGE[LLM-as-judge — layer later for tone / 薬機法]
+    subgraph JUDGE["LLM-as-judge: tone and 薬機法, layer later"]
       C2[Coach card] --> EX[Extract claims]
       EX --> NLI[NLI-check each claim<br/>against grounded findings]
-      NLI --> SCORE[score = supported / total]
+      NLI --> SCORE["score = supported / total"]
     end
 ```
 
@@ -530,17 +530,17 @@ The Pareto plane, with the cascade pulling toward the cheap-and-accurate corner:
 
 ```mermaid
 quadrantChart
-    title Cost vs accuracy — the routing frontier
+    title Cost vs accuracy, the routing frontier
     x-axis Low cost --> High cost
     y-axis Low F1 --> High F1
     quadrant-1 Accurate but pricey
     quadrant-2 Sweet spot
     quadrant-3 Cheap but weak
     quadrant-4 Worst of both
-    Flash-only: [0.12, 0.62]
-    Pro-only: [0.85, 0.92]
-    Cascade tau=0.7: [0.34, 0.90]
-    Cascade tau=0.9: [0.58, 0.915]
+    Flash only: [0.12, 0.62]
+    Pro only: [0.85, 0.92]
+    Cascade 0.7: [0.34, 0.90]
+    Cascade 0.9: [0.58, 0.915]
 ```
 
 ## Part 3 — Sequencing and the one caveat
@@ -550,10 +550,10 @@ If you build these for the portfolio, sequence by signal-per-effort:
 ```mermaid
 timeline
     title Suggested build order
-    First (proves the claim) : 4 Latency and cost benchmark : 5 Eval scorecard from CI
-    Second (the ops layer)   : 6 Eval-diff PR bot : 7 Nightly canary
-    Differentiator           : 8 Coach faithfulness eval
-    Blog-post extra          : 9 Router threshold sweep
+    Phase 1 prove the claim : 4 Latency and cost benchmark : 5 Eval scorecard from CI
+    Phase 2 ops layer : 6 Eval-diff PR bot : 7 Nightly canary
+    Phase 3 differentiator : 8 Coach faithfulness eval
+    Phase 4 writeup extra : 9 Router threshold sweep
 ```
 
 - **4 + 5 first.** They directly prove "I can measure accuracy *and* latency properly" and produce a *visible* artifact, which is the literal ask of the Ops/Eval route.
